@@ -186,20 +186,17 @@ export default function App() {
     }
     return out;
   };
-  const hierarchyProgress = (item: MediaItem) => {
-    const children = hierarchyChildren(item.id);
+  const hierarchyProgress = (item: MediaItem): { progress: number; total?: number } => {
+    const children: MediaItem[] = hierarchyChildren(item.id);
     if (!children.length) return { progress: item.progress, total: item.total };
-    const leaf = children.flatMap(child => {
-      const nested = hierarchyProgress(child);
-      return [{ progress: nested.progress, total: nested.total }];
-    });
-    const withTotals = leaf.filter(x => x.total != null && x.total > 0);
+    const leaf: Array<{ progress: number; total?: number }> = children.map((child: MediaItem) => hierarchyProgress(child));
+    const withTotals: Array<{ progress: number; total?: number }> = leaf.filter((x: { progress: number; total?: number }) => x.total != null && x.total > 0);
     if (withTotals.length) {
-      const total = withTotals.reduce((n, x) => n + (x.total ?? 0), 0);
-      const progress = withTotals.reduce((n, x) => n + Math.min(x.progress, x.total ?? x.progress), 0);
+      const total: number = withTotals.reduce((n: number, x: { progress: number; total?: number }) => n + (x.total ?? 0), 0);
+      const progress: number = withTotals.reduce((n: number, x: { progress: number; total?: number }) => n + Math.min(x.progress, x.total ?? x.progress), 0);
       return { progress, total };
     }
-    return { progress: leaf.reduce((n, x) => n + x.progress, 0), total: undefined };
+    return { progress: leaf.reduce((n: number, x: { progress: number; total?: number }) => n + x.progress, 0) };
   };
   const roots = items.filter(x => !x.parentId);
   const stats = { total: roots.length, watching: items.filter(x => x.status === 'watching').length, completed: items.filter(x => x.status === 'completed').length, favorites: items.filter(x => x.favorite).length };
