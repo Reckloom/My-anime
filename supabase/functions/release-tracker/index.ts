@@ -61,14 +61,22 @@ Deno.serve(async (req)=>{
   })).filter(x=>x.media_metadata_id);
 
   let upserted=0;
+  let notifications=0;
   if(rows.length){
     const {error:e}=await admin.from('media_releases').upsert(rows,{onConflict:'source,source_key',ignoreDuplicates:false});
     if(e) return Response.json({error:e.message},{status:500});
     upserted=rows.length;
+    for (const row of rows) {
+      const { data: release } = await admin.from('media_releases').select('id').eq('source', row.source).eq('source_key', row.source_key).single();
+      if (release) {
+        const { data: created } = await admin.rpc('create_release_notifications', { p_release_id: release.id });
+        notifications += Number(created || 0);
+      }
+    }
   }
 
   // Keep old scheduled rows accurate: anything now in the past becomes released.
   await admin.from('media_releases').update({status:'released',last_seen_at:new Date().toISOString()}).eq('status','scheduled').lt('scheduled_at',new Date().toISOString());
 
-  return Response.json({ok:true,checked:ids.length,upserted});
+  return Response.json({ok:true,checked:ids.length,upserted,notifications});
 });
