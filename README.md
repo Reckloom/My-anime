@@ -56,3 +56,35 @@ The repository's GitHub Actions workflow also builds the project on pushes to `m
 ## Phase boundaries
 
 AniList automation, release notifications, AI features and Android packaging are intentionally not part of Phase 2.
+
+
+## Phase 3 — AniList media discovery
+
+FRAME now includes an AniList-powered discovery flow:
+- live title search against the public AniList GraphQL API
+- poster-based search results and a metadata detail view
+- import into the signed-in user's library
+- AniList ID stored separately from user progress/status
+- global metadata stored in `media_metadata`
+- duplicate protection per user + AniList ID
+- metadata refresh without resetting progress, status, favorites, or notes
+- missing metadata handled gracefully
+- authenticated Supabase Edge Function for metadata writes; no secret key is shipped to the browser
+
+AniList's public GraphQL API is called at `https://graphql.anilist.co`; public data queries do not require an API secret.
+
+### Phase 3 cloud setup
+
+Apply the repository migrations in this order:
+1. `supabase/migrations/20261005220000_foundation_auth.sql`
+2. `supabase/migrations/20261005223000_phase2_media_hardening.sql`
+3. `supabase/migrations/20261005230000_phase3_anilist_metadata.sql`
+
+Then deploy the authenticated Edge Function:
+`supabase functions deploy anilist-import --project-ref <your-project-ref>`
+
+The function is intentionally protected by user JWT authentication. It is the only component allowed to write shared AniList metadata; the browser only receives the Supabase publishable key and the user's session.
+
+The current connected Supabase project was inspected during Phase 3. It currently contains the older `anime`/`parts`/release-tracking schema and reports no applied repository migrations, so these repository migrations have **not** been applied automatically. This avoids silently changing or overwriting the existing database. The FRAME frontend continues to use the `media_items` architecture established by the repository's Phase 1/2 migrations.
+
+Release notifications remain outside Phase 3.
