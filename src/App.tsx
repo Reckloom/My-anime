@@ -11,6 +11,9 @@ const STORE = 'frame-my-anime-v1';
 type SortMode = 'recent' | 'title' | 'progress' | 'rating';
 type Notification = { id:string; releaseId:string; kind:string; title:string; body:string; mediaTitle?:string; releaseNumber?:number; scheduledAt?:string; readAt?:string; createdAt:string };
 type NotificationPreferences = { episode_releases:boolean; new_seasons:boolean; new_parts:boolean };
+type Activity = { id:string; mediaItemId:string; eventType:string; oldProgress?:number; newProgress?:number; oldStatus?:string; newStatus?:string; createdAt:string };
+type Collection = { id:string; name:string; description?:string; itemIds:string[] };
+type Tag = { id:string; name:string; itemIds:string[] };
 type Release = {
   id:string; mediaMetadataId:string; anilistId:number; releaseType:string; releaseNumber?:number;
   title?:string; scheduledAt?:string; status:'scheduled'|'released'|'cancelled'|'rescheduled'|'unknown'; source:string;
@@ -79,6 +82,9 @@ export default function App() {
   const [releases, setReleases] = useState<Release[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({ episode_releases:true, new_seasons:true, new_parts:true });
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
 
   useEffect(() => {
     if (!supabase || !user) { setLoading(false); return; }
@@ -110,6 +116,31 @@ export default function App() {
     return () => { active = false; };
   }, [user, items]);
 
+  useEffect(() => {
+    if (!supabase || !user) { setActivity([]); setCollections([]); setTags([]); return; }
+    let active = true;
+    Promise.all([
+      supabase.from('media_activity').select('id,media_item_id,event_type,old_progress,new_progress,old_status,new_status,created_at').order('created_at',{ascending:false}).limit(500),
+      supabase.from('collections').select('id,name,description').order('created_at',{ascending:true}),
+      supabase.from('collection_items').select('collection_id,media_item_id,position').order('position',{ascending:true}),
+      supabase.from('tags').select('id,name').order('name',{ascending:true}),
+      supabase.from('media_tags').select('tag_id,media_item_id')
+    ]).then(([a,cx,ci,t,mt]) => {
+      if (!active) return;
+      if (!a.error) setActivity((a.data ?? []).map((x:Record<string,unknown>)=>({id:String(x.id),mediaItemId:String(x.media_item_id),eventType:String(x.event_type),oldProgress:x.old_progress==null?undefined:Number(x.old_progress),newProgress:x.new_progress==null?undefined:Number(x.new_progress),oldStatus:x.old_status?String(x.old_status):undefined,newStatus:x.new_status?String(x.new_status):undefined,createdAt:String(x.created_at)})));
+      if (!cx.error) {
+        const rows=(cx.data??[]) as Record<string,unknown>[];
+        const links=(ci.error?[]:(ci.data??[])) as Record<string,unknown>[];
+        setCollections(rows.map(x=>({id:String(x.id),name:String(x.name),description:x.description?String(x.description):undefined,itemIds:links.filter(l=>String(l.collection_id)===String(x.id)).map(l=>String(l.media_item_id))})));
+      }
+      if (!t.error) {
+        const rows=(t.data??[]) as Record<string,unknown>[];
+        const links=(mt.error?[]:(mt.data??[])) as Record<string,unknown>[];
+        setTags(rows.map(x=>({id:String(x.id),name:String(x.name),itemIds:links.filter(l=>String(l.tag_id)===String(x.id)).map(l=>String(l.media_item_id))})));
+      }
+    });
+    return () => { active = false; };
+  }, [user]);
   useEffect(() => {
     if (!supabase || !user) { setNotifications([]); return; }
     let active = true;
@@ -173,6 +204,34 @@ export default function App() {
     if (!supabase || !user) return;
     const { error:e } = await supabase.from('notification_preferences').upsert({ user_id:user.id, ...next }, { onConflict:'user_id' });
     if (e) setError(e.message); else { setNotificationPrefs(next); setNotice('Notification preferences saved.'); }
+  };
+  const createCollection = async (name:string) => {
+    if (!supabase || !user || !name.trim()) return;
+    const {data,error:e}=await supabase.from('collections').insert({user_id:user.id,name:name.trim()}).select('id,name,description').single();
+    if(e) setError(e.message); else if(data) { setCollections(prev=>[...prev,{id:String(data.id),name:String(data.name),itemIds:[]}]); setNotice('Collection created.'); }
+  };
+  const toggleCollectionItem = async (collectionId:string,itemId:string) => {
+    if(!supabase || !user) return;
+    const collection=collections.find(x=>x.id===collectionId); if(!collection) return;
+    const has=collection.itemIds.includes(itemId);
+    const result=has
+      ? await supabase.from('collection_items').delete().eq('collection_id',collectionId).eq('media_item_id',itemId)
+      : await supabase.from('collection_items').insert({collection_id:collectionId,media_item_id:itemId});
+    if(result.error) setError(result.error.message); else setCollections(prev=>prev.map(x=>x.id===collectionId?{...x,itemIds:has?x.itemIds.filter(id=>id!==itemId):[...x.itemIds,itemId]}:x));
+  };
+  const createTag = async (name:string) => {
+    if (!supabase || !user || !name.trim()) return;
+    const {data,error:e}=await supabase.from('tags').insert({user_id:user.id,name:name.trim()}).select('id,name').single();
+    if(e) setError(e.message); else if(data) { setTags(prev=>[...prev,{id:String(data.id),name:String(data.name),itemIds:[]}]); setNotice('Tag created.'); }
+  };
+  const toggleTagItem = async (tagId:string,itemId:string) => {
+    if(!supabase || !user) return;
+    const tag=tags.find(x=>x.id===tagId); if(!tag) return;
+    const has=tag.itemIds.includes(itemId);
+    const result=has
+      ? await supabase.from('media_tags').delete().eq('tag_id',tagId).eq('media_item_id',itemId)
+      : await supabase.from('media_tags').insert({tag_id:tagId,media_item_id:itemId});
+    if(result.error) setError(result.error.message); else setTags(prev=>prev.map(x=>x.id===tagId?{...x,itemIds:has?x.itemIds.filter(id=>id!==itemId):[...x.itemIds,itemId]}:x));
   };
 
   const remove = async (item: MediaItem) => {
@@ -259,7 +318,22 @@ export default function App() {
     return { progress: leaf.reduce((n: number, x: { progress: number; total?: number }) => n + x.progress, 0) };
   };
   const roots = items.filter(x => !x.parentId);
-  const stats = { total: roots.length, watching: items.filter(x => x.status === 'watching').length, completed: items.filter(x => x.status === 'completed').length, favorites: items.filter(x => x.favorite).length };
+  const childIds = new Set(items.filter(x => x.parentId).map(x => x.parentId!));
+  const tracked = items.filter(x => !childIds.has(x.id));
+  const stats = {
+    total: roots.length,
+    watching: items.filter(x => x.status === 'watching').length,
+    completed: items.filter(x => x.status === 'completed').length,
+    planned: items.filter(x => x.status === 'planned').length,
+    paused: items.filter(x => x.status === 'paused').length,
+    dropped: items.filter(x => x.status === 'dropped').length,
+    favorites: items.filter(x => x.favorite).length,
+    completedUnits: tracked.reduce((n,x)=>n+(Number.isFinite(x.progress)?Math.max(0,x.progress):0),0),
+    rated: tracked.filter(x=>x.score != null && Number.isFinite(x.score)),
+    genres: Object.entries(tracked.flatMap(x=>x.genres).reduce<Record<string,number>>((m,g)=>{m[g]=(m[g]??0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]),
+    types: Object.entries(tracked.reduce<Record<string,number>>((m,x)=>{m[x.medium]=(m[x.medium]??0)+1;return m;},{})).sort((a,b)=>b[1]-a[1]),
+    scoreBuckets: Object.entries(tracked.filter(x=>x.score!=null).reduce<Record<string,number>>((m,x)=>{const bucket=(Math.round((x.score??0)*2)/2).toFixed(1);m[bucket]=(m[bucket]??0)+1;return m;},{})).sort((a,b)=>Number(a[0])-Number(b[0]))
+  };
 
   const defaultItem: MediaItem = { id: crypto.randomUUID(), title: '', description: '', poster: '', backdrop: '', medium: 'anime', status: 'planned', progress: 0, genres: [], themes: [], favorite: false };
 
@@ -275,7 +349,7 @@ export default function App() {
       {page === 'library' && <LibraryPage items={filtered} q={q} setQ={setQ} status={status} setStatus={setStatus} medium={medium} setMedium={setMedium} sort={sort} setSort={setSort} open={setSelected} />}
       {page === 'discover' && <Discover open={setSelected} />}
       {page === 'calendar' && <Calendar releases={releases} />}
-      {page === 'stats' && <Stats stats={stats} />} {page === 'notifications' && <NotificationsPage notifications={notifications} markRead={markNotificationRead} markAll={markAllNotificationsRead} />} {page === 'settings' && <NotificationSettings prefs={notificationPrefs} save={saveNotificationPrefs} />}
+      {page === 'stats' && <Stats stats={stats} activity={activity} items={items} collections={collections} tags={tags} createCollection={createCollection} toggleCollectionItem={toggleCollectionItem} createTag={createTag} toggleTagItem={toggleTagItem} />} {page === 'notifications' && <NotificationsPage notifications={notifications} markRead={markNotificationRead} markAll={markAllNotificationsRead} />} {page === 'settings' && <NotificationSettings prefs={notificationPrefs} save={saveNotificationPrefs} />}
     </>}
     <div className="mobilebar"><button onClick={() => setPage('home')}><Film />Home</button><button onClick={() => setPage('library')}><LibraryIcon />Library</button><button onClick={() => setPage('discover')}><Compass />Discover</button><button onClick={() => setPage('stats')}><BarChart3 />Stats</button></div>
     {selected && <Drawer item={selected} parts={hierarchyChildren(selected.id)} allItems={items} summary={hierarchyProgress(selected)} close={() => setSelected(null)} open={setSelected} edit={() => setEditMode(true)} update={update} remove={() => void remove(selected)} refresh={(item) => void refreshMetadata(item)} />}
@@ -290,7 +364,7 @@ function Loading() { return <main className="state"><Loader2 className="spin" />
 function Home({ items, stats, open }: { items: MediaItem[]; stats: { total: number; watching: number; completed: number; favorites: number }; open: (x: MediaItem) => void }) {
   const hero = items.find(x => x.id === 'aot') || items[0];
   if (!hero) return <Empty title="Your FRAME is empty." text="Add your first piece of media to start building your library." />;
-  return <main><section className="hero" style={{ backgroundImage: `linear-gradient(90deg,#09090df5 5%,#09090d88 55%,transparent),url(${hero.backdrop})` }}><div><small>YOUR MEDIA UNIVERSE</small><h1>{hero.title}</h1><p>{hero.description}</p><div className="meta"><span><Star /> {hero.score ?? '—'}</span><span>{hero.year ?? '—'}</span><span>{labelMedium(hero.medium)}</span><span>{labelStatus(hero.status)}</span></div><button className="primary" onClick={() => open(hero)}><Play fill="currentColor" />Open details</button></div></section><div className="stats"><Stat n={stats.total} t="Series" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.favorites} t="Favorites" /></div><Shelf title="Continue watching" items={items.filter(x => x.status === 'watching')} open={open} /><Shelf title="Favorites" items={items.filter(x => x.favorite)} open={open} /><Shelf title="Your library" items={items.filter(x => !x.parentId)} open={open} /></main>;
+  return <main><section className="hero" style={{ backgroundImage: `linear-gradient(90deg,#09090df5 5%,#09090d88 55%,transparent),url(${hero.backdrop})` }}><div><small>YOUR MEDIA UNIVERSE</small><h1>{hero.title}</h1><p>{hero.description}</p><div className="meta"><span><Star /> {hero.score ?? '—'}</span><span>{hero.year ?? '—'}</span><span>{labelMedium(hero.medium)}</span><span>{labelStatus(hero.status)}</span></div><button className="primary" onClick={() => open(hero)}><Play fill="currentColor" />Open details</button></div></section><div className="stats"><Stat n={stats.total} t="Series" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.favorites} t="Favorites" /></div><Shelf title="Continue watching" items={items.filter(x => x.status === 'watching').sort((a,b)=>b.progress-a.progress)} open={open} /><Shelf title="Favorites" items={items.filter(x => x.favorite)} open={open} /><Shelf title="Recently active" items={[...items].sort((a,b)=>b.progress-a.progress).filter(x=>x.progress>0).slice(0,8)} open={open} /><Shelf title="Your library" items={items.filter(x => !x.parentId)} open={open} /></main>;
 }
 function Stat({ n, t }: { n: number; t: string }) { return <div><b>{n}</b><span>{t}</span></div> }
 function Shelf({ title, items, open }: { title: string; items: MediaItem[]; open: (x: MediaItem) => void }) { return <section className="shelf"><div className="heading"><h2>{title}</h2><span>{items.length}</span></div>{items.length ? <div className="cards">{items.map(x => <Card key={x.id} item={x} open={open} />)}</div> : <p className="muted">Nothing here yet.</p>}</section> }
@@ -321,7 +395,37 @@ function NotificationSettings({ prefs, save }: { prefs:NotificationPreferences; 
   return <main className="page settings-page"><small>SETTINGS</small><h1>Notification settings.</h1><p className="muted">Choose which release events FRAME should turn into in-app notifications. Future browser push and email channels can use these same preferences.</p><div className="settings-card"><SettingToggle title="New episodes" text="Notify me when an episode tracked in my library is released." checked={draft.episode_releases} onChange={toggle('episode_releases')}/><SettingToggle title="New seasons" text="Notify me when a tracked season release is detected." checked={draft.new_seasons} onChange={toggle('new_seasons')}/><SettingToggle title="New parts & related entries" text="Notify me about new parts and related releases." checked={draft.new_parts} onChange={toggle('new_parts')}/><button className="primary" onClick={()=>save(draft)}>Save preferences</button></div></main>;
 }
 function SettingToggle({title,text,checked,onChange}:{title:string;text:string;checked:boolean;onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void}) { return <label className="setting-toggle"><span><b>{title}</b><small>{text}</small></span><input type="checkbox" checked={checked} onChange={onChange}/></label> }
-function Stats({ stats }: { stats: { total: number; watching: number; completed: number; favorites: number } }) { return <main className="page"><small>STATISTICS</small><h1>Your media, measured.</h1><div className="bigstats"><Stat n={stats.total} t="Library" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.favorites} t="Favorites" /></div></main> }
+function Stats({ stats, activity, items, collections, tags, createCollection, toggleCollectionItem, createTag, toggleTagItem }: { stats: any; activity:Activity[]; items:MediaItem[]; collections:Collection[]; tags:Tag[]; createCollection:(name:string)=>Promise<void>; toggleCollectionItem:(collectionId:string,itemId:string)=>Promise<void>; createTag:(name:string)=>Promise<void>; toggleTagItem:(tagId:string,itemId:string)=>Promise<void> }) {
+  const [collectionName,setCollectionName]=useState('');
+  const [tagName,setTagName]=useState('');
+  const [orgItem,setOrgItem]=useState(items.find(x=>!x.parentId)?.id ?? items[0]?.id ?? '');
+  const [orgCollection,setOrgCollection]=useState(collections[0]?.id ?? '');
+  const [orgTag,setOrgTag]=useState(tags[0]?.id ?? '');
+  useEffect(()=>{if(!orgItem && items[0])setOrgItem(items[0].id)},[items,orgItem]);
+  useEffect(()=>{if(!orgCollection && collections[0])setOrgCollection(collections[0].id)},[collections,orgCollection]);
+  useEffect(()=>{if(!orgTag && tags[0])setOrgTag(tags[0].id)},[tags,orgTag]);
+  const trend=Object.entries(activity.filter(x=>x.eventType==='completed'||x.newStatus==='completed').reduce<Record<string,number>>((m,x)=>{const d=new Date(x.createdAt);const key=d.toLocaleDateString(undefined,{month:'short',year:'2-digit'});m[key]=(m[key]??0)+1;return m;},{}));
+  const recent=activity.filter(x=>x.eventType!=='added').slice(0,10);
+  const titleFor=(id:string)=>items.find(x=>x.id===id)?.title??'Unknown media';
+  const avg=stats.rated.length ? (stats.rated.reduce((n: number,x:MediaItem)=>n+(x.score??0),0)/stats.rated.length).toFixed(1) : '—';
+  return <main className="page stats-page"><small>STATISTICS + PERSONALIZATION</small><h1>Your media, measured.</h1>
+    <div className="bigstats"><Stat n={stats.total} t="Library" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.planned} t="Planned" /><Stat n={stats.paused} t="Paused" /><Stat n={stats.dropped} t="Dropped" /><Stat n={stats.completedUnits} t="Episodes / chapters" /><Stat n={stats.favorites} t="Favorites" /></div>
+    <section className="stat-panels">
+      <div className="stat-panel"><div className="heading"><h2>Completion trends</h2><span>{trend.length} months</span></div>{trend.length?<div className="bars">{trend.map(([month,count])=><div className="bar-row" key={month}><span>{month}</span><i style={{width:Math.max(8,(count/Math.max(...trend.map(([,n])=>n)))*100)+'%'}}/><b>{count}</b></div>)}</div>:<p className="muted">Completion history will appear as you update progress.</p>}</div>
+      <div className="stat-panel"><div className="heading"><h2>Score profile</h2><span>Average {avg}</span></div>{stats.scoreBuckets.length?<div className="distribution">{stats.scoreBuckets.map(([score,count]:[string,number])=><span key={score} style={{height:Math.max(8,count*18)+'px'}} title={score+' · '+count}>{score}</span>)}</div>:<p className="muted">Add scores to see your rating profile.</p>}</div>
+    </section>
+    <section className="stat-panels">
+      <div className="stat-panel"><div className="heading"><h2>Genres</h2></div>{stats.genres.length?stats.genres.slice(0,10).map(([g,n]:[string,number])=><div className="rank-row" key={g}><span>{g}</span><b>{n}</b></div>):<p className="muted">Genre data will appear from your library.</p>}</div>
+      <div className="stat-panel"><div className="heading"><h2>Media types</h2></div>{stats.types.length?stats.types.map(([g,n]:[string,number])=><div className="rank-row" key={g}><span>{labelMedium(g as Medium)}</span><b>{n}</b></div>):<p className="muted">Add media to build type statistics.</p>}</div>
+    </section>
+    <section className="stat-panel activity-panel"><div className="heading"><h2>Watching activity</h2><span>{activity.length} events</span></div>{recent.length?<div className="activity-list">{recent.map(a=><div key={a.id}><span>{a.eventType==='completed'?'Completed':a.eventType==='progress'?'Progress updated':'Status changed'}</span><b>{titleFor(a.mediaItemId)}</b><small>{a.newProgress!=null?' · '+a.newProgress+(items.find(x=>x.id===a.mediaItemId)?.total?'/'+items.find(x=>x.id===a.mediaItemId)?.total:''):''} · {new Date(a.createdAt).toLocaleString()}</small></div>)}</div>:<p className="muted">No activity yet. Your progress and status changes will appear here.</p>}</section>
+    <section className="stat-panel organization-panel"><div className="heading"><h2>Collections & tags</h2><span>Private organization</span></div>
+      <div className="org-create"><input value={collectionName} onChange={e=>setCollectionName(e.target.value)} placeholder="New collection name" /><button className="secondary" onClick={()=>{void createCollection(collectionName);setCollectionName('')}}>Create collection</button><input value={tagName} onChange={e=>setTagName(e.target.value)} placeholder="New tag name" /><button className="secondary" onClick={()=>{void createTag(tagName);setTagName('')}}>Create tag</button></div>
+      <div className="org-controls"><select value={orgItem} onChange={e=>setOrgItem(e.target.value)}>{items.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select><select value={orgCollection} onChange={e=>setOrgCollection(e.target.value)}><option value="">Choose collection</option>{collections.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="secondary" disabled={!orgCollection} onClick={()=>{if(orgCollection)void toggleCollectionItem(orgCollection,orgItem)}}>Add / remove collection</button><select value={orgTag} onChange={e=>setOrgTag(e.target.value)}><option value="">Choose tag</option>{tags.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="secondary" disabled={!orgTag} onClick={()=>{if(orgTag)void toggleTagItem(orgTag,orgItem)}}>Add / remove tag</button></div>
+      <div className="org-list">{collections.map(c=><div key={c.id}><b>{c.name}</b><span>{c.itemIds.length} items</span></div>)}{tags.map(t=><div key={t.id}><b>#{t.name}</b><span>{t.itemIds.length} tagged</span></div>)}</div>
+    </section>
+  </main>;
+}
 
 function Drawer({ item, parts, allItems, summary, close, open, edit, update, remove, refresh }: { item: MediaItem; parts: MediaItem[]; allItems: MediaItem[]; summary: { progress: number; total?: number }; close: () => void; open: (x: MediaItem) => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void; refresh: (x: MediaItem) => void }) {
   const [savingFavorite, setSavingFavorite] = useState(false);
