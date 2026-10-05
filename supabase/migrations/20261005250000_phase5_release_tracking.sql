@@ -55,8 +55,8 @@ declare
 begin
   select decrypted_secret into project_url from vault.decrypted_secrets where name = 'project_url' limit 1;
   select decrypted_secret into publishable_key from vault.decrypted_secrets where name = 'publishable_key' limit 1;
-
-  if project_url is null or publishable_key is null then
+  -- The tracker secret authenticates the scheduled worker itself; it is never sent to browsers.
+  if project_url is null or publishable_key is null or (select decrypted_secret from vault.decrypted_secrets where name = 'release_tracker_cron_secret' limit 1) is null then
     raise exception 'Release tracker Vault secrets are not configured';
   end if;
 
@@ -64,7 +64,8 @@ begin
     url := project_url || '/functions/v1/release-tracker',
     headers := jsonb_build_object(
       'Content-Type','application/json',
-      'apikey',publishable_key
+      'apikey',publishable_key,
+      'x-release-tracker-secret',(select decrypted_secret from vault.decrypted_secrets where name = 'release_tracker_cron_secret' limit 1)
     ),
     body := jsonb_build_object('source','cron')
   ) into request_id;
