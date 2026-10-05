@@ -25,7 +25,7 @@ const statuses: Status[] = ['watching', 'completed', 'planned', 'paused', 'dropp
 const mediaTypes: Medium[] = ['anime', 'manga', 'manhwa', 'light-novel', 'visual-novel', 'movie', 'series'];
 
 function initial() {
-  try { const x = localStorage.getItem(STORE); return x ? JSON.parse(x) as MediaItem[] : starterLibrary; }
+  try { const x = localStorage.getItem(STORE); const parsed: unknown = x ? JSON.parse(x) : null; return Array.isArray(parsed) ? parsed as MediaItem[] : starterLibrary; }
   catch { return starterLibrary; }
 }
 function labelStatus(s: Status) { return s === 'planned' ? 'Plan to Watch' : s[0].toUpperCase() + s.slice(1); }
@@ -287,7 +287,7 @@ export default function App() {
         const { error: e } = await supabase.from('media_items').delete().eq('id', item.id);
         if (e) throw e;
       }
-      const next = items.filter(i => i.id !== item.id && i.parentId !== item.id);
+      const next = items.filter(i => i.id !== item.id).map(i => i.parentId === item.id ? { ...i, parentId: undefined } : i);
       if (!supabase || !user) persistLocal(next); else setItems(next);
       setSelected(null); setEditMode(false); setNotice('Removed from your library.');
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not delete media.'); }
