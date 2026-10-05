@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Menu, Plus, Search, Heart, Bell, Play, X, Pencil, Save, Star, Film, Library as LibraryIcon, Compass, CalendarDays, BarChart3, Settings, Trash2, CheckCircle2, AlertCircle, Loader2, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { starterLibrary } from './data';
 import { signOut, useAuth } from './auth/Auth';
@@ -317,7 +317,7 @@ function NotificationsPage({ notifications, markRead, markAll }: { notifications
 function NotificationSettings({ prefs, save }: { prefs:NotificationPreferences; save:(x:NotificationPreferences)=>void }) {
   const [draft,setDraft]=useState(prefs);
   useEffect(()=>setDraft(prefs),[prefs]);
-  const toggle=(key:keyof NotificationPreferences)=>(e:React.ChangeEvent<HTMLInputElement>)=>setDraft({...draft,[key]:e.target.checked});
+  const toggle=(key:keyof NotificationPreferences)=>(e:ChangeEvent<HTMLInputElement>)=>setDraft({...draft,[key]:e.target.checked});
   return <main className="page settings-page"><small>SETTINGS</small><h1>Notification settings.</h1><p className="muted">Choose which release events FRAME should turn into in-app notifications. Future browser push and email channels can use these same preferences.</p><div className="settings-card"><SettingToggle title="New episodes" text="Notify me when an episode tracked in my library is released." checked={draft.episode_releases} onChange={toggle('episode_releases')}/><SettingToggle title="New seasons" text="Notify me when a tracked season release is detected." checked={draft.new_seasons} onChange={toggle('new_seasons')}/><SettingToggle title="New parts & related entries" text="Notify me about new parts and related releases." checked={draft.new_parts} onChange={toggle('new_parts')}/><button className="primary" onClick={()=>save(draft)}>Save preferences</button></div></main>;
 }
 function SettingToggle({title,text,checked,onChange}:{title:string;text:string;checked:boolean;onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void}) { return <label className="setting-toggle"><span><b>{title}</b><small>{text}</small></span><input type="checkbox" checked={checked} onChange={onChange}/></label> }
