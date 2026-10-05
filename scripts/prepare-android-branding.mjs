@@ -37,5 +37,5 @@ for (const name of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
 
 const stylesUrl = new URL('values/styles.xml', root);
 let styles = await readFile(stylesUrl, 'utf8');
-styles = styles.replace(/<item name="android:background">@drawable\\/splash<\\/item>/g, '<item name="android:background">@drawable\\/frame_splash</item>');
+styles = styles.replaceAll('<item name="android:background">@drawable/splash</item>', '<item name="android:background">@drawable/frame_splash</item>');
 await writeFile(stylesUrl, styles, 'utf8');
