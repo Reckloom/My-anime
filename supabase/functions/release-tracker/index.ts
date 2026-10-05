@@ -16,10 +16,18 @@ type Schedule = { id:number; airingAt:number; episode:number; timeUntilAiring:nu
 function titleOf(m:NonNullable<Schedule['media']>){return m.title.userPreferred||m.title.english||m.title.romaji||m.title.native||'Untitled'}
 
 async function aniList(ids:number[],from:number,to:number){
-  const r=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:QUERY,variables:{ids,from,to}})});
-  const j=await r.json();
-  if(!r.ok||j.errors?.length) throw new Error(j.errors?.[0]?.message||'AniList release lookup failed.');
-  return (j.data?.Page?.airingSchedules||[]) as Schedule[];
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),20000);
+  try{
+    const r=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:QUERY,variables:{ids,from,to}}),signal:controller.signal});
+    let j:any;
+    try{j=await r.json()}catch{throw new Error('AniList returned an invalid response.')}
+    if(!r.ok||j.errors?.length) throw new Error(j.errors?.[0]?.message||'AniList release lookup failed.');
+    return (j.data?.Page?.airingSchedules||[]) as Schedule[];
+  }catch(e){
+    if(e instanceof DOMException&&e.name==='AbortError') throw new Error('AniList release lookup timed out.');
+    throw e;
+  }finally{clearTimeout(timer)}
 }
 
 Deno.serve(async (req)=>{
@@ -41,8 +49,12 @@ Deno.serve(async (req)=>{
   const now=Math.floor(Date.now()/1000);
   const to=now+WINDOW_DAYS*86400;
   let schedules:Schedule[]=[];
-  for(let i=0;i<ids.length;i+=50){
-    schedules.push(...await aniList(ids.slice(i,i+50),now-7*86400,to));
+  try{
+    for(let i=0;i<ids.length;i+=50){
+      schedules.push(...await aniList(ids.slice(i,i+50),now-7*86400,to));
+    }
+  }catch(error){
+    return Response.json({error:error instanceof Error?error.message:'Release lookup failed.'},{status:502});
   }
 
   const metadataByAni=new Map((tracked||[]).map(x=>[Number(x.anilist_id),x.id]));
