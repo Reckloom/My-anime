@@ -205,8 +205,45 @@ function Stats({ stats }: { stats: { total: number; watching: number; completed:
 
 function Drawer({ item, parts, close, edit, update, remove, refresh }: { item: MediaItem; parts: MediaItem[]; close: () => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void; refresh: (x: MediaItem) => void }) {
   const [savingFavorite, setSavingFavorite] = useState(false);
-  const toggleFavorite = async () => { setSavingFavorite(true); await update({ ...item, favorite: !item.favorite }); setSavingFavorite(false); };
-  return <div className="overlay"><aside className="drawer"><button className="close" onClick={close}><X /></button><div className="cover" style={{ backgroundImage: `linear-gradient(0deg,#111116,transparent),url(${item.backdrop})` }} /><div className="detail"><img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} /><div><small>{labelMedium(item.medium)} · {labelStatus(item.status)}</small><h1>{item.title}</h1><p>{item.description}</p>{item.notes && <div className="notes"><b>Notes</b><p>{item.notes}</p></div>}<div className="tags">{item.genres.map(x => <span key={x}>{x}</span>)}</div><div className="bar"><i style={{ width: (item.total ? Math.min(100, item.progress / item.total * 100) : item.progress / 20) + '%' }} /></div><div className="meta"><span>{item.progress}{item.total ? ' / ' + item.total : ''}</span><span>{item.year || '—'}</span><span>★ {item.score || '—'}</span></div><button className="primary" onClick={edit}><Pencil />Edit details</button><button className="secondary" disabled={savingFavorite} onClick={() => void toggleFavorite()}><Heart fill={item.favorite ? 'currentColor' : 'none'} />{item.favorite ? 'Unfavorite' : 'Favorite'}</button><button className="danger" onClick={remove}><Trash2 />Delete</button>{item.anilistId && <button className="secondary" onClick={() => refresh(item)}><RefreshCw />Refresh metadata</button></div></div>{parts.length > 0 && <div className="parts"><h3>Parts & seasons</h3>{parts.map(x => <button key={x.id} onClick={() => setSelectedPart(x, update)}><img src={x.poster}/><span>{x.title}</span><small>{x.progress}{x.total ? '/' + x.total : ''}</small></button>)}</div>}</aside></div>;
+  const toggleFavorite = async () => {
+    setSavingFavorite(true);
+    await update({ ...item, favorite: !item.favorite });
+    setSavingFavorite(false);
+  };
+  return (
+    <div className="overlay">
+      <aside className="drawer">
+        <button className="close" onClick={close}><X /></button>
+        <div className="cover" style={{ backgroundImage: `linear-gradient(0deg,#111116,transparent),url(${item.backdrop})` }} />
+        <div className="detail">
+          <img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} />
+          <div>
+            <small>{labelMedium(item.medium)} · {labelStatus(item.status)}{item.anilistId ? ' · AniList #' + item.anilistId : ''}</small>
+            <h1>{item.title}</h1>
+            {item.alternativeTitles?.length ? <p className="alt-titles"><b>Also known as:</b> {item.alternativeTitles.join(' · ')}</p> : null}
+            <p>{item.description || 'No description available.'}</p>
+            {item.notes && <div className="notes"><b>Notes</b><p>{item.notes}</p></div>}
+            <div className="tags">{item.genres.map(x => <span key={x}>{x}</span>)}</div>
+            <div className="bar"><i style={{ width: (item.total ? Math.min(100, item.progress / item.total * 100) : item.progress / 20) + '%' }} /></div>
+            <div className="meta"><span>{item.progress}{item.total ? ' / ' + item.total : ''}</span><span>{item.year || '—'}</span><span>★ {item.score ?? '—'}</span></div>
+            {item.season && <div className="info-line">Season: {item.season} {item.year ?? ''}</div>}
+            {item.duration && <div className="info-line">Duration: {item.duration} min · {item.airStart || '—'}{item.airEnd ? ' → ' + item.airEnd : ''}</div>}
+            {item.studio && <div className="info-line">Studio: {item.studio}</div>}
+            {item.source && <div className="info-line">Source: {item.source}</div>}
+            <div className="detail-actions">
+              <button className="primary" onClick={edit}><Pencil />Edit details</button>
+              <button className="secondary" disabled={savingFavorite} onClick={() => void toggleFavorite()}><Heart fill={item.favorite ? 'currentColor' : 'none'} />{item.favorite ? 'Unfavorite' : 'Favorite'}</button>
+              {item.anilistId && <button className="secondary" onClick={() => refresh(item)}><RefreshCw />Refresh metadata</button>}
+              <button className="danger" onClick={remove}><Trash2 />Delete</button>
+            </div>
+          </div>
+        </div>
+        {parts.length > 0 && <div className="parts"><h3>Parts & seasons</h3>{parts.map(x =>
+          <button key={x.id} onClick={() => close()}><img src={x.poster} /><span>{x.title}</span><small>{x.progress}{x.total ? '/' + x.total : ''}</small></button>
+        )}</div>}
+      </aside>
+    </div>
+  );
 }
 async function setSelectedPart(item: MediaItem, update: (x: MediaItem) => Promise<void>) { await update(item); }
 
