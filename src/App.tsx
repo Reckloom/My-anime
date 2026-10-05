@@ -85,6 +85,7 @@ export default function App() {
   const [activity, setActivity] = useState<Activity[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [aiOpen, setAiOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase || !user) { setLoading(false); return; }
@@ -234,6 +235,14 @@ export default function App() {
     if(result.error) setError(result.error.message); else setTags(prev=>prev.map(x=>x.id===tagId?{...x,itemIds:has?x.itemIds.filter(id=>id!==itemId):[...x.itemIds,itemId]}:x));
   };
 
+  const askAssistant = async (message:string) => {
+    if (!supabase || !user) throw new Error('Sign in to use FRAME Assistant.');
+    const { data, error:e } = await supabase.functions.invoke('frame-ai', { body:{ message } });
+    if (e) throw e;
+    if (!data?.answer) throw new Error(data?.error || 'No answer returned.');
+    return String(data.answer);
+  };
+
   const remove = async (item: MediaItem) => {
     if (!window.confirm(`Delete “${item.title}” from your library?`)) return;
     setError(''); setNotice('');
@@ -339,8 +348,8 @@ export default function App() {
 
   return <div className="app">
     <header className="top"><button className="icon" onClick={() => setMenu(true)}><Menu /></button><button className="logo" onClick={() => setPage('home')}><b>F</b>FRAME</button>
-      <nav><button className={page === 'home' ? 'on' : ''} onClick={() => setPage('home')}>Home</button><button className={page === 'library' ? 'on' : ''} onClick={() => setPage('library')}>Library</button><button className={page === 'discover' ? 'on' : ''} onClick={() => setPage('discover')}>Discover</button><button className={page === 'calendar' ? 'on' : ''} onClick={() => setPage('calendar')}>Release Radar</button></nav>
-      <div className="topright"><button className="notification-button" onClick={() => setPage('notifications')} aria-label="Notifications"><Bell size={17} />{notifications.filter(n => !n.readAt).length > 0 && <span>{notifications.filter(n => !n.readAt).length > 99 ? '99+' : notifications.filter(n => !n.readAt).length}</span>}</button><div className="search"><Search size={16} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search library" /></div><button className="add" onClick={() => setAniSearchOpen(true)}><Search size={17} />Find media</button><button className="add" onClick={() => { setAddMode(true); setError(''); }}><Plus size={17} />Add</button></div>
+      <nav><button className={page === 'home' ? 'on' : ''} onClick={() => setPage('home')}>Home</button><button className={page === 'library' ? 'on' : ''} onClick={() => setPage('library')}>Library</button><button className={page === 'discover' ? 'on' : ''} onClick={() => setPage('discover')}>Discover</button><button className={page === 'calendar' ? 'on' : ''} onClick={() => setPage('calendar')}>Release Radar</button><button className={page === 'assistant' ? 'on' : ''} onClick={() => setPage('assistant')}>Assistant</button></nav>
+      <div className="topright"><button className="notification-button" onClick={() => setPage('notifications')} aria-label="Notifications"><Bell size={17} />{notifications.filter(n => !n.readAt).length > 0 && <span>{notifications.filter(n => !n.readAt).length > 99 ? '99+' : notifications.filter(n => !n.readAt).length}</span>}</button><div className="search"><Search size={16} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search library" /></div><button className="add" onClick={() => setAiOpen(true)} title="Ask FRAME Assistant"><SparklesIcon />Assistant</button><button className="add" onClick={() => setAniSearchOpen(true)}><Search size={17} />Find media</button><button className="add" onClick={() => { setAddMode(true); setError(''); }}><Plus size={17} />Add</button></div>
     </header>
     {notice && <div className="toast success"><CheckCircle2 size={15} />{notice}<button onClick={() => setNotice('')}><X size={13}/></button></div>}
     {error && <div className="toast error"><AlertCircle size={15} />{error}<button onClick={() => setError('')}><X size={13}/></button></div>}
@@ -349,18 +358,35 @@ export default function App() {
       {page === 'library' && <LibraryPage items={filtered} q={q} setQ={setQ} status={status} setStatus={setStatus} medium={medium} setMedium={setMedium} sort={sort} setSort={setSort} open={setSelected} />}
       {page === 'discover' && <Discover open={setSelected} />}
       {page === 'calendar' && <Calendar releases={releases} />}
+      {page === 'assistant' && <AssistantPage ask={askAssistant} />}
       {page === 'stats' && <Stats stats={stats} activity={activity} items={items} collections={collections} tags={tags} createCollection={createCollection} toggleCollectionItem={toggleCollectionItem} createTag={createTag} toggleTagItem={toggleTagItem} />} {page === 'notifications' && <NotificationsPage notifications={notifications} markRead={markNotificationRead} markAll={markAllNotificationsRead} />} {page === 'settings' && <NotificationSettings prefs={notificationPrefs} save={saveNotificationPrefs} />}
     </>}
-    <div className="mobilebar"><button onClick={() => setPage('home')}><Film />Home</button><button onClick={() => setPage('library')}><LibraryIcon />Library</button><button onClick={() => setPage('discover')}><Compass />Discover</button><button onClick={() => setPage('stats')}><BarChart3 />Stats</button></div>
+    <div className="mobilebar"><button onClick={() => setPage('assistant')}><SparklesIcon />AI</button><button onClick={() => setPage('home')}><Film />Home</button><button onClick={() => setPage('library')}><LibraryIcon />Library</button><button onClick={() => setPage('discover')}><Compass />Discover</button><button onClick={() => setPage('stats')}><BarChart3 />Stats</button></div>
     {selected && <Drawer item={selected} parts={hierarchyChildren(selected.id)} allItems={items} summary={hierarchyProgress(selected)} close={() => setSelected(null)} open={setSelected} edit={() => setEditMode(true)} update={update} remove={() => void remove(selected)} refresh={(item) => void refreshMetadata(item)} />}
     {editMode && selected && <Editor item={selected} close={() => setEditMode(false)} save={update} parentOptions={items.filter(x => x.id !== selected.id && !descendants(selected.id).has(x.id))} />}
     {addMode && <Editor item={defaultItem} close={() => setAddMode(false)} save={add} isNew parentOptions={items} />}
     {menu && <MenuPanel close={() => setMenu(false)} page={page} setPage={setPage} />}
+    {aiOpen && <AssistantPanel ask={askAssistant} close={() => setAiOpen(false)} />}
     {aniSearchOpen && <AniListSearch close={() => setAniSearchOpen(false)} onImported={() => { setAniSearchOpen(false); window.location.reload(); }} />}
   </div>;
 }
 
 function Loading() { return <main className="state"><Loader2 className="spin" /><h2>Loading your library</h2><p>Syncing your private FRAME collection…</p></main> }
+function SparklesIcon(){ return <span className="sparkle-mark" aria-hidden="true">✦</span> }
+
+function AssistantPage({ ask }: { ask:(message:string)=>Promise<string> }) {
+  const [message,setMessage]=useState('');
+  const [answer,setAnswer]=useState('');
+  const [busy,setBusy]=useState(false);
+  const submit=async()=>{if(!message.trim()||busy)return;setBusy(true);try{setAnswer(await ask(message.trim()))}catch(e){setAnswer(e instanceof Error?e.message:'Could not reach the assistant.')}finally{setBusy(false)}};
+  return <main className="page assistant-page"><small>FRAME ASSISTANT</small><h1>Your library, understood.</h1><p className="muted">Ask about your watching status, recommendations, similar media, or release information. The assistant is read-only.</p><div className="assistant-shell"><div className="assistant-prompts">{['What am I currently watching?','What should I watch next?','What have I completed?','What releases are coming up?'].map(x=><button key={x} className="secondary" onClick={()=>setMessage(x)}>{x}</button>)}</div><textarea value={message} onChange={e=>setMessage(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void submit()}}} placeholder="Ask FRAME about your library…" maxLength={2000}/><div className="assistant-footer"><small>Enter to send · Shift+Enter for a new line</small><button className="primary" disabled={busy||!message.trim()} onClick={()=>void submit()}>{busy?'Thinking…':'Ask assistant'}</button></div>{answer&&<article className="assistant-answer"><b>FRAME Assistant</b><p>{answer}</p></article>}</div></main>;
+}
+function AssistantPanel({ ask, close }: { ask:(message:string)=>Promise<string>; close:()=>void }) {
+  const [message,setMessage]=useState(''); const [answer,setAnswer]=useState(''); const [busy,setBusy]=useState(false);
+  const submit=async()=>{if(!message.trim()||busy)return;setBusy(true);try{setAnswer(await ask(message.trim()))}catch(e){setAnswer(e instanceof Error?e.message:'Could not reach the assistant.')}finally{setBusy(false)}};
+  return <div className="assistant-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="assistant-panel"><header><div><small>FRAME AI</small><h2>Ask your library.</h2></div><button className="icon" onClick={close} aria-label="Close assistant"><X/></button></header><div className="assistant-prompts">{['What am I watching?','Recommend something from my library.','What is releasing next?'].map(x=><button key={x} className="secondary" onClick={()=>setMessage(x)}>{x}</button>)}</div>{answer&&<article className="assistant-answer"><b>FRAME Assistant</b><p>{answer}</p></article>}<textarea autoFocus value={message} onChange={e=>setMessage(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void submit()}}} placeholder="Ask anything about your media…" maxLength={2000}/><button className="primary" disabled={busy||!message.trim()} onClick={()=>void submit()}>{busy?'Thinking…':'Ask assistant'}</button></section></div>;
+}
+
 function Home({ items, stats, open }: { items: MediaItem[]; stats: { total: number; watching: number; completed: number; favorites: number }; open: (x: MediaItem) => void }) {
   const hero = items.find(x => x.id === 'aot') || items[0];
   if (!hero) return <Empty title="Your FRAME is empty." text="Add your first piece of media to start building your library." />;
