@@ -153,7 +153,7 @@ export default function App() {
   const filtered = useMemo(() => {
     const normalized = q.trim().toLowerCase();
     return items.filter(x =>
-      (!normalized || [x.title, x.description, ...x.genres, ...x.themes].join(' ').toLowerCase().includes(normalized)) &&
+      (!normalized || [x.title, x.description, x.notes ?? '', ...x.genres, ...x.themes].join(' ').toLowerCase().includes(normalized)) &&
       (status === 'all' || x.status === status) && (medium === 'all' || x.medium === medium)
     ).sort((a, b) => sort === 'title' ? a.title.localeCompare(b.title) : sort === 'progress' ? b.progress - a.progress : sort === 'rating' ? (b.score ?? -1) - (a.score ?? -1) : 0);
   }, [items, q, status, medium, sort]);
