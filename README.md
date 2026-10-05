@@ -102,3 +102,160 @@ User-facing tables:
 RLS ensures users can only read/update their own notification rows and preferences. Browser clients cannot insert notification rows.
 
 The notification architecture is channel-ready: future browser push/email workers can consume the same notification records without changing release tracking or exposing service-role credentials.
+
+
+## Phase 10 — Production + Android
+
+Phase 10 preserves the existing FRAME application and adds production hardening plus deterministic Android packaging.
+
+### Production hardening
+
+- Browser configuration contains only the Supabase URL and publishable key.
+- Activity history is trigger-owned; clients cannot forge activity records.
+- Collection and tag names are case-insensitively unique per user.
+- AniList calls have a 12-second timeout and invalid-response handling.
+- Release data is server-filtered to the current user's metadata IDs and avoids refetching on every progress/status edit.
+- Release tracking reconciles scheduled-to-released transitions before creating idempotent notifications.
+- The AI function remains JWT-protected, server-side, read-only, and excludes raw media IDs from model context.
+- Web security headers are supplied through `public/_headers`.
+- Android and web use the same Supabase backend and authentication.
+
+### Environment
+
+Create the deployment environment from `.env.production.example`:
+
+```
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+```
+
+Never place `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, or release-tracker secrets in a `VITE_*` variable.
+
+### Web deployment
+
+```
+npm install
+npm run typecheck
+npm audit --audit-level=high
+npm run build
+npm run preview
+```
+
+Deploy the generated `dist/` directory to a static host such as Cloudflare Pages. The native Android wrapper does not create a separate application backend.
+
+Before first cloud-backed use, apply the repository migrations in order through Phase 10. The connected Supabase project currently has the older legacy schema and no recorded repository migrations, so this is a deliberate database cutover step and should be reviewed against any legacy data before execution.
+
+### Supabase production configuration
+
+Deploy these Edge Functions:
+
+```
+supabase functions deploy anilist-import --project-ref <project-ref>
+supabase functions deploy release-tracker --project-ref <project-ref>
+supabase functions deploy frame-ai --project-ref <project-ref>
+```
+
+Configure Edge Function secrets in the Supabase dashboard, without committing or pasting them into source control:
+
+- `OPENAI_API_KEY`
+- optional `FRAME_AI_MODEL`
+- `RELEASE_TRACKER_CRON_SECRET`
+
+Configure the Vault values consumed by the release cron:
+
+- `project_url`
+- `publishable_key`
+- `release_tracker_cron_secret`
+
+Enable leaked-password protection in Supabase Auth. Verify the cron job and perform one manual release-tracker run after migration.
+
+### Android / Capacitor
+
+Capacitor 8 is configured in `capacitor.config.ts` with app ID `com.reckloom.frame` and app name `FRAME`.
+
+```
+npm install
+npm run build
+npx cap add android
+npx cap sync android
+node scripts/prepare-android-branding.mjs
+npx cap open android
+```
+
+The Android project is intentionally generated from Capacitor rather than committing generated boilerplate. The branding script reapplies FRAME's icon and dark splash resources after generation.
+
+Debug APK:
+
+```
+cd android
+./gradlew assembleDebug
+```
+
+GitHub Actions also produces the debug APK as the `frame-debug-apk` artifact.
+
+Signed Play-ready AAB:
+
+```
+# Configure these GitHub repository secrets first:
+ANDROID_KEYSTORE_BASE64
+ANDROID_KEYSTORE_PASSWORD
+ANDROID_KEY_ALIAS
+ANDROID_KEY_PASSWORD
+```
+
+Then manually run `.github/workflows/release-android.yml`. The signing keystore is created only on the runner and is not committed.
+
+### Validation
+
+The web CI workflow runs on pushes, pull requests and manual dispatch and performs:
+
+1. dependency installation
+2. TypeScript typecheck
+3. high-severity npm audit
+4. production Vite build
+
+The Android workflow runs on pushes/manual dispatch and builds a real debug APK through Capacitor + Gradle.
+
+### Final repository structure
+
+```
+.
+├── .env.example
+├── .env.production.example
+├── .gitignore
+├── .github/workflows/
+│   ├── build.yml
+│   ├── android.yml
+│   └── release-android.yml
+├── capacitor.config.ts
+├── index.html
+├── package.json
+├── public/
+│   ├── _headers
+│   └── favicon.svg
+├── scripts/
+│   └── prepare-android-branding.mjs
+├── src/
+│   ├── App.tsx
+│   ├── anilist.ts
+│   ├── auth/
+│   ├── components/
+│   └── lib/
+├── supabase/
+│   ├── functions/
+│   │   ├── anilist-import/
+│   │   ├── frame-ai/
+│   │   └── release-tracker/
+│   └── migrations/
+│       ├── 20261005220000_foundation_auth.sql
+│       ├── 20261005223000_phase2_media_hardening.sql
+│       ├── 20261005230000_phase3_anilist_metadata.sql
+│       ├── 20261005240000_phase4_media_hierarchy.sql
+│       ├── 20261005250000_phase5_release_tracking.sql
+│       ├── 20261005260000_phase6_notifications.sql
+│       ├── 20261005270000_phase8_statistics_personalization.sql
+│       └── 20261005280000_phase10_production_hardening.sql
+├── tsconfig.app.json
+├── tsconfig.json
+└── vite.config.ts
+```
