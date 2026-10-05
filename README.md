@@ -88,3 +88,17 @@ The function is intentionally protected by user JWT authentication. It is the on
 The current connected Supabase project was inspected during Phase 3. It currently contains the older `anime`/`parts`/release-tracking schema and reports no applied repository migrations, so these repository migrations have **not** been applied automatically. This avoids silently changing or overwriting the existing database. The FRAME frontend continues to use the `media_items` architecture established by the repository's Phase 1/2 migrations.
 
 Release notifications remain outside Phase 3.
+
+## Phase 6 — Notifications + reminders
+
+Phase 6 adds per-user in-app notifications driven by the existing `media_releases` engine. It does not create a second release tracker.
+
+Apply migrations in order through Phase 6, then deploy the existing `release-tracker` Edge Function. The release tracker uses its server-side service role to create notifications through the protected database function `create_release_notifications`.
+
+User-facing tables:
+- `notification_preferences` — per-user episode/season/part preferences.
+- `notifications` — per-user notification history with read state.
+
+RLS ensures users can only read/update their own notification rows and preferences. Browser clients cannot insert notification rows.
+
+The notification architecture is channel-ready: future browser push/email workers can consume the same notification records without changing release tracking or exposing service-role credentials.
