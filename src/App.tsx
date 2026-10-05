@@ -9,6 +9,11 @@ import { aniList, cleanDescription, DETAIL_QUERY, type AniListMedia } from './an
 
 const STORE = 'frame-my-anime-v1';
 type SortMode = 'recent' | 'title' | 'progress' | 'rating';
+type Release = {
+  id:string; mediaMetadataId:string; anilistId:number; releaseType:string; releaseNumber?:number;
+  title?:string; scheduledAt?:string; status:'scheduled'|'released'|'cancelled'|'rescheduled'|'unknown'; source:string;
+  mediaTitle:string; poster:string;
+};
 const statuses: Status[] = ['watching', 'completed', 'planned', 'paused', 'dropped'];
 const mediaTypes: Medium[] = ['anime', 'manga', 'manhwa', 'light-novel', 'visual-novel', 'movie', 'series'];
 
@@ -69,6 +74,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [aniSearchOpen, setAniSearchOpen] = useState(false);
+  const [releases, setReleases] = useState<Release[]>([]);
 
   useEffect(() => {
     if (!supabase || !user) { setLoading(false); return; }
@@ -82,6 +88,23 @@ export default function App() {
     });
     return () => { active = false; };
   }, [user]);
+
+  useEffect(() => {
+    if (!supabase || !user) { setReleases([]); return; }
+    let active = true;
+    supabase.from('media_releases').select('*,media_metadata(title,poster)').order('scheduled_at', { ascending: true }).limit(200).then(({ data, error: e }) => {
+      if (!active) return;
+      if (!e) setReleases((data ?? []).map((x: Record<string, unknown>) => ({
+        id: String(x.id), mediaMetadataId: String(x.media_metadata_id), anilistId: Number(x.anilist_id),
+        releaseType: String(x.release_type), releaseNumber: x.release_number == null ? undefined : Number(x.release_number),
+        title: x.title ? String(x.title) : undefined, scheduledAt: x.scheduled_at ? String(x.scheduled_at) : undefined,
+        status: String(x.status) as Release['status'], source: String(x.source),
+        mediaTitle: x.media_metadata && typeof x.media_metadata === 'object' ? String((x.media_metadata as Record<string, unknown>).title ?? '') : '',
+        poster: x.media_metadata && typeof x.media_metadata === 'object' ? String((x.media_metadata as Record<string, unknown>).poster ?? '') : ''
+      })).filter(x => items.some(i => i.metadataId === x.mediaMetadataId)));
+    });
+    return () => { active = false; };
+  }, [user, items]);
 
   const persistLocal = (next: MediaItem[]) => { setItems(next); localStorage.setItem(STORE, JSON.stringify(next)); };
   const saveCloud = async (item: MediaItem) => {
@@ -214,7 +237,7 @@ export default function App() {
       {page === 'home' && <Home items={items} stats={stats} open={setSelected} />}
       {page === 'library' && <LibraryPage items={filtered} q={q} setQ={setQ} status={status} setStatus={setStatus} medium={medium} setMedium={setMedium} sort={sort} setSort={setSort} open={setSelected} />}
       {page === 'discover' && <Discover open={setSelected} />}
-      {page === 'calendar' && <Calendar items={items} />}
+      {page === 'calendar' && <Calendar releases={releases} />}
       {page === 'stats' && <Stats stats={stats} />}
     </>}
     <div className="mobilebar"><button onClick={() => setPage('home')}><Film />Home</button><button onClick={() => setPage('library')}><LibraryIcon />Library</button><button onClick={() => setPage('discover')}><Compass />Discover</button><button onClick={() => setPage('stats')}><BarChart3 />Stats</button></div>
@@ -241,7 +264,13 @@ function LibraryPage({ items, q, setQ, status, setStatus, medium, setMedium, sor
 }
 function Empty({ title, text }: { title: string; text: string }) { return <main className="state"><LibraryIcon /><h2>{title}</h2><p>{text}</p></main> }
 function Discover({ open }: { open: (x: MediaItem) => void }) { return <main className="page"><small>DISCOVER</small><h1>Find your next obsession.</h1><p className="muted">Use <b>Find media</b> in the header to search the live AniList catalogue and import titles with their metadata.</p><div className="discover">{starterLibrary.filter(x => !x.parentId).map(x => <button key={x.id} onClick={() => open(x)} style={{ backgroundImage: `linear-gradient(0deg,#000e,transparent),url(${x.backdrop})` }}><div><small>{labelMedium(x.medium)}</small><h2>{x.title}</h2><span>{x.genres.join(' · ')}</span></div></button>)}</div></main> }
-function Calendar({ items }: { items: MediaItem[] }) { return <main className="page"><small>RELEASE RADAR</small><h1>Never miss what comes next.</h1><div className="releases">{items.filter(x => x.status === 'watching').map(x => <div key={x.id}><img src={x.poster}/><section><b>{x.title}</b><span>{x.nextReleaseNumber ? 'Episode ' + x.nextReleaseNumber : 'Tracking ready'}</span><small>{x.nextRelease || 'Release tracking will be connected in a later phase.'}</small></section><CalendarDays /></div>)}</div></main> }
+function Calendar({ releases }: { releases: Release[] }) {
+  const now = Date.now();
+  const upcoming = releases.filter(x => x.status === 'scheduled' && x.scheduledAt && new Date(x.scheduledAt).getTime() >= now).sort((a,b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
+  const recent = releases.filter(x => (x.status === 'released' || (x.scheduledAt && new Date(x.scheduledAt).getTime() < now)) && x.scheduledAt).sort((a,b) => new Date(b.scheduledAt!).getTime() - new Date(a.scheduledAt!).getTime()).slice(0, 30);
+  const row = (x: Release) => <div key={x.id} className={x.status === 'cancelled' ? 'cancelled' : ''}><img src={x.poster || 'https://placehold.co/240x360/111116/777?text=FRAME'} /><section><b>{x.mediaTitle || x.title || 'Unknown media'}</b><span>{x.releaseType === 'episode' && x.releaseNumber != null ? 'Episode ' + x.releaseNumber : x.releaseType}</span><small>{x.status === 'cancelled' ? 'Cancelled' : x.scheduledAt ? new Date(x.scheduledAt).toLocaleString() : 'Date unknown'}</small></section><CalendarDays /></div>;
+  return <main className="page"><small>RELEASE RADAR</small><h1>Never miss what comes next.</h1><p className="muted">Release data is refreshed automatically by the server-side tracker. Your library status and progress remain separate.</p><section className="release-section"><div className="heading"><h2>Upcoming</h2><span>{upcoming.length}</span></div><div className="releases">{upcoming.length ? upcoming.map(row) : <p className="muted">No upcoming releases currently known.</p>}</div></section><section className="release-section"><div className="heading"><h2>Recently released</h2><span>{recent.length}</span></div><div className="releases">{recent.length ? recent.map(row) : <p className="muted">No recent releases currently known.</p>}</div></section></main>;
+}
 function Stats({ stats }: { stats: { total: number; watching: number; completed: number; favorites: number } }) { return <main className="page"><small>STATISTICS</small><h1>Your media, measured.</h1><div className="bigstats"><Stat n={stats.total} t="Library" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.favorites} t="Favorites" /></div></main> }
 
 function Drawer({ item, parts, allItems, summary, close, open, edit, update, remove, refresh }: { item: MediaItem; parts: MediaItem[]; allItems: MediaItem[]; summary: { progress: number; total?: number }; close: () => void; open: (x: MediaItem) => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void; refresh: (x: MediaItem) => void }) {
