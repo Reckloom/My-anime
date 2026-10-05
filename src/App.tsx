@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Menu, Plus, Search, Heart, Play, X, Pencil, Save, Star, Film, Library as LibraryIcon, Compass, CalendarDays, BarChart3, Settings, Trash2, CheckCircle2, AlertCircle, Loader2, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Menu, Plus, Search, Heart, Bell, Play, X, Pencil, Save, Star, Film, Library as LibraryIcon, Compass, CalendarDays, BarChart3, Settings, Trash2, CheckCircle2, AlertCircle, Loader2, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { starterLibrary } from './data';
 import { signOut, useAuth } from './auth/Auth';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -9,6 +9,8 @@ import { aniList, cleanDescription, DETAIL_QUERY, type AniListMedia } from './an
 
 const STORE = 'frame-my-anime-v1';
 type SortMode = 'recent' | 'title' | 'progress' | 'rating';
+type Notification = { id:string; releaseId:string; kind:string; title:string; body:string; mediaTitle?:string; releaseNumber?:number; scheduledAt?:string; readAt?:string; createdAt:string };
+type NotificationPreferences = { episode_releases:boolean; new_seasons:boolean; new_parts:boolean };
 type Release = {
   id:string; mediaMetadataId:string; anilistId:number; releaseType:string; releaseNumber?:number;
   title?:string; scheduledAt?:string; status:'scheduled'|'released'|'cancelled'|'rescheduled'|'unknown'; source:string;
@@ -75,6 +77,8 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [aniSearchOpen, setAniSearchOpen] = useState(false);
   const [releases, setReleases] = useState<Release[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({ episode_releases:true, new_seasons:true, new_parts:true });
 
   useEffect(() => {
     if (!supabase || !user) { setLoading(false); return; }
@@ -106,6 +110,23 @@ export default function App() {
     return () => { active = false; };
   }, [user, items]);
 
+  useEffect(() => {
+    if (!supabase || !user) { setNotifications([]); return; }
+    let active = true;
+    Promise.all([
+      supabase.from('notifications').select('*').order('created_at', { ascending:false }).limit(100),
+      supabase.from('notification_preferences').select('episode_releases,new_seasons,new_parts').eq('user_id', user.id).maybeSingle()
+    ]).then(([n,p]) => {
+      if (!active) return;
+      if (!n.error) setNotifications((n.data ?? []).map((x:Record<string,unknown>) => ({
+        id:String(x.id), releaseId:String(x.release_id), kind:String(x.kind), title:String(x.title), body:String(x.body),
+        mediaTitle:x.media_title ? String(x.media_title) : undefined, releaseNumber:x.release_number == null ? undefined : Number(x.release_number),
+        scheduledAt:x.scheduled_at ? String(x.scheduled_at) : undefined, readAt:x.read_at ? String(x.read_at) : undefined, createdAt:String(x.created_at)
+      })));
+      if (!p.error && p.data) setNotificationPrefs({ episode_releases:Boolean(p.data.episode_releases), new_seasons:Boolean(p.data.new_seasons), new_parts:Boolean(p.data.new_parts) });
+    });
+    return () => { active = false; };
+  }, [user]);
   const persistLocal = (next: MediaItem[]) => { setItems(next); localStorage.setItem(STORE, JSON.stringify(next)); };
   const saveCloud = async (item: MediaItem) => {
     if (!supabase || !user) return;
@@ -138,6 +159,22 @@ export default function App() {
       setAddMode(false);
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not add media.'); }
   };
+  const markNotificationRead = async (id:string) => {
+    if (!supabase || !user) return;
+    const { error:e } = await supabase.from('notifications').update({ read_at:new Date().toISOString() }).eq('id',id).eq('user_id',user.id);
+    if (!e) setNotifications(prev => prev.map(n => n.id===id ? {...n,readAt:new Date().toISOString()} : n));
+  };
+  const markAllNotificationsRead = async () => {
+    if (!supabase || !user) return;
+    const { error:e } = await supabase.from('notifications').update({ read_at:new Date().toISOString() }).eq('user_id',user.id).is('read_at',null);
+    if (!e) setNotifications(prev => prev.map(n => ({...n,readAt:n.readAt || new Date().toISOString()})));
+  };
+  const saveNotificationPrefs = async (next:NotificationPreferences) => {
+    if (!supabase || !user) return;
+    const { error:e } = await supabase.from('notification_preferences').upsert({ user_id:user.id, ...next }, { onConflict:'user_id' });
+    if (e) setError(e.message); else { setNotificationPrefs(next); setNotice('Notification preferences saved.'); }
+  };
+
   const remove = async (item: MediaItem) => {
     if (!window.confirm(`Delete “${item.title}” from your library?`)) return;
     setError(''); setNotice('');
@@ -229,7 +266,7 @@ export default function App() {
   return <div className="app">
     <header className="top"><button className="icon" onClick={() => setMenu(true)}><Menu /></button><button className="logo" onClick={() => setPage('home')}><b>F</b>FRAME</button>
       <nav><button className={page === 'home' ? 'on' : ''} onClick={() => setPage('home')}>Home</button><button className={page === 'library' ? 'on' : ''} onClick={() => setPage('library')}>Library</button><button className={page === 'discover' ? 'on' : ''} onClick={() => setPage('discover')}>Discover</button><button className={page === 'calendar' ? 'on' : ''} onClick={() => setPage('calendar')}>Release Radar</button></nav>
-      <div className="topright"><div className="search"><Search size={16} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search library" /></div><button className="add" onClick={() => setAniSearchOpen(true)}><Search size={17} />Find media</button><button className="add" onClick={() => { setAddMode(true); setError(''); }}><Plus size={17} />Add</button></div>
+      <div className="topright"><button className="notification-button" onClick={() => setPage('notifications')} aria-label="Notifications"><Bell size={17} />{notifications.filter(n => !n.readAt).length > 0 && <span>{notifications.filter(n => !n.readAt).length > 99 ? '99+' : notifications.filter(n => !n.readAt).length}</span>}</button><div className="search"><Search size={16} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search library" /></div><button className="add" onClick={() => setAniSearchOpen(true)}><Search size={17} />Find media</button><button className="add" onClick={() => { setAddMode(true); setError(''); }}><Plus size={17} />Add</button></div>
     </header>
     {notice && <div className="toast success"><CheckCircle2 size={15} />{notice}<button onClick={() => setNotice('')}><X size={13}/></button></div>}
     {error && <div className="toast error"><AlertCircle size={15} />{error}<button onClick={() => setError('')}><X size={13}/></button></div>}
@@ -238,7 +275,7 @@ export default function App() {
       {page === 'library' && <LibraryPage items={filtered} q={q} setQ={setQ} status={status} setStatus={setStatus} medium={medium} setMedium={setMedium} sort={sort} setSort={setSort} open={setSelected} />}
       {page === 'discover' && <Discover open={setSelected} />}
       {page === 'calendar' && <Calendar releases={releases} />}
-      {page === 'stats' && <Stats stats={stats} />}
+      {page === 'stats' && <Stats stats={stats} />} {page === 'notifications' && <NotificationsPage notifications={notifications} markRead={markNotificationRead} markAll={markAllNotificationsRead} />} {page === 'settings' && <NotificationSettings prefs={notificationPrefs} save={saveNotificationPrefs} />}
     </>}
     <div className="mobilebar"><button onClick={() => setPage('home')}><Film />Home</button><button onClick={() => setPage('library')}><LibraryIcon />Library</button><button onClick={() => setPage('discover')}><Compass />Discover</button><button onClick={() => setPage('stats')}><BarChart3 />Stats</button></div>
     {selected && <Drawer item={selected} parts={hierarchyChildren(selected.id)} allItems={items} summary={hierarchyProgress(selected)} close={() => setSelected(null)} open={setSelected} edit={() => setEditMode(true)} update={update} remove={() => void remove(selected)} refresh={(item) => void refreshMetadata(item)} />}
@@ -271,6 +308,19 @@ function Calendar({ releases }: { releases: Release[] }) {
   const row = (x: Release) => <div key={x.id} className={x.status === 'cancelled' ? 'cancelled' : ''}><img src={x.poster || 'https://placehold.co/240x360/111116/777?text=FRAME'} /><section><b>{x.mediaTitle || x.title || 'Unknown media'}</b><span>{x.releaseType === 'episode' && x.releaseNumber != null ? 'Episode ' + x.releaseNumber : x.releaseType}</span><small>{x.status === 'cancelled' ? 'Cancelled' : x.scheduledAt ? new Date(x.scheduledAt).toLocaleString() : 'Date unknown'}</small></section><CalendarDays /></div>;
   return <main className="page"><small>RELEASE RADAR</small><h1>Never miss what comes next.</h1><p className="muted">Release data is refreshed automatically by the server-side tracker. Your library status and progress remain separate.</p><section className="release-section"><div className="heading"><h2>Upcoming</h2><span>{upcoming.length}</span></div><div className="releases">{upcoming.length ? upcoming.map(row) : <p className="muted">No upcoming releases currently known.</p>}</div></section><section className="release-section"><div className="heading"><h2>Recently released</h2><span>{recent.length}</span></div><div className="releases">{recent.length ? recent.map(row) : <p className="muted">No recent releases currently known.</p>}</div></section></main>;
 }
+function NotificationsPage({ notifications, markRead, markAll }: { notifications:Notification[]; markRead:(id:string)=>void; markAll:()=>void }) {
+  const unread=notifications.filter(n=>!n.readAt).length;
+  return <main className="page"><div className="heading"><div><small>NOTIFICATIONS</small><h1>Your release updates.</h1></div><button className="secondary" disabled={!unread} onClick={markAll}>Mark all as read</button></div>
+  {notifications.length ? <div className="notification-list">{notifications.map(n=><button className={n.readAt?'notification read':'notification'} key={n.id} onClick={()=>markRead(n.id)}><div className="notification-icon"><Bell size={16}/></div><section><b>{n.title}</b><span>{n.mediaTitle || 'Your library'}{n.releaseNumber != null ? ' · Episode '+n.releaseNumber : ''}</span><p>{n.body}</p><small>{new Date(n.createdAt).toLocaleString()}</small></section>{!n.readAt && <i />}</button>)}</div> : <Empty title="You're all caught up." text="New release notifications for media in your library will appear here." />}
+  </main>;
+}
+function NotificationSettings({ prefs, save }: { prefs:NotificationPreferences; save:(x:NotificationPreferences)=>void }) {
+  const [draft,setDraft]=useState(prefs);
+  useEffect(()=>setDraft(prefs),[prefs]);
+  const toggle=(key:keyof NotificationPreferences)=>(e:React.ChangeEvent<HTMLInputElement>)=>setDraft({...draft,[key]:e.target.checked});
+  return <main className="page settings-page"><small>SETTINGS</small><h1>Notification settings.</h1><p className="muted">Choose which release events FRAME should turn into in-app notifications. Future browser push and email channels can use these same preferences.</p><div className="settings-card"><SettingToggle title="New episodes" text="Notify me when an episode tracked in my library is released." checked={draft.episode_releases} onChange={toggle('episode_releases')}/><SettingToggle title="New seasons" text="Notify me when a tracked season release is detected." checked={draft.new_seasons} onChange={toggle('new_seasons')}/><SettingToggle title="New parts & related entries" text="Notify me about new parts and related releases." checked={draft.new_parts} onChange={toggle('new_parts')}/><button className="primary" onClick={()=>save(draft)}>Save preferences</button></div></main>;
+}
+function SettingToggle({title,text,checked,onChange}:{title:string;text:string;checked:boolean;onChange:(e:React.ChangeEvent<HTMLInputElement>)=>void}) { return <label className="setting-toggle"><span><b>{title}</b><small>{text}</small></span><input type="checkbox" checked={checked} onChange={onChange}/></label> }
 function Stats({ stats }: { stats: { total: number; watching: number; completed: number; favorites: number } }) { return <main className="page"><small>STATISTICS</small><h1>Your media, measured.</h1><div className="bigstats"><Stat n={stats.total} t="Library" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.favorites} t="Favorites" /></div></main> }
 
 function Drawer({ item, parts, allItems, summary, close, open, edit, update, remove, refresh }: { item: MediaItem; parts: MediaItem[]; allItems: MediaItem[]; summary: { progress: number; total?: number }; close: () => void; open: (x: MediaItem) => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void; refresh: (x: MediaItem) => void }) {
@@ -341,4 +391,4 @@ function Editor({ item, close, save, isNew = false, parentOptions = [] }: { item
     <label className="check"><input type="checkbox" checked={d.favorite} onChange={e => set('favorite', e.target.checked)} /> Favorite</label>
   </div><button className="primary save" disabled={saving || !d.title.trim()} onClick={() => void submit()}>{saving ? <><Loader2 className="spin"/>Saving…</> : <><Save />Save changes</>}</button></div></div>;
 }
-function MenuPanel({ close, page, setPage }: { close: () => void; page: string; setPage: (x: string) => void }) { const rows: [string, string, typeof Film][] = [['home','Home',Film],['library','Library',LibraryIcon],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays],['stats','Statistics',BarChart3]]; return <div className="menuoverlay" onClick={close}><aside className="menu" onClick={e => e.stopPropagation()}><div className="menulogo"><b>F</b>FRAME<button onClick={close}><X /></button></div>{rows.map(([id,label,Icon]) => <button className={page === id ? 'selected' : ''} key={id} onClick={() => {setPage(id);close();}}><Icon />{label}</button>)}<div className="menubottom"><button><Settings />Settings</button><button className="signout" onClick={() => void signOut()}>Log out</button><p>FRAME v2.0<br />Your personal media universe.</p></div></aside></div> }
+function MenuPanel({ close, page, setPage }: { close: () => void; page: string; setPage: (x: string) => void }) { const rows: [string, string, typeof Film][] = [['home','Home',Film],['library','Library',LibraryIcon],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays],['stats','Statistics',BarChart3],['notifications','Notifications',Bell],['settings','Settings',Settings]]; return <div className="menuoverlay" onClick={close}><aside className="menu" onClick={e => e.stopPropagation()}><div className="menulogo"><b>F</b>FRAME<button onClick={close}><X /></button></div>{rows.map(([id,label,Icon]) => <button className={page === id ? 'selected' : ''} key={id} onClick={() => {setPage(id);close();}}><Icon />{label}</button>)}<div className="menubottom"><button><Settings />Settings</button><button className="signout" onClick={() => void signOut()}>Log out</button><p>FRAME v2.0<br />Your personal media universe.</p></div></aside></div> }
