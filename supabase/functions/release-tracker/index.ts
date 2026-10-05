@@ -57,7 +57,8 @@ Deno.serve(async (req)=>{
     status:s.airingAt<=now?'released':'scheduled',
     source:'anilist',
     source_key:'airing:'+s.id,
-    raw:s
+    raw:s,
+    last_seen_at:new Date().toISOString()
   })).filter(x=>x.media_metadata_id);
 
   let upserted=0;
@@ -66,6 +67,14 @@ Deno.serve(async (req)=>{
     const {error:e}=await admin.from('media_releases').upsert(rows,{onConflict:'source,source_key',ignoreDuplicates:false});
     if(e) return Response.json({error:e.message},{status:500});
     upserted=rows.length;
+  }
+
+  // Reconcile scheduled rows before creating notifications so scheduled -> released
+  // transitions are eligible in the same tracker run.
+  await admin.from('media_releases').update({status:'released',last_seen_at:new Date().toISOString()}).eq('status','scheduled').lt('scheduled_at',new Date().toISOString());
+
+  // Notification creation is idempotent and therefore safe to replay.
+  if(rows.length){
     for (const row of rows) {
       const { data: release } = await admin.from('media_releases').select('id').eq('source', row.source).eq('source_key', row.source_key).single();
       if (release) {
@@ -74,9 +83,6 @@ Deno.serve(async (req)=>{
       }
     }
   }
-
-  // Keep old scheduled rows accurate: anything now in the past becomes released.
-  await admin.from('media_releases').update({status:'released',last_seen_at:new Date().toISOString()}).eq('status','scheduled').lt('scheduled_at',new Date().toISOString());
 
   return Response.json({ok:true,checked:ids.length,upserted,notifications});
 });
