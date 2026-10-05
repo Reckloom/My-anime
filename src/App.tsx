@@ -4,6 +4,7 @@ import { starterLibrary } from './data';
 import { signOut, useAuth } from './auth/Auth';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import type { MediaItem, Status, Medium } from './types';
+import { AniListSearch } from './components/AniListSearch';
 
 const STORE = 'frame-my-anime-v1';
 type SortMode = 'recent' | 'title' | 'progress' | 'rating';
@@ -18,14 +19,22 @@ function labelStatus(s: Status) { return s === 'planned' ? 'Plan to Watch' : s[0
 function labelMedium(s: Medium) { return s.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase()); }
 
 function fromRow(row: Record<string, unknown>): MediaItem {
+  const meta = (row.media_metadata && typeof row.media_metadata === 'object' ? row.media_metadata : {}) as Record<string, unknown>;
+  const value = (key: string, legacy = key) => meta[key] ?? row[legacy];
   return {
     id: String(row.id), parentId: row.parent_id ? String(row.parent_id) : undefined,
-    title: String(row.title), description: String(row.description ?? ''), poster: String(row.poster ?? ''),
-    backdrop: String(row.backdrop ?? ''), medium: row.medium as Medium, status: row.status as Status,
-    progress: Number(row.progress ?? 0), total: row.total == null ? undefined : Number(row.total),
-    year: row.year == null ? undefined : Number(row.year), score: row.score == null ? undefined : Number(row.score),
-    genres: Array.isArray(row.genres) ? row.genres.map(String) : [], themes: Array.isArray(row.themes) ? row.themes.map(String) : [],
-    studio: row.studio ? String(row.studio) : undefined, source: row.source ? String(row.source) : undefined,
+    metadataId: row.metadata_id ? String(row.metadata_id) : undefined,
+    anilistId: row.anilist_id == null ? undefined : Number(row.anilist_id),
+    title: String(value('title') ?? ''), alternativeTitles: Array.isArray(meta.alternative_titles) ? meta.alternative_titles.map(String) : [],
+    description: String(value('description') ?? ''), poster: String(value('poster') ?? ''), backdrop: String(value('backdrop') ?? ''),
+    medium: row.medium as Medium, status: row.status as Status, progress: Number(row.progress ?? 0),
+    total: value('episodes', 'total') == null ? undefined : Number(value('episodes', 'total')),
+    year: value('year') == null ? undefined : Number(value('year')), score: value('score') == null ? undefined : Number(value('score')),
+    genres: Array.isArray(value('genres')) ? (value('genres') as unknown[]).map(String) : [],
+    themes: Array.isArray(value('themes')) ? (value('themes') as unknown[]).map(String) : [],
+    studio: value('studio') ? String(value('studio')) : undefined, source: value('source') ? String(value('source')) : undefined,
+    season: meta.season ? String(meta.season) : undefined, duration: meta.duration == null ? undefined : Number(meta.duration),
+    airStart: meta.air_start ? String(meta.air_start) : undefined, airEnd: meta.air_end ? String(meta.air_end) : undefined,
     favorite: Boolean(row.favorite), notes: row.notes ? String(row.notes) : undefined,
     nextRelease: row.next_release ? String(row.next_release) : undefined,
     nextReleaseNumber: row.next_release_number == null ? undefined : Number(row.next_release_number),
@@ -33,7 +42,7 @@ function fromRow(row: Record<string, unknown>): MediaItem {
 }
 function toRow(item: MediaItem, userId: string) {
   return {
-    id: item.id, user_id: userId, parent_id: item.parentId ?? null, title: item.title.trim(),
+    id: item.id, user_id: userId, parent_id: item.parentId ?? null, metadata_id: item.metadataId ?? null, anilist_id: item.anilistId ?? null, title: item.title.trim(),
     description: item.description ?? '', poster: item.poster ?? '', backdrop: item.backdrop ?? '',
     medium: item.medium, status: item.status, progress: Math.max(0, Math.min(2000, Math.round(item.progress || 0))),
     total: item.total == null ? null : Math.max(0, Math.round(item.total)), year: item.year ?? null,
@@ -58,12 +67,13 @@ export default function App() {
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [aniSearchOpen, setAniSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase || !user) { setLoading(false); return; }
     let active = true;
     setLoading(true); setError('');
-    supabase.from('media_items').select('*').order('created_at', { ascending: false }).then(({ data, error: e }) => {
+    supabase.from('media_items').select('*,media_metadata(*)').order('created_at', { ascending: false }).then(({ data, error: e }) => {
       if (!active) return;
       if (e) setError(e.message);
       else setItems((data ?? []).map(fromRow));
@@ -75,7 +85,7 @@ export default function App() {
   const persistLocal = (next: MediaItem[]) => { setItems(next); localStorage.setItem(STORE, JSON.stringify(next)); };
   const saveCloud = async (item: MediaItem) => {
     if (!supabase || !user) return;
-    const { data, error: e } = await supabase.from('media_items').upsert(toRow(item, user.id), { onConflict: 'id' }).select().single();
+    const { data, error: e } = await supabase.from('media_items').upsert(toRow(item, user.id), { onConflict: 'id' }).select('*,media_metadata(*)').single();
     if (e) throw e;
     return fromRow(data);
   };
@@ -133,7 +143,7 @@ export default function App() {
   return <div className="app">
     <header className="top"><button className="icon" onClick={() => setMenu(true)}><Menu /></button><button className="logo" onClick={() => setPage('home')}><b>F</b>FRAME</button>
       <nav><button className={page === 'home' ? 'on' : ''} onClick={() => setPage('home')}>Home</button><button className={page === 'library' ? 'on' : ''} onClick={() => setPage('library')}>Library</button><button className={page === 'discover' ? 'on' : ''} onClick={() => setPage('discover')}>Discover</button><button className={page === 'calendar' ? 'on' : ''} onClick={() => setPage('calendar')}>Release Radar</button></nav>
-      <div className="topright"><div className="search"><Search size={16} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search library" /></div><button className="add" onClick={() => { setAddMode(true); setError(''); }}><Plus size={17} />Add</button></div>
+      <div className="topright"><div className="search"><Search size={16} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search library" /></div><button className="add" onClick={() => setAniSearchOpen(true)}><Search size={17} />Find media</button><button className="add" onClick={() => { setAddMode(true); setError(''); }}><Plus size={17} />Add</button></div>
     </header>
     {notice && <div className="toast success"><CheckCircle2 size={15} />{notice}<button onClick={() => setNotice('')}><X size={13}/></button></div>}
     {error && <div className="toast error"><AlertCircle size={15} />{error}<button onClick={() => setError('')}><X size={13}/></button></div>}
@@ -149,6 +159,7 @@ export default function App() {
     {editMode && selected && <Editor item={selected} close={() => setEditMode(false)} save={update} />}
     {addMode && <Editor item={defaultItem} close={() => setAddMode(false)} save={add} isNew />}
     {menu && <MenuPanel close={() => setMenu(false)} page={page} setPage={setPage} />}
+    {aniSearchOpen && <AniListSearch close={() => setAniSearchOpen(false)} onImported={() => { setAniSearchOpen(false); window.location.reload(); }} />}
   </div>;
 }
 
@@ -166,14 +177,14 @@ function LibraryPage({ items, q, setQ, status, setStatus, medium, setMedium, sor
   return <main className="page"><small>YOUR LIBRARY</small><h1>Everything you follow.</h1><div className="library-toolbar"><div className="search library-search"><Search size={16}/><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search title, genres, notes…" /></div><div className="filters"><select value={status} onChange={e => setStatus(e.target.value as Status | 'all')}><option value="all">All status</option>{statuses.map(x => <option key={x} value={x}>{labelStatus(x)}</option>)}</select><select value={medium} onChange={e => setMedium(e.target.value as Medium | 'all')}><option value="all">All media</option>{mediaTypes.map(x => <option key={x} value={x}>{labelMedium(x)}</option>)}</select><select value={sort} onChange={e => setSort(e.target.value as SortMode)}><option value="recent">Recently added</option><option value="title">Title</option><option value="progress">Progress</option><option value="rating">Rating</option></select><ArrowUpDown size={15}/></div></div>{items.length ? <div className="grid">{items.map(x => <Card key={x.id} item={x} open={open} />)}</div> : <Empty title="No matching media." text="Try another search or filter, or add something new." />}</main>;
 }
 function Empty({ title, text }: { title: string; text: string }) { return <main className="state"><LibraryIcon /><h2>{title}</h2><p>{text}</p></main> }
-function Discover({ open }: { open: (x: MediaItem) => void }) { return <main className="page"><small>DISCOVER</small><h1>Find your next obsession.</h1><div className="discover">{starterLibrary.filter(x => !x.parentId).map(x => <button key={x.id} onClick={() => open(x)} style={{ backgroundImage: `linear-gradient(0deg,#000e,transparent),url(${x.backdrop})` }}><div><small>{labelMedium(x.medium)}</small><h2>{x.title}</h2><span>{x.genres.join(' · ')}</span></div></button>)}</div></main> }
+function Discover({ open }: { open: (x: MediaItem) => void }) { return <main className="page"><small>DISCOVER</small><h1>Find your next obsession.</h1><p className="muted">Use <b>Find media</b> in the header to search the live AniList catalogue and import titles with their metadata.</p><div className="discover">{starterLibrary.filter(x => !x.parentId).map(x => <button key={x.id} onClick={() => open(x)} style={{ backgroundImage: `linear-gradient(0deg,#000e,transparent),url(${x.backdrop})` }}><div><small>{labelMedium(x.medium)}</small><h2>{x.title}</h2><span>{x.genres.join(' · ')}</span></div></button>)}</div></main> }
 function Calendar({ items }: { items: MediaItem[] }) { return <main className="page"><small>RELEASE RADAR</small><h1>Never miss what comes next.</h1><div className="releases">{items.filter(x => x.status === 'watching').map(x => <div key={x.id}><img src={x.poster}/><section><b>{x.title}</b><span>{x.nextReleaseNumber ? 'Episode ' + x.nextReleaseNumber : 'Tracking ready'}</span><small>{x.nextRelease || 'Release tracking will be connected in a later phase.'}</small></section><CalendarDays /></div>)}</div></main> }
 function Stats({ stats }: { stats: { total: number; watching: number; completed: number; favorites: number } }) { return <main className="page"><small>STATISTICS</small><h1>Your media, measured.</h1><div className="bigstats"><Stat n={stats.total} t="Library" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.favorites} t="Favorites" /></div></main> }
 
 function Drawer({ item, parts, close, edit, update, remove }: { item: MediaItem; parts: MediaItem[]; close: () => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void }) {
   const [savingFavorite, setSavingFavorite] = useState(false);
   const toggleFavorite = async () => { setSavingFavorite(true); await update({ ...item, favorite: !item.favorite }); setSavingFavorite(false); };
-  return <div className="overlay"><aside className="drawer"><button className="close" onClick={close}><X /></button><div className="cover" style={{ backgroundImage: `linear-gradient(0deg,#111116,transparent),url(${item.backdrop})` }} /><div className="detail"><img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} /><div><small>{labelMedium(item.medium)} · {labelStatus(item.status)}</small><h1>{item.title}</h1><p>{item.description}</p>{item.notes && <div className="notes"><b>Notes</b><p>{item.notes}</p></div>}<div className="tags">{item.genres.map(x => <span key={x}>{x}</span>)}</div><div className="bar"><i style={{ width: (item.total ? Math.min(100, item.progress / item.total * 100) : item.progress / 20) + '%' }} /></div><div className="meta"><span>{item.progress}{item.total ? ' / ' + item.total : ''}</span><span>{item.year || '—'}</span><span>★ {item.score || '—'}</span></div><button className="primary" onClick={edit}><Pencil />Edit details</button><button className="secondary" disabled={savingFavorite} onClick={() => void toggleFavorite()}><Heart fill={item.favorite ? 'currentColor' : 'none'} />{item.favorite ? 'Unfavorite' : 'Favorite'}</button><button className="danger" onClick={remove}><Trash2 />Delete</button></div></div>{parts.length > 0 && <div className="parts"><h3>Parts & seasons</h3>{parts.map(x => <button key={x.id} onClick={() => setSelectedPart(x, update)}><img src={x.poster}/><span>{x.title}</span><small>{x.progress}{x.total ? '/' + x.total : ''}</small></button>)}</div>}</aside></div>;
+  return <div className="overlay"><aside className="drawer"><button className="close" onClick={close}><X /></button><div className="cover" style={{ backgroundImage: `linear-gradient(0deg,#111116,transparent),url(${item.backdrop})` }} /><div className="detail"><img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} /><div><small>{labelMedium(item.medium)} · {labelStatus(item.status)}</small><h1>{item.title}</h1><p>{item.description}</p>{item.notes && <div className="notes"><b>Notes</b><p>{item.notes}</p></div>}<div className="tags">{item.genres.map(x => <span key={x}>{x}</span>)}</div><div className="bar"><i style={{ width: (item.total ? Math.min(100, item.progress / item.total * 100) : item.progress / 20) + '%' }} /></div><div className="meta"><span>{item.progress}{item.total ? ' / ' + item.total : ''}</span><span>{item.year || '—'}</span><span>★ {item.score || '—'}</span></div><button className="primary" onClick={edit}><Pencil />Edit details</button><button className="secondary" disabled={savingFavorite} onClick={() => void toggleFavorite()}><Heart fill={item.favorite ? 'currentColor' : 'none'} />{item.favorite ? 'Unfavorite' : 'Favorite'}</button><button className="danger" onClick={remove}><Trash2 />Delete</button>{item.anilistId && <button className="secondary" onClick={() => void refreshMetadata(item)}><RefreshCw />Refresh metadata</button></div></div>{parts.length > 0 && <div className="parts"><h3>Parts & seasons</h3>{parts.map(x => <button key={x.id} onClick={() => setSelectedPart(x, update)}><img src={x.poster}/><span>{x.title}</span><small>{x.progress}{x.total ? '/' + x.total : ''}</small></button>)}</div>}</aside></div>;
 }
 async function setSelectedPart(item: MediaItem, update: (x: MediaItem) => Promise<void>) { await update(item); }
 
