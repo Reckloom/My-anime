@@ -28,10 +28,19 @@ function mediumOf(m:AniMedia){
   return m.format==='MOVIE' ? 'movie' : 'anime';
 }
 async function fetchAniList(id:number){
-  const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id}})});
-  const json=await response.json();
-  if(!response.ok||json.errors?.length) throw new Error(json.errors?.[0]?.message||'AniList request failed.');
-  return json.data.Media as AniMedia;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id}}),signal:controller.signal});
+    let json:any;
+    try{json=await response.json()}catch{throw new Error('AniList returned an invalid response.')}
+    if(!response.ok||json.errors?.length) throw new Error(json.errors?.[0]?.message||'AniList request failed.');
+    if(!json.data?.Media) throw new Error('AniList returned no media data.');
+    return json.data.Media as AniMedia;
+  }catch(e){
+    if(e instanceof DOMException&&e.name==='AbortError') throw new Error('AniList request timed out.');
+    throw e;
+  }finally{clearTimeout(timer)}
 }
 function metadataRow(m:AniMedia){
   const title=titleOf(m);
