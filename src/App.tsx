@@ -152,11 +152,55 @@ export default function App() {
 
   const filtered = useMemo(() => {
     const normalized = q.trim().toLowerCase();
-    return items.filter(x =>
+    const matches = items.filter(x =>
       (!normalized || [x.title, x.description, x.notes ?? '', ...x.genres, ...x.themes].join(' ').toLowerCase().includes(normalized)) &&
       (status === 'all' || x.status === status) && (medium === 'all' || x.medium === medium)
-    ).sort((a, b) => sort === 'title' ? a.title.localeCompare(b.title) : sort === 'progress' ? b.progress - a.progress : sort === 'rating' ? (b.score ?? -1) - (a.score ?? -1) : 0);
+    );
+    // When a child matches a filter, retain every ancestor so the hierarchy stays understandable.
+    const visible = new Set(matches.map(x => x.id));
+    const byId = new Map(items.map(x => [x.id, x]));
+    for (const match of matches) {
+      let parent = match.parentId ? byId.get(match.parentId) : undefined;
+      let guard = 0;
+      while (parent && guard++ < 2000) {
+        visible.add(parent.id);
+        parent = parent.parentId ? byId.get(parent.parentId) : undefined;
+      }
+    }
+    return items.filter(x => visible.has(x.id)).sort((a, b) =>
+      sort === 'title' ? a.title.localeCompare(b.title) :
+      sort === 'progress' ? b.progress - a.progress :
+      sort === 'rating' ? (b.score ?? -1) - (a.score ?? -1) : 0
+    );
   }, [items, q, status, medium, sort]);
+
+  const hierarchyChildren = (parentId: string) => items.filter(x => x.parentId === parentId);
+  const descendants = (id: string) => {
+    const out = new Set<string>();
+    const queue = [id];
+    while (queue.length) {
+      const current = queue.shift()!;
+      for (const child of items.filter(x => x.parentId === current)) {
+        if (!out.has(child.id)) { out.add(child.id); queue.push(child.id); }
+      }
+    }
+    return out;
+  };
+  const hierarchyProgress = (item: MediaItem) => {
+    const children = hierarchyChildren(item.id);
+    if (!children.length) return { progress: item.progress, total: item.total };
+    const leaf = children.flatMap(child => {
+      const nested = hierarchyProgress(child);
+      return [{ progress: nested.progress, total: nested.total }];
+    });
+    const withTotals = leaf.filter(x => x.total != null && x.total > 0);
+    if (withTotals.length) {
+      const total = withTotals.reduce((n, x) => n + (x.total ?? 0), 0);
+      const progress = withTotals.reduce((n, x) => n + Math.min(x.progress, x.total ?? x.progress), 0);
+      return { progress, total };
+    }
+    return { progress: leaf.reduce((n, x) => n + x.progress, 0), total: undefined };
+  };
   const roots = items.filter(x => !x.parentId);
   const stats = { total: roots.length, watching: items.filter(x => x.status === 'watching').length, completed: items.filter(x => x.status === 'completed').length, favorites: items.filter(x => x.favorite).length };
 
@@ -177,9 +221,9 @@ export default function App() {
       {page === 'stats' && <Stats stats={stats} />}
     </>}
     <div className="mobilebar"><button onClick={() => setPage('home')}><Film />Home</button><button onClick={() => setPage('library')}><LibraryIcon />Library</button><button onClick={() => setPage('discover')}><Compass />Discover</button><button onClick={() => setPage('stats')}><BarChart3 />Stats</button></div>
-    {selected && <Drawer item={selected} parts={items.filter(x => x.parentId === selected.id)} close={() => setSelected(null)} edit={() => setEditMode(true)} update={update} remove={() => void remove(selected)} refresh={(item) => void refreshMetadata(item)} />}
-    {editMode && selected && <Editor item={selected} close={() => setEditMode(false)} save={update} />}
-    {addMode && <Editor item={defaultItem} close={() => setAddMode(false)} save={add} isNew />}
+    {selected && <Drawer item={selected} parts={hierarchyChildren(selected.id)} allItems={items} summary={hierarchyProgress(selected)} close={() => setSelected(null)} open={setSelected} edit={() => setEditMode(true)} update={update} remove={() => void remove(selected)} refresh={(item) => void refreshMetadata(item)} />}
+    {editMode && selected && <Editor item={selected} close={() => setEditMode(false)} save={update} parentOptions={items.filter(x => x.id !== selected.id && !descendants(selected.id).has(x.id))} />}
+    {addMode && <Editor item={defaultItem} close={() => setAddMode(false)} save={add} isNew parentOptions={items} />}
     {menu && <MenuPanel close={() => setMenu(false)} page={page} setPage={setPage} />}
     {aniSearchOpen && <AniListSearch close={() => setAniSearchOpen(false)} onImported={() => { setAniSearchOpen(false); window.location.reload(); }} />}
   </div>;
@@ -203,13 +247,15 @@ function Discover({ open }: { open: (x: MediaItem) => void }) { return <main cla
 function Calendar({ items }: { items: MediaItem[] }) { return <main className="page"><small>RELEASE RADAR</small><h1>Never miss what comes next.</h1><div className="releases">{items.filter(x => x.status === 'watching').map(x => <div key={x.id}><img src={x.poster}/><section><b>{x.title}</b><span>{x.nextReleaseNumber ? 'Episode ' + x.nextReleaseNumber : 'Tracking ready'}</span><small>{x.nextRelease || 'Release tracking will be connected in a later phase.'}</small></section><CalendarDays /></div>)}</div></main> }
 function Stats({ stats }: { stats: { total: number; watching: number; completed: number; favorites: number } }) { return <main className="page"><small>STATISTICS</small><h1>Your media, measured.</h1><div className="bigstats"><Stat n={stats.total} t="Library" /><Stat n={stats.watching} t="Watching" /><Stat n={stats.completed} t="Completed" /><Stat n={stats.favorites} t="Favorites" /></div></main> }
 
-function Drawer({ item, parts, close, edit, update, remove, refresh }: { item: MediaItem; parts: MediaItem[]; close: () => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void; refresh: (x: MediaItem) => void }) {
+function Drawer({ item, parts, allItems, summary, close, open, edit, update, remove, refresh }: { item: MediaItem; parts: MediaItem[]; allItems: MediaItem[]; summary: { progress: number; total?: number }; close: () => void; open: (x: MediaItem) => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void; refresh: (x: MediaItem) => void }) {
   const [savingFavorite, setSavingFavorite] = useState(false);
   const toggleFavorite = async () => {
     setSavingFavorite(true);
     await update({ ...item, favorite: !item.favorite });
     setSavingFavorite(false);
   };
+  const parent = item.parentId ? allItems.find(x => x.id === item.parentId) : undefined;
+  const childCount = parts.length;
   return (
     <div className="overlay">
       <aside className="drawer">
@@ -218,14 +264,15 @@ function Drawer({ item, parts, close, edit, update, remove, refresh }: { item: M
         <div className="detail">
           <img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} />
           <div>
+            {parent && <button className="breadcrumb" onClick={() => open(parent)}>← {parent.title}</button>}
             <small>{labelMedium(item.medium)} · {labelStatus(item.status)}{item.anilistId ? ' · AniList #' + item.anilistId : ''}</small>
             <h1>{item.title}</h1>
             {item.alternativeTitles?.length ? <p className="alt-titles"><b>Also known as:</b> {item.alternativeTitles.join(' · ')}</p> : null}
             <p>{item.description || 'No description available.'}</p>
             {item.notes && <div className="notes"><b>Notes</b><p>{item.notes}</p></div>}
             <div className="tags">{item.genres.map(x => <span key={x}>{x}</span>)}</div>
-            <div className="bar"><i style={{ width: (item.total ? Math.min(100, item.progress / item.total * 100) : item.progress / 20) + '%' }} /></div>
-            <div className="meta"><span>{item.progress}{item.total ? ' / ' + item.total : ''}</span><span>{item.year || '—'}</span><span>★ {item.score ?? '—'}</span></div>
+            <div className="bar"><i style={{ width: (summary.total ? Math.min(100, summary.progress / summary.total * 100) : Math.min(100, summary.progress / 20)) + '%' }} /></div>
+            <div className="meta"><span>{summary.progress}{summary.total ? ' / ' + summary.total : ''}{childCount ? ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') : ''}</span><span>{item.year || '—'}</span><span>★ {item.score ?? '—'}</span></div>
             {item.season && <div className="info-line">Season: {item.season} {item.year ?? ''}</div>}
             {item.duration && <div className="info-line">Duration: {item.duration} min · {item.airStart || '—'}{item.airEnd ? ' → ' + item.airEnd : ''}</div>}
             {item.studio && <div className="info-line">Studio: {item.studio}</div>}
@@ -238,16 +285,15 @@ function Drawer({ item, parts, close, edit, update, remove, refresh }: { item: M
             </div>
           </div>
         </div>
-        {parts.length > 0 && <div className="parts"><h3>Parts & seasons</h3>{parts.map(x =>
-          <button key={x.id} onClick={() => close()}><img src={x.poster} /><span>{x.title}</span><small>{x.progress}{x.total ? '/' + x.total : ''}</small></button>
+        {parts.length > 0 && <div className="parts"><h3>{item.parentId ? 'Child parts' : 'Seasons & parts'}</h3>{parts.map(x =>
+          <button key={x.id} onClick={() => open(x)}><img src={x.poster || 'https://placehold.co/240x360/111116/777?text=FRAME'} /><span>{x.title}</span><small>{labelStatus(x.status)} · {x.progress}{x.total ? '/' + x.total : ''}</small></button>
         )}</div>}
       </aside>
     </div>
   );
 }
-async function setSelectedPart(item: MediaItem, update: (x: MediaItem) => Promise<void>) { await update(item); }
 
-function Editor({ item, close, save, isNew = false }: { item: MediaItem; close: () => void; save: (x: MediaItem) => Promise<void> | void; isNew?: boolean }) {
+function Editor({ item, close, save, isNew = false, parentOptions = [] }: { item: MediaItem; close: () => void; save: (x: MediaItem) => Promise<void> | void; isNew?: boolean; parentOptions?: MediaItem[] }) {
   const [d, setD] = useState(item); const [saving, setSaving] = useState(false);
   const set = (k: keyof MediaItem, v: unknown) => setD(x => ({ ...x, [k]: v }));
   const submit = async () => { if (!d.title.trim()) return; if (d.progress < 0 || d.progress > 2000 || (d.total != null && d.total < 0)) return; setSaving(true); await save({ ...d, title: d.title.trim(), progress: Math.min(2000, Math.max(0, Math.round(d.progress))) }); setSaving(false); };
@@ -255,6 +301,7 @@ function Editor({ item, close, save, isNew = false }: { item: MediaItem; close: 
     <label>Title<input value={d.title} onChange={e => set('title', e.target.value)} autoFocus /></label>
     <label>Media type<select value={d.medium} onChange={e => set('medium', e.target.value as Medium)}>{mediaTypes.map(x => <option key={x} value={x}>{labelMedium(x)}</option>)}</select></label>
     <label>Status<select value={d.status} onChange={e => set('status', e.target.value as Status)}>{statuses.map(x => <option key={x} value={x}>{labelStatus(x)}</option>)}</select></label>
+    <label>Parent media<select value={d.parentId ?? ''} onChange={e => set('parentId', e.target.value || undefined)}><option value="">No parent (top level)</option>{parentOptions.map(x => <option key={x.id} value={x.id}>{x.title}</option>)}</select></label>
     <label>Progress (0–2000)<input type="number" min="0" max="2000" value={d.progress} onChange={e => set('progress', Number(e.target.value))} /></label>
     <label>Total episodes / chapters<input type="number" min="0" value={d.total ?? ''} onChange={e => set('total', e.target.value ? Number(e.target.value) : undefined)} /></label>
     <label>Year<input type="number" min="0" value={d.year ?? ''} onChange={e => set('year', e.target.value ? Number(e.target.value) : undefined)} /></label>
