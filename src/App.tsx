@@ -5,6 +5,7 @@ import { signOut, useAuth } from './auth/Auth';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import type { MediaItem, Status, Medium } from './types';
 import { AniListSearch } from './components/AniListSearch';
+import { aniList, cleanDescription, DETAIL_QUERY, type AniListMedia } from './anilist';
 
 const STORE = 'frame-my-anime-v1';
 type SortMode = 'recent' | 'title' | 'progress' | 'rating';
@@ -128,6 +129,27 @@ export default function App() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not delete media.'); }
   };
 
+  const refreshMetadata = async (item: MediaItem) => {
+    if (!item.anilistId) { setError('This item has no AniList ID.'); return; }
+    setError(''); setNotice('');
+    try {
+      if (supabase && user) {
+        const { error: e } = await supabase.functions.invoke('anilist-import', { body: { action: 'refresh', anilistId: item.anilistId, mediaItemId: item.id } });
+        if (e) throw e;
+        const { data, error: loadError } = await supabase.from('media_items').select('*,media_metadata(*)').eq('id', item.id).single();
+        if (loadError) throw loadError;
+        const saved = fromRow(data);
+        setItems(prev => prev.map(x => x.id === item.id ? saved : x));
+        setSelected(saved); setNotice('AniList metadata refreshed.');
+      } else {
+        const { Media } = await aniList<{ Media: AniListMedia }>(DETAIL_QUERY, { id: item.anilistId });
+        const title = Media.title.userPreferred || Media.title.english || Media.title.romaji || Media.title.native || item.title;
+        const saved = { ...item, title, alternativeTitles: [Media.title.english, Media.title.romaji, Media.title.native, ...(Media.synonyms || [])].filter((x): x is string => Boolean(x && x !== title)), description: cleanDescription(Media.description), poster: Media.coverImage?.extraLarge || '', backdrop: Media.bannerImage || '', genres: Media.genres || [], themes: (Media.tags || []).map(x => x.name), year: Media.seasonYear ?? undefined, score: Media.averageScore == null ? undefined : Media.averageScore / 10, studio: Media.studios?.nodes?.map(x => x.name).join(', ') || undefined, source: Media.source || undefined, total: Media.episodes ?? item.total, season: Media.season || undefined, duration: Media.duration || undefined };
+        persistLocal(items.map(x => x.id === item.id ? saved : x)); setSelected(saved); setNotice('Metadata refreshed locally.');
+      }
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not refresh metadata.'); }
+  };
+
   const filtered = useMemo(() => {
     const normalized = q.trim().toLowerCase();
     return items.filter(x =>
@@ -184,7 +206,7 @@ function Stats({ stats }: { stats: { total: number; watching: number; completed:
 function Drawer({ item, parts, close, edit, update, remove, refresh }: { item: MediaItem; parts: MediaItem[]; close: () => void; edit: () => void; update: (x: MediaItem) => Promise<void>; remove: () => void; refresh: (x: MediaItem) => void }) {
   const [savingFavorite, setSavingFavorite] = useState(false);
   const toggleFavorite = async () => { setSavingFavorite(true); await update({ ...item, favorite: !item.favorite }); setSavingFavorite(false); };
-  return <div className="overlay"><aside className="drawer"><button className="close" onClick={close}><X /></button><div className="cover" style={{ backgroundImage: `linear-gradient(0deg,#111116,transparent),url(${item.backdrop})` }} /><div className="detail"><img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} /><div><small>{labelMedium(item.medium)} · {labelStatus(item.status)}</small><h1>{item.title}</h1><p>{item.description}</p>{item.notes && <div className="notes"><b>Notes</b><p>{item.notes}</p></div>}<div className="tags">{item.genres.map(x => <span key={x}>{x}</span>)}</div><div className="bar"><i style={{ width: (item.total ? Math.min(100, item.progress / item.total * 100) : item.progress / 20) + '%' }} /></div><div className="meta"><span>{item.progress}{item.total ? ' / ' + item.total : ''}</span><span>{item.year || '—'}</span><span>★ {item.score || '—'}</span></div><button className="primary" onClick={edit}><Pencil />Edit details</button><button className="secondary" disabled={savingFavorite} onClick={() => void toggleFavorite()}><Heart fill={item.favorite ? 'currentColor' : 'none'} />{item.favorite ? 'Unfavorite' : 'Favorite'}</button><button className="danger" onClick={remove}><Trash2 />Delete</button>{item.anilistId && <button className="secondary" onClick={() => void refreshMetadata(item)}><RefreshCw />Refresh metadata</button></div></div>{parts.length > 0 && <div className="parts"><h3>Parts & seasons</h3>{parts.map(x => <button key={x.id} onClick={() => setSelectedPart(x, update)}><img src={x.poster}/><span>{x.title}</span><small>{x.progress}{x.total ? '/' + x.total : ''}</small></button>)}</div>}</aside></div>;
+  return <div className="overlay"><aside className="drawer"><button className="close" onClick={close}><X /></button><div className="cover" style={{ backgroundImage: `linear-gradient(0deg,#111116,transparent),url(${item.backdrop})` }} /><div className="detail"><img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} /><div><small>{labelMedium(item.medium)} · {labelStatus(item.status)}</small><h1>{item.title}</h1><p>{item.description}</p>{item.notes && <div className="notes"><b>Notes</b><p>{item.notes}</p></div>}<div className="tags">{item.genres.map(x => <span key={x}>{x}</span>)}</div><div className="bar"><i style={{ width: (item.total ? Math.min(100, item.progress / item.total * 100) : item.progress / 20) + '%' }} /></div><div className="meta"><span>{item.progress}{item.total ? ' / ' + item.total : ''}</span><span>{item.year || '—'}</span><span>★ {item.score || '—'}</span></div><button className="primary" onClick={edit}><Pencil />Edit details</button><button className="secondary" disabled={savingFavorite} onClick={() => void toggleFavorite()}><Heart fill={item.favorite ? 'currentColor' : 'none'} />{item.favorite ? 'Unfavorite' : 'Favorite'}</button><button className="danger" onClick={remove}><Trash2 />Delete</button>{item.anilistId && <button className="secondary" onClick={() => refresh(item)}><RefreshCw />Refresh metadata</button></div></div>{parts.length > 0 && <div className="parts"><h3>Parts & seasons</h3>{parts.map(x => <button key={x.id} onClick={() => setSelectedPart(x, update)}><img src={x.poster}/><span>{x.title}</span><small>{x.progress}{x.total ? '/' + x.total : ''}</small></button>)}</div>}</aside></div>;
 }
 async function setSelectedPart(item: MediaItem, update: (x: MediaItem) => Promise<void>) { await update(item); }
 
