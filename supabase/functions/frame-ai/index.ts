@@ -27,12 +27,12 @@ Deno.serve(async req=>{
   const [{data:media,error:mediaError}]=await Promise.all([
     userClient.from('media_items').select('id,metadata_id,title,medium,status,progress,total,score,favorite,genres,themes,parent_id').order('created_at',{ascending:false}).limit(200)
   ]);
-  const ownedMetadata=[...new Set((media||[]).map(x=>String(x.metadata_id)).filter(Boolean))];
-  const {data:metadata,error:metaError}=ownedMetadata.length
-    ? await userClient.from('media_metadata').select('id,title,genres,themes,year,studio').in('id',ownedMetadata).limit(200)
+  const ownedMetadataIds=[...new Set((media||[]).map(x=>String(x.metadata_id)).filter(Boolean))];
+  const {data:metadata,error:metaError}=ownedMetadataIds.length
+    ? await userClient.from('media_metadata').select('id,title,genres,themes,year,studio').in('id',ownedMetadataIds).limit(200)
     : {data:[],error:null};
   if(mediaError||metaError) return reply({error:'Could not securely load your library.'},500);
-  const ownedMetadata=new Set((media||[]).map(x=>String(x.metadata_id)).filter(Boolean));
+  const ownedMetadata=new Set(ownedMetadataIds);
   const metadataRows=(metadata||[]).filter(x=>ownedMetadata.has(String(x.id))).slice(0,300);
   let releases:any[]=[];
   if(ownedMetadata.size){
