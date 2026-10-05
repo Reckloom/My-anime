@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Menu, Plus, Search, Heart, Bell, Play, X, Pencil, Save, Star, Film, Library as LibraryIcon, Compass, CalendarDays, BarChart3, Settings, Trash2, CheckCircle2, AlertCircle, Loader2, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { starterLibrary } from './data';
 import { signOut, useAuth } from './auth/Auth';
@@ -100,11 +102,14 @@ export default function App() {
     return () => { active = false; };
   }, [user]);
 
+  const metadataKey = useMemo(() => items.map(i => i.metadataId).filter(Boolean).sort().join(','), [items]);
+
   useEffect(() => {
-    if (!supabase || !user) { setReleases([]); return; }
+    if (!supabase || !user || !metadataKey) { setReleases([]); return; }
     let active = true;
-    supabase.from('media_releases').select('*,media_metadata(title,poster)').order('scheduled_at', { ascending: true }).limit(200).then(({ data, error: e }) => {
+    supabase.from('media_releases').select('*,media_metadata(title,poster)').in('media_metadata_id', metadataKey.split(',')).order('scheduled_at', { ascending: true }).limit(200).then(({ data, error: e }) => {
       if (!active) return;
+      if (e) setError('Could not load release data.');
       if (!e) setReleases((data ?? []).map((x: Record<string, unknown>) => ({
         id: String(x.id), mediaMetadataId: String(x.media_metadata_id), anilistId: Number(x.anilist_id),
         releaseType: String(x.release_type), releaseNumber: x.release_number == null ? undefined : Number(x.release_number),
@@ -115,7 +120,7 @@ export default function App() {
       })).filter(x => items.some(i => i.metadataId === x.mediaMetadataId)));
     });
     return () => { active = false; };
-  }, [user, items]);
+  }, [user, metadataKey]);
 
   useEffect(() => {
     if (!supabase || !user) { setActivity([]); setCollections([]); setTags([]); return; }
@@ -159,7 +164,38 @@ export default function App() {
     });
     return () => { active = false; };
   }, [user]);
-  const persistLocal = (next: MediaItem[]) => { setItems(next); localStorage.setItem(STORE, JSON.stringify(next)); };
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let listener: { remove: () => Promise<void> } | undefined;
+    void CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (editMode) { setEditMode(false); return; }
+      if (addMode) { setAddMode(false); return; }
+      if (aiOpen) { setAiOpen(false); return; }
+      if (aniSearchOpen) { setAniSearchOpen(false); return; }
+      if (menu) { setMenu(false); return; }
+      if (selected) { setSelected(null); return; }
+      if (page !== 'home') { setPage('home'); return; }
+      if (!canGoBack) void CapacitorApp.exitApp();
+    }).then(x => { listener = x; });
+    return () => { void listener?.remove(); };
+  }, [addMode, aiOpen, aniSearchOpen, editMode, menu, page, selected]);
+
+  useEffect(() => {
+    if (!(selected || editMode || addMode || menu || aniSearchOpen || aiOpen)) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (editMode) setEditMode(false);
+      else if (addMode) setAddMode(false);
+      else if (aiOpen) setAiOpen(false);
+      else if (aniSearchOpen) setAniSearchOpen(false);
+      else if (menu) setMenu(false);
+      else if (selected) setSelected(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [addMode, aiOpen, aniSearchOpen, editMode, menu, selected]);
+
+  const persistLocal = (next: MediaItem[]) => { setItems(next); try { localStorage.setItem(STORE, JSON.stringify(next)); } catch { setError('Local storage is unavailable or full. Your changes may not persist after reload.'); } };
   const saveCloud = async (item: MediaItem) => {
     if (!supabase || !user) return;
     const { data, error: e } = await supabase.from('media_items').upsert(toRow(item, user.id), { onConflict: 'id' }).select('*,media_metadata(*)').single();
@@ -347,12 +383,12 @@ export default function App() {
   const defaultItem: MediaItem = { id: crypto.randomUUID(), title: '', description: '', poster: '', backdrop: '', medium: 'anime', status: 'planned', progress: 0, genres: [], themes: [], favorite: false };
 
   return <div className="app">
-    <header className="top"><button className="icon" onClick={() => setMenu(true)}><Menu /></button><button className="logo" onClick={() => setPage('home')}><b>F</b>FRAME</button>
+    <header className="top"><button className="icon" onClick={() => setMenu(true)} aria-label="Open navigation"><Menu /></button><button className="logo" onClick={() => setPage('home')} aria-label="Go to FRAME home"><b>F</b>FRAME</button>
       <nav><button className={page === 'home' ? 'on' : ''} onClick={() => setPage('home')}>Home</button><button className={page === 'library' ? 'on' : ''} onClick={() => setPage('library')}>Library</button><button className={page === 'discover' ? 'on' : ''} onClick={() => setPage('discover')}>Discover</button><button className={page === 'calendar' ? 'on' : ''} onClick={() => setPage('calendar')}>Release Radar</button><button className={page === 'assistant' ? 'on' : ''} onClick={() => setPage('assistant')}>Assistant</button></nav>
       <div className="topright"><button className="notification-button" onClick={() => setPage('notifications')} aria-label="Notifications"><Bell size={17} />{notifications.filter(n => !n.readAt).length > 0 && <span>{notifications.filter(n => !n.readAt).length > 99 ? '99+' : notifications.filter(n => !n.readAt).length}</span>}</button><div className="search"><Search size={16} /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search library" /></div><button className="add" onClick={() => setAiOpen(true)} title="Ask FRAME Assistant"><SparklesIcon />Assistant</button><button className="add" onClick={() => setAniSearchOpen(true)}><Search size={17} />Find media</button><button className="add" onClick={() => { setAddMode(true); setError(''); }}><Plus size={17} />Add</button></div>
     </header>
-    {notice && <div className="toast success"><CheckCircle2 size={15} />{notice}<button onClick={() => setNotice('')}><X size={13}/></button></div>}
-    {error && <div className="toast error"><AlertCircle size={15} />{error}<button onClick={() => setError('')}><X size={13}/></button></div>}
+    {notice && <div className="toast success" role="status" aria-live="polite"><CheckCircle2 size={15} />{notice}<button onClick={() => setNotice('')}><X size={13}/></button></div>}
+    {error && <div className="toast error" role="alert"><AlertCircle size={15} />{error}<button onClick={() => setError('')}><X size={13}/></button></div>}
     {loading ? <Loading /> : <>
       {page === 'home' && <Home items={items} stats={stats} open={setSelected} />}
       {page === 'library' && <LibraryPage items={filtered} q={q} setQ={setQ} status={status} setStatus={setStatus} medium={medium} setMedium={setMedium} sort={sort} setSort={setSort} open={setSelected} />}
@@ -384,7 +420,7 @@ function AssistantPage({ ask }: { ask:(message:string)=>Promise<string> }) {
 function AssistantPanel({ ask, close }: { ask:(message:string)=>Promise<string>; close:()=>void }) {
   const [message,setMessage]=useState(''); const [answer,setAnswer]=useState(''); const [busy,setBusy]=useState(false);
   const submit=async()=>{if(!message.trim()||busy)return;setBusy(true);try{setAnswer(await ask(message.trim()))}catch(e){setAnswer(e instanceof Error?e.message:'Could not reach the assistant.')}finally{setBusy(false)}};
-  return <div className="assistant-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="assistant-panel"><header><div><small>FRAME AI</small><h2>Ask your library.</h2></div><button className="icon" onClick={close} aria-label="Close assistant"><X/></button></header><div className="assistant-prompts">{['What am I watching?','Recommend something from my library.','What is releasing next?'].map(x=><button key={x} className="secondary" onClick={()=>setMessage(x)}>{x}</button>)}</div>{answer&&<article className="assistant-answer"><b>FRAME Assistant</b><p>{answer}</p></article>}<textarea autoFocus value={message} onChange={e=>setMessage(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void submit()}}} placeholder="Ask anything about your media…" maxLength={2000}/><button className="primary" disabled={busy||!message.trim()} onClick={()=>void submit()}>{busy?'Thinking…':'Ask assistant'}</button></section></div>;
+  return <div className="assistant-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="assistant-panel" role="dialog" aria-modal="true" aria-label="FRAME Assistant"><header><div><small>FRAME AI</small><h2>Ask your library.</h2></div><button className="icon" onClick={close} aria-label="Close assistant"><X/></button></header><div className="assistant-prompts">{['What am I watching?','Recommend something from my library.','What is releasing next?'].map(x=><button key={x} className="secondary" onClick={()=>setMessage(x)}>{x}</button>)}</div>{answer&&<article className="assistant-answer"><b>FRAME Assistant</b><p>{answer}</p></article>}<textarea autoFocus value={message} onChange={e=>setMessage(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void submit()}}} placeholder="Ask anything about your media…" maxLength={2000}/><button className="primary" disabled={busy||!message.trim()} onClick={()=>void submit()}>{busy?'Thinking…':'Ask assistant'}</button></section></div>;
 }
 
 function Home({ items, stats, open }: { items: MediaItem[]; stats: { total: number; watching: number; completed: number; favorites: number }; open: (x: MediaItem) => void }) {
@@ -394,7 +430,7 @@ function Home({ items, stats, open }: { items: MediaItem[]; stats: { total: numb
 }
 function Stat({ n, t }: { n: number; t: string }) { return <div><b>{n}</b><span>{t}</span></div> }
 function Shelf({ title, items, open }: { title: string; items: MediaItem[]; open: (x: MediaItem) => void }) { return <section className="shelf"><div className="heading"><h2>{title}</h2><span>{items.length}</span></div>{items.length ? <div className="cards">{items.map(x => <Card key={x.id} item={x} open={open} />)}</div> : <p className="muted">Nothing here yet.</p>}</section> }
-function Card({ item, open }: { item: MediaItem; open: (x: MediaItem) => void }) { return <button className="card" onClick={() => open(item)}><img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} /><strong>{item.title || 'Untitled'}</strong><small>{item.progress}{item.total ? '/' + item.total : ''} · {labelStatus(item.status)}</small>{item.favorite && <Heart className="heart" fill="currentColor" />}</button> }
+function Card({ item, open }: { item: MediaItem; open: (x: MediaItem) => void }) { return <button className="card" onClick={() => open(item)}><img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} alt={item.title} loading="lazy" decoding="async" /><strong>{item.title || 'Untitled'}</strong><small>{item.progress}{item.total ? '/' + item.total : ''} · {labelStatus(item.status)}</small>{item.favorite && <Heart className="heart" fill="currentColor" />}</button> }
 
 function LibraryPage({ items, q, setQ, status, setStatus, medium, setMedium, sort, setSort, open }: { items: MediaItem[]; q: string; setQ: (x: string) => void; status: Status | 'all'; setStatus: (x: Status | 'all') => void; medium: Medium | 'all'; setMedium: (x: Medium | 'all') => void; sort: SortMode; setSort: (x: SortMode) => void; open: (x: MediaItem) => void }) {
   return <main className="page"><small>YOUR LIBRARY</small><h1>Everything you follow.</h1><div className="library-toolbar"><div className="search library-search"><Search size={16}/><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search title, genres, notes…" /></div><div className="filters"><select value={status} onChange={e => setStatus(e.target.value as Status | 'all')}><option value="all">All status</option>{statuses.map(x => <option key={x} value={x}>{labelStatus(x)}</option>)}</select><select value={medium} onChange={e => setMedium(e.target.value as Medium | 'all')}><option value="all">All media</option>{mediaTypes.map(x => <option key={x} value={x}>{labelMedium(x)}</option>)}</select><select value={sort} onChange={e => setSort(e.target.value as SortMode)}><option value="recent">Recently added</option><option value="title">Title</option><option value="progress">Progress</option><option value="rating">Rating</option></select><ArrowUpDown size={15}/></div></div>{items.length ? <div className="grid">{items.map(x => <Card key={x.id} item={x} open={open} />)}</div> : <Empty title="No matching media." text="Try another search or filter, or add something new." />}</main>;
@@ -405,7 +441,7 @@ function Calendar({ releases }: { releases: Release[] }) {
   const now = Date.now();
   const upcoming = releases.filter(x => x.status === 'scheduled' && x.scheduledAt && new Date(x.scheduledAt).getTime() >= now).sort((a,b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
   const recent = releases.filter(x => (x.status === 'released' || (x.scheduledAt && new Date(x.scheduledAt).getTime() < now)) && x.scheduledAt).sort((a,b) => new Date(b.scheduledAt!).getTime() - new Date(a.scheduledAt!).getTime()).slice(0, 30);
-  const row = (x: Release) => <div key={x.id} className={x.status === 'cancelled' ? 'cancelled' : ''}><img src={x.poster || 'https://placehold.co/240x360/111116/777?text=FRAME'} /><section><b>{x.mediaTitle || x.title || 'Unknown media'}</b><span>{x.releaseType === 'episode' && x.releaseNumber != null ? 'Episode ' + x.releaseNumber : x.releaseType}</span><small>{x.status === 'cancelled' ? 'Cancelled' : x.scheduledAt ? new Date(x.scheduledAt).toLocaleString() : 'Date unknown'}</small></section><CalendarDays /></div>;
+  const row = (x: Release) => <div key={x.id} className={x.status === 'cancelled' ? 'cancelled' : ''}><img src={x.poster || 'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async" /><section><b>{x.mediaTitle || x.title || 'Unknown media'}</b><span>{x.releaseType === 'episode' && x.releaseNumber != null ? 'Episode ' + x.releaseNumber : x.releaseType}</span><small>{x.status === 'cancelled' ? 'Cancelled' : x.scheduledAt ? new Date(x.scheduledAt).toLocaleString() : 'Date unknown'}</small></section><CalendarDays /></div>;
   return <main className="page"><small>RELEASE RADAR</small><h1>Never miss what comes next.</h1><p className="muted">Release data is refreshed automatically by the server-side tracker. Your library status and progress remain separate.</p><section className="release-section"><div className="heading"><h2>Upcoming</h2><span>{upcoming.length}</span></div><div className="releases">{upcoming.length ? upcoming.map(row) : <p className="muted">No upcoming releases currently known.</p>}</div></section><section className="release-section"><div className="heading"><h2>Recently released</h2><span>{recent.length}</span></div><div className="releases">{recent.length ? recent.map(row) : <p className="muted">No recent releases currently known.</p>}</div></section></main>;
 }
 function NotificationsPage({ notifications, markRead, markAll }: { notifications:Notification[]; markRead:(id:string)=>void; markAll:()=>void }) {
@@ -463,9 +499,9 @@ function Drawer({ item, parts, allItems, summary, close, open, edit, update, rem
   const parent = item.parentId ? allItems.find(x => x.id === item.parentId) : undefined;
   const childCount = parts.length;
   return (
-    <div className="overlay">
+    <div className="overlay" role="dialog" aria-modal="true" aria-label="Media details">
       <aside className="drawer">
-        <button className="close" onClick={close}><X /></button>
+        <button className="close" onClick={close} aria-label="Close details"><X /></button>
         <div className="cover" style={{ backgroundImage: `linear-gradient(0deg,#111116,transparent),url(${item.backdrop})` }} />
         <div className="detail">
           <img src={item.poster || 'https://placehold.co/700x1000/111116/777?text=FRAME'} />
@@ -492,7 +528,7 @@ function Drawer({ item, parts, allItems, summary, close, open, edit, update, rem
           </div>
         </div>
         {parts.length > 0 && <div className="parts"><h3>{item.parentId ? 'Child parts' : 'Seasons & parts'}</h3>{parts.map(x =>
-          <button key={x.id} onClick={() => open(x)}><img src={x.poster || 'https://placehold.co/240x360/111116/777?text=FRAME'} /><span>{x.title}</span><small>{labelStatus(x.status)} · {x.progress}{x.total ? '/' + x.total : ''}</small></button>
+          <button key={x.id} onClick={() => open(x)}><img src={x.poster || 'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async" /><span>{x.title}</span><small>{labelStatus(x.status)} · {x.progress}{x.total ? '/' + x.total : ''}</small></button>
         )}</div>}
       </aside>
     </div>
@@ -502,8 +538,8 @@ function Drawer({ item, parts, allItems, summary, close, open, edit, update, rem
 function Editor({ item, close, save, isNew = false, parentOptions = [] }: { item: MediaItem; close: () => void; save: (x: MediaItem) => Promise<void> | void; isNew?: boolean; parentOptions?: MediaItem[] }) {
   const [d, setD] = useState(item); const [saving, setSaving] = useState(false);
   const set = (k: keyof MediaItem, v: unknown) => setD(x => ({ ...x, [k]: v }));
-  const submit = async () => { if (!d.title.trim()) return; if (d.progress < 0 || d.progress > 2000 || (d.total != null && d.total < 0)) return; setSaving(true); await save({ ...d, title: d.title.trim(), progress: Math.min(2000, Math.max(0, Math.round(d.progress))) }); setSaving(false); };
-  return <div className="modalwrap"><div className="modal"><div className="modalhead"><div><small>{isNew ? 'ADD TO LIBRARY' : 'EDITOR'}</small><h2>{isNew ? 'Add media' : 'Edit media'}</h2></div><button onClick={close}><X /></button></div><div className="form">
+  const submit = async () => { if (!d.title.trim()) return; if (d.progress < 0 || d.progress > 2000 || (d.total != null && d.total < 0)) return; setSaving(true); try { await save({ ...d, title: d.title.trim(), progress: Math.min(2000, Math.max(0, Math.round(d.progress))) }); } finally { setSaving(false); } };
+  return <div className="modalwrap" role="presentation"><div className="modal" role="dialog" aria-modal="true" aria-label={isNew ? "Add media" : "Edit media"}><div className="modalhead"><div><small>{isNew ? 'ADD TO LIBRARY' : 'EDITOR'}</small><h2>{isNew ? 'Add media' : 'Edit media'}</h2></div><button onClick={close}><X /></button></div><div className="form">
     <label>Title<input value={d.title} onChange={e => set('title', e.target.value)} autoFocus /></label>
     <label>Media type<select value={d.medium} onChange={e => set('medium', e.target.value as Medium)}>{mediaTypes.map(x => <option key={x} value={x}>{labelMedium(x)}</option>)}</select></label>
     <label>Status<select value={d.status} onChange={e => set('status', e.target.value as Status)}>{statuses.map(x => <option key={x} value={x}>{labelStatus(x)}</option>)}</select></label>
@@ -521,4 +557,4 @@ function Editor({ item, close, save, isNew = false, parentOptions = [] }: { item
     <label className="check"><input type="checkbox" checked={d.favorite} onChange={e => set('favorite', e.target.checked)} /> Favorite</label>
   </div><button className="primary save" disabled={saving || !d.title.trim()} onClick={() => void submit()}>{saving ? <><Loader2 className="spin"/>Saving…</> : <><Save />Save changes</>}</button></div></div>;
 }
-function MenuPanel({ close, page, setPage }: { close: () => void; page: string; setPage: (x: string) => void }) { const rows: [string, string, typeof Film][] = [['home','Home',Film],['library','Library',LibraryIcon],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays],['stats','Statistics',BarChart3],['notifications','Notifications',Bell],['settings','Settings',Settings]]; return <div className="menuoverlay" onClick={close}><aside className="menu" onClick={e => e.stopPropagation()}><div className="menulogo"><b>F</b>FRAME<button onClick={close}><X /></button></div>{rows.map(([id,label,Icon]) => <button className={page === id ? 'selected' : ''} key={id} onClick={() => {setPage(id);close();}}><Icon />{label}</button>)}<div className="menubottom"><button><Settings />Settings</button><button className="signout" onClick={() => void signOut()}>Log out</button><p>FRAME v2.0<br />Your personal media universe.</p></div></aside></div> }
+function MenuPanel({ close, page, setPage }: { close: () => void; page: string; setPage: (x: string) => void }) { const rows: [string, string, typeof Film][] = [['home','Home',Film],['library','Library',LibraryIcon],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays],['stats','Statistics',BarChart3],['notifications','Notifications',Bell],['settings','Settings',Settings]]; return <div className="menuoverlay" onClick={close}><aside className="menu" onClick={e => e.stopPropagation()}><div className="menulogo"><b>F</b>FRAME<button onClick={close} aria-label="Close navigation"><X /></button></div>{rows.map(([id,label,Icon]) => <button className={page === id ? 'selected' : ''} key={id} onClick={() => {setPage(id);close();}}><Icon />{label}</button>)}<div className="menubottom"><button><Settings />Settings</button><button className="signout" onClick={() => void signOut()}>Log out</button><p>FRAME v2.0<br />Your personal media universe.</p></div></aside></div> }
