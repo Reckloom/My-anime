@@ -2,7 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@^2';
 
 const OPENAI_URL='https://api.openai.com/v1/responses';
-const MODEL=Deno.env.get('FRAME_AI_MODEL') || 'gpt-5.6-luna';
+const MODEL=Deno.env.get('FRAME_AI_MODEL') || 'gpt-6-luna';
 const cors={ 'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Content-Type':'application/json' };
 function reply(body:unknown,status=200){return new Response(JSON.stringify(body),{status,headers:cors});}
 
