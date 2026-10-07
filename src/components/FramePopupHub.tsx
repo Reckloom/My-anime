@@ -6,7 +6,6 @@ type Profile={id:string;username:string;display_name:string};
 type Msg={id:string;user_id:string;body:string;created_at:string;profiles?:{display_name?:string;username?:string}|null};
 
 export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind:()=>void;onOpenCalls:()=>void;onCall:(friend:Profile)=>void}){
- if(uid==='guest')return null;
  const [open,setOpen]=useState(false),[panel,setPanel]=useState<'chat'|'call'|null>(null);
  const [messages,setMessages]=useState<Msg[]>([]),[draft,setDraft]=useState(''),[friends,setFriends]=useState<Profile[]>([]),[error,setError]=useState('');
  const loadChat=async()=>{
@@ -22,7 +21,7 @@ export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind
   const {data:p}=await supabase.from('profiles').select('id,username,display_name').in('id',ids);
   setFriends((p||[]) as Profile[]);
  };
- useEffect(()=>{void loadChat();void loadFriends();const t=window.setInterval(()=>{void loadChat();void loadFriends()},5000);return()=>window.clearInterval(t)},[uid]);
+ useEffect(()=>{if(uid==='guest')return;void loadChat();void loadFriends();const t=window.setInterval(()=>{void loadChat();void loadFriends()},5000);return()=>window.clearInterval(t)},[uid]);
  const send=async()=>{
   if(!supabase||!draft.trim())return;
   const body=draft.trim().slice(0,2000);
@@ -30,6 +29,7 @@ export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind
   if(data){setMessages(prev=>[...prev,{...(data as Msg),profiles:{display_name:'You'}}].slice(-60));setDraft('');setError('')}else setError('Message could not be sent.');
  };
  const choose=(next:'chat'|'call')=>{setOpen(true);setPanel(next)};
+ if(uid==='guest')return null;
  return <div className="frame-popup-system">
   <div className={'frame-popup-panel '+(open&&panel?'visible':'')} role="dialog" aria-label="FRAME quick panel">
    <header><div><small>FRAME QUICK</small><b>{panel==='chat'?'Global chat':'Voice calls'}</b></div><button aria-label="Minimize quick panel" onClick={()=>setPanel(null)}><Minimize2 size={15}/></button></header>
