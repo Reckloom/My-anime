@@ -45,10 +45,10 @@ export default {
   try{
    const scoped=ctx.supabase;
    const {data:items,error:itemError}=await scoped.from('media_items')
-     .select('id,title,anilist_id,progress,total,next_release,next_release_number')
+     .select('id,title,poster,anilist_id,progress,total,next_release,next_release_number')
      .eq('user_id',userId).not('anilist_id','is',null);
    if(itemError)throw itemError;
-   const tracked=(items||[]).map(x=>({id:String(x.id),title:String(x.title),anilistId:Number(x.anilist_id),progress:Number(x.progress||0),total:x.total==null?null:Number(x.total)}))
+   const tracked=(items||[]).map(x=>({id:String(x.id),title:String(x.title),poster:String(x.poster||''),anilistId:Number(x.anilist_id),progress:Number(x.progress||0),total:x.total==null?null:Number(x.total)}))
      .filter(x=>Number.isInteger(x.anilistId));
    if(!tracked.length)return json({ok:true,checked:0,releases:[],alerts:[]});
    const now=Math.floor(Date.now()/1000);
