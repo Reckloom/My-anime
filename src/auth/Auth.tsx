@@ -36,7 +36,7 @@ function AuthScreen(){
   event.preventDefault();if(!supabase)return;setBusy(true);reset();
   try{
    if(mode==='signup'){const {error:e}=await supabase.auth.signUp({email,password});if(e)throw e;setMessage('Account created. Check your email if confirmation is enabled.');setMode('login')}
-   else if(mode==='login'){localStorage.removeItem('frame-guest');const {error:e}=await supabase.auth.signInWithPassword({email,password});if(e)throw e}
+   else if(mode==='login'){const {error:e}=await supabase.auth.signInWithPassword({email,password});if(e)throw e}
    else if(mode==='reset'){const redirectTo=window.location.origin+window.location.pathname+'#reset';const {error:e}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});if(e)throw e;setMessage('If that email exists, a secure reset link has been sent.')}
    else {const {error:e}=await supabase.auth.updateUser({password});if(e)throw e;setMessage('Password updated. Continue into FRAME.');setMode('login');setPassword('')}
   }catch(e){setError(e instanceof Error?e.message:'Something went wrong. Please try again.')}
@@ -50,11 +50,11 @@ function AuthScreen(){
    {error&&<div className="auth-message error">{error}</div>}{message&&<div className="auth-message success">{message}</div>}
    {mode!=='update'&&<form onSubmit={submit}>{mode!=='reset'&&<label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required/></label>}{mode!=='reset'&&<label>Password<div className="pass-wrap"><input type={showPass?'text':'password'} autoComplete={mode==='login'?'current-password':'new-password'} minLength={6} value={password} onChange={e=>setPassword(e.target.value)} placeholder="At least 6 characters" required/><button type="button" onClick={()=>setShowPass(!showPass)}>{showPass?'Hide':'Show'}</button></div></label>}{mode==='reset'&&<label>Email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required/></label>}<button className="gate-submit" disabled={busy}>{busy?'Opening…':mode==='signup'?'Create account':mode==='reset'?'Send recovery link':'Enter FRAME'}</button></form>}
    {mode==='update'&&<form onSubmit={submit}><label>New password<div className="pass-wrap"><input type={showPass?'text':'password'} minLength={6} value={password} onChange={e=>setPassword(e.target.value)} required/><button type="button" onClick={()=>setShowPass(!showPass)}>{showPass?'Hide':'Show'}</button></div></label><button className="gate-submit" disabled={busy}>{busy?'Saving…':'Update password'}</button></form>}
-   {mode==='login'&&<div className="gate-links"><button onClick={()=>{setMode('reset');reset()}}>Forgot password?</button><button onClick={guest}>Enter as guest</button></div>}
+   {mode==='login'&&<div className="gate-links"><button onClick={()=>{setMode('reset');reset()}}>Forgot password?</button></div>}
    {mode==='reset'&&<button className="gate-link" onClick={()=>{setMode('login');reset()}}>Back to login</button>}
    {mode==='update'&&<button className="gate-link" onClick={()=>setMode('login')}>Back to login</button>}
    {(mode==='login'||mode==='signup')&&<p className="gate-switch">{mode==='login'?'New to FRAME?':'Already have an account?'} <button onClick={()=>{setMode(mode==='login'?'signup':'login');reset()}}>{mode==='login'?'Create account':'Sign in'}</button></p>}
   </div><div className="gate-footer"><Shield size={14}/> Your library is private unless you choose to share it.</div></section>
  </main>;
 }
-export async function signOut(){localStorage.removeItem('frame-guest');if(supabase)await supabase.auth.signOut()}
+export async function signOut(){if(supabase)await supabase.auth.signOut()}
