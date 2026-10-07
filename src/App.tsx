@@ -278,7 +278,10 @@ function Connections({connections,toggle:_toggle}:{connections:Record<string,boo
 
   <section className="connections-section">
    <div className="connections-section-head"><div><small>AI CONNECTIONS</small><h2>Server-side providers</h2></div><span>Configured per provider</span></div>
-   <div className="ai-connect-card"><Bot size={22}/><div><h2>FRAME AI</h2><p>Built-in secure provider. External OpenAI, Gemini and Claude connections remain opt-in and server-side; FRAME does not place their API keys in the browser.</p></div><span className="connection-status built-in">Built in</span></div>
+   <div className="connections-grid ai-provider-grid">
+    <div className="connection-card"><div className="connection-icon"><Bot size={19}/></div><div><b>FRAME AI</b><p>Secure built-in provider for library-aware questions and voice assistance.</p><small>Built in · ready</small></div><span className="connection-status built-in">Ready</span></div>
+    {['OpenAI','Gemini','Claude'].map(name=><div className="connection-card" key={name}><div className="connection-icon"><Bot size={19}/></div><div><b>{name}</b><p>Optional external provider connection for future server-side AI routing.</p><small>Connector · not configured</small></div><span className="connection-status not-configured">Not configured</span></div>)}
+   </div>
   </section>
  </div>;
 }
