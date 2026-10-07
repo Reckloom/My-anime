@@ -13,7 +13,7 @@ const links=(m:MediaItem)=>{const q=encodeURIComponent(m.title);return [
  {label:'IMDb',url:'https://www.imdb.com/find/?q='+q},{label:'JustWatch',url:'https://www.justwatch.com/in/search?q='+q},{label:'Google',url:'https://www.google.com/search?q='+q+' official watch buy'}
  ].filter(Boolean) as {label:string;url:string}[]};
 
-export function FrameDetail({item,library,close,save,onRefreshMetadata,onDelete}:{item:MediaItem;library:MediaItem[];close:()=>void;save:(x:MediaItem)=>void;onRefreshMetadata?: (item:MediaItem)=>Promise<MediaItem>;onDelete?: (id:string)=>Promise<void>}){
+export function FrameDetail({item,library,close,save,onRefreshMetadata,onDelete}:{item:MediaItem;library:MediaItem[];close:()=>void;save:(x:MediaItem)=>void|Promise<boolean>;onRefreshMetadata?: (item:MediaItem)=>Promise<MediaItem>;onDelete?: (id:string)=>Promise<void>}){
  const [d,setD]=useState(item),[note,setNote]=useState(item.notes||''),[refreshing,setRefreshing]=useState(false),[refreshMessage,setRefreshMessage]=useState('');
  const game=d.medium==='game',movie=d.medium==='movie',max=game?100:movie?1:(d.total||500),pct=game||movie?d.progress:(d.progress/(d.total||1)*100);
  const canUseAsParent=(candidate:MediaItem)=>{if(candidate.id===d.id)return false;let cursor:MediaItem|undefined=candidate;let hops=0;while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=library.find(x=>x.id===cursor?.parentId);hops++}return true};
