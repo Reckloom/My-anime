@@ -94,7 +94,7 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
  if(provider==='book'){
   const res=await fetch('https://openlibrary.org/search.json?q='+q+'&limit=12&fields=key,title,author_name,first_publish_year,cover_i');if(!res.ok)throw new Error('Book catalogue is temporarily unavailable.');
   const data=await res.json() as {docs?:any[]};
-  return (data.docs||[]).map(x=>({provider:'openlibrary',externalId:String(x.key||'').replace(/^\\/works\\//,''),title:String(x.title||term),medium:'book',poster:x.cover_i?'https://covers.openlibrary.org/b/id/'+x.cover_i+'-L.jpg':undefined,description:x.author_name?.length?'By '+x.author_name.slice(0,3).join(', '):'',year:x.first_publish_year?Number(x.first_publish_year):undefined,sourceUrl:x.key?'https://openlibrary.org'+x.key:undefined,source:'openlibrary',genres:[]}));
+  return (data.docs||[]).map(x=>({provider:'openlibrary',externalId:String(x.key||'').replace(/^\/works\//,''),title:String(x.title||term),medium:'book',poster:x.cover_i?'https://covers.openlibrary.org/b/id/'+x.cover_i+'-L.jpg':undefined,description:x.author_name?.length?'By '+x.author_name.slice(0,3).join(', '):'',year:x.first_publish_year?Number(x.first_publish_year):undefined,sourceUrl:x.key?'https://openlibrary.org'+x.key:undefined,source:'openlibrary',genres:[]}));
  }
  if(provider==='movie'){
   const url='https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+q+'&gsrnamespace=0&gsrlimit=12&prop=extracts|pageimages|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=400&format=json&origin=*';
