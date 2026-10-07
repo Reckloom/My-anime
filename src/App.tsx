@@ -1,11 +1,12 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Home as HomeIcon,Library,Link2,LogOut,Menu,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
+import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Home as HomeIcon,Library,Link2,LogOut,Menu,Phone,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
 import {FrameAI} from './components/FrameAI';
 import {FrameDetail} from './components/FrameDetail';
 import {FrameSocial,VoiceCall} from './components/FrameSocial';
+import {CallsPage} from './components/FrameCalls';
 import {supabase} from './lib/supabase';
 
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
@@ -129,7 +130,7 @@ export default function App(){
   <header className="frame-topbar">
    <button className="frame-brand" onClick={()=>go('home')}><span>F</span><b>FRAME</b></button>
    <nav className="frame-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['radar','Radar'],CalendarDays],[['ai','AI'],Bot],[['friends','Friends'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
+    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['radar','Radar'],CalendarDays],[['ai','AI'],Bot],[['friends','Friends'],Users],[['calls','Calls'],Phone]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
    </nav>
    <div className="frame-actions">
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
@@ -140,14 +141,14 @@ export default function App(){
     <button className="top-icon mobile-only" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['ai','AI'],['friends','Friends'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['ai','AI'],['friends','Friends'],['calls','Calls'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
    {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go}/>}
    {page==='library'&&<LibraryPage items={shown} filter={filter} setFilter={setFilter} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)}/>}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} ai={()=>go('ai')}/>}
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
    {page==='ai'&&<FrameAI items={items} provider={aiProvider} setProvider={x=>{setAiProvider(x);void persist('ai_provider',x)}}/>}
-   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setCall}/>}
+   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setCall}/>}\n   {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
    {page==='connections'&&<Connections connections={connections} toggle={updateConnection}/>}
    {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}}/>}
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
