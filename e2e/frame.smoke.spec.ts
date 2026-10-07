@@ -19,7 +19,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByLabel('Title').fill('FRAME QA Test Title');
     await page.getByRole('button', { name: 'Add to my library' }).click();
 
-    await expect(page.getByText('FRAME QA Test Title', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'FRAME QA Test Title', exact: true })).toBeVisible();
   });
 
   test('opens Settings and switches appearance controls', async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Nothing', exact: true }).click();
+    await page.getByRole('button', { name: /Nothing Dot-matrix industrial/ }).click();
     await expect(page.getByText('Nothing is active.', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Dark', exact: true }).click();
@@ -37,15 +37,15 @@ test.describe('FRAME core smoke flow', () => {
   test('opens every primary page without crashing', async ({ page }) => {
     await page.goto('/');
     const targets: Array<[string, RegExp]> = [
-      ['Library', /Library/],
-      ['Discover', /Discover/],
+      ['Library', /^Library$/],
+      ['Discover', /Explore everything\./],
       ['Web', /Google Search/],
-      ['Radar', /Release Radar|Radar/],
-      ['AI', /FRAME AI|AI/],
-      ['Friends', /Friends/],
-      ['Chat', /Global Chat|Chat/],
-      ['Calls', /Calls|Voice/],
-      ['Settings', /Settings/],
+      ['Radar', /Release Radar/],
+      ['AI', /AI Search/],
+      ['Friends', /^Friends$/],
+      ['Chat', /Global Chat/],
+      ['Calls', /^Calls$/],
+      ['Settings', /^Settings$/],
     ];
 
     for (const [button, heading] of targets) {
