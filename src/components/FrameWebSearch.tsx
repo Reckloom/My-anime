@@ -3,6 +3,7 @@ import {ExternalLink,Globe,Loader2,Search} from 'lucide-react';
 import {supabase} from '../lib/supabase';
 
 type WebResult={title:string;link:string;snippet?:string;displayLink?:string};
+
 export function FrameWebSearch(){
  const [query,setQuery]=useState(''),[results,setResults]=useState<WebResult[]>([]),[loading,setLoading]=useState(false),[message,setMessage]=useState('');
  const run=async()=>{
@@ -16,14 +17,20 @@ export function FrameWebSearch(){
       if(!(data as any).results?.length)setMessage('Google returned no matching pages.');
       return;
     }
-    if((data as any)?.fallbackUrl) setMessage('In-site Google results are not configured, so FRAME will open the same search in Google.');
+    if((data as any)?.fallbackUrl){
+      window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank','noopener,noreferrer');
+      setMessage('Google results opened in a new tab because in-site Google results are not configured.');
+      return;
+    }
    }
+   window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank','noopener,noreferrer');
+   setMessage('Google results opened in a new tab.');
   }catch{
-   setMessage('In-site search could not connect, so FRAME will open Google directly.');
+   window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank','noopener,noreferrer');
+   setMessage('In-site search could not connect, so Google results were opened.');
+  }finally{
+   setLoading(false);
   }
-  window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank','noopener,noreferrer');
-  setMessage('Google results opened in a new tab.');
-  }finally{setLoading(false)}
  };
  return <div className="page web-search-page">
   <div className="page-heading"><div><small>WEB DISCOVERY</small><h1>Google Search</h1><p>Search the wider web from inside FRAME. Media catalogue search remains available through the universal finder.</p></div></div>
