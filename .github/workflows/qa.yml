@@ -23,6 +23,6 @@ jobs:
       - name: Build FRAME
         run: npm run build
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Run browser smoke tests
         run: npx playwright test
