@@ -19,7 +19,7 @@ export interface GameDetails{
 }
 
 export interface MediaItem{
- id:string; parentId?:string; metadataId?:string; anilistId?:number;
+ id:string; parentId?:string; metadataId?:string; anilistId?:number; sourceProvider?:string; externalId?:string;
  title:string; alternativeTitles?:string[]; description:string; poster:string; backdrop:string;
  medium:Medium; status:Status; progress:number; total?:number; year?:number; score?:number;
  genres:string[]; themes:string[]; studio?:string; source?:string; season?:string; duration?:number;
