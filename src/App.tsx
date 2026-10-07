@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
+import {Bot,CalendarDays,ChevronRight,CirclePlus,Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
@@ -108,7 +108,7 @@ export default function App(){
     if(created)setProfile(created as Profile);
    }
    const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
-   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'));const savedTheme=String(prefs.theme||'sky');setTheme((['sky','samsung','apple','oneplus','nothing','amoled'].includes(savedTheme)?savedTheme:'sky'));setAppearanceMode((['light','dark','system'].includes(String(prefs.appearance_mode))?String(prefs.appearance_mode):'light') as 'light'|'dark'|'system')}
+   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'));const savedTheme=String(prefs.theme||'sky');setTheme((['sky','samsung','apple','oneplus','nothing','amoled','pixel','material','retro'].includes(savedTheme)?savedTheme:'sky'));setAppearanceMode((['light','dark','system'].includes(String(prefs.appearance_mode))?String(prefs.appearance_mode):'light') as 'light'|'dark'|'system')}
   };
   void load();
   return()=>{active=false};
@@ -171,7 +171,7 @@ export default function App(){
   <header className="frame-topbar">
    <button className="frame-brand" onClick={()=>go('home')}><span>F</span><b>FRAME</b></button>
    <nav className="frame-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['radar','Radar'],CalendarDays],[['ai','AI'],Bot],[['friends','Friends'],Users],[['chat','Chat'],MessageCircle],[['calls','Calls'],Phone]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
+    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['web','Web'],Globe],[['radar','Radar'],CalendarDays],[['ai','AI'],Bot],[['friends','Friends'],Users],[['chat','Chat'],MessageCircle],[['calls','Calls'],Phone]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
    </nav>
    <div className="frame-actions">
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
