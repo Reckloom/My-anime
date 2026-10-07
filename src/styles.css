@@ -38,3 +38,11 @@ html{background:#09090d;scroll-behavior:smooth}body{overflow-x:hidden}button,a,i
 .catalog-tabs button{border:1px solid #ffffff12;background:#ffffff05;color:#999;border-radius:8px;padding:9px 12px;font-size:11px}
 .catalog-tabs button:hover,.catalog-tabs button.active{background:#ffffff0c;color:#fff;border-color:#ffffff20}
 .manual-fallback{width:100%;justify-content:center;margin-top:12px}
+
+/* Universal discovery */
+.catalog-tabs-wide{overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;align-items:stretch}
+.catalog-tabs-wide button{display:flex;align-items:center;gap:6px;white-space:nowrap;min-height:42px}
+.catalog-tabs-wide button small{display:block;margin-left:1px;color:#666;font-size:8px}
+.catalog-tabs-wide button.active small,.catalog-tabs-wide button:hover small{color:#aaa}
+.info-line{word-break:break-all}
+@media(max-width:700px){.catalog-tabs-wide{display:grid;grid-template-columns:1fr 1fr}.catalog-tabs-wide button{justify-content:flex-start}.catalog-tabs-wide button small{margin-left:auto}}
