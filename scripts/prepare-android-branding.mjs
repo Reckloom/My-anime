@@ -26,10 +26,13 @@ const colorsUrl = new URL('values/colors.xml', root);
 await mkdir(new URL('.', colorsUrl), { recursive: true });
 let colors = '';
 try { colors = await readFile(colorsUrl, 'utf8'); } catch {}
+if (!colors.includes('<resources')) {
+  colors = '<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n</resources>\\n';
+}
 if (!colors.includes('frame_background')) {
   colors = colors.replace('</resources>', '  <color name="frame_background">#09090D</color>\\n</resources>');
-  await writeFile(colorsUrl, colors, 'utf8');
 }
+await writeFile(colorsUrl, colors, 'utf8');
 
 for (const name of ['ic_launcher.xml', 'ic_launcher_round.xml']) {
   await write(`mipmap-anydpi-v26/${name}`, `<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@color/frame_background"/><foreground android:drawable="@drawable/frame_icon_foreground"/></adaptive-icon>\\n`);
