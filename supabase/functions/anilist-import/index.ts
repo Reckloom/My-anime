@@ -163,7 +163,7 @@ export default {
       return Response.json({error:'Invalid JSON request.'},{status:400});
     }
 
-    const userId=ctx.userClaims?.sub;
+    const userId=ctx.userClaims?.id;
     if(!userId) return Response.json({error:'Authenticated user required.'},{status:401});
 
     const action=String(body?.action||'import');
