@@ -11,6 +11,7 @@ import {CallsPage} from './components/FrameCalls';
 import {FrameDirectCall} from './components/FrameDirectCall';
 import {FrameWebSearch} from './components/FrameWebSearch';
 import {FrameQuickDock} from './components/FrameQuickDock';
+import {FramePopupHub} from './components/FramePopupHub';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
 
@@ -204,7 +205,7 @@ export default function App(){
   {selected&&<FrameDetail item={selected} library={items} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>}
   {finder&&<AniListSearch initialQuery={query} close={()=>setFinder(false)} onImported={importItem} onManual={()=>setFinder(false)} onAi={()=>{setFinder(false);go('ai')}}/>}
   {!guest&&<FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/>} 
-  <FrameQuickDock onChat={()=>go('chat')} onCall={()=>go('calls')} onSearch={()=>setFinder(true)}/>
+  <FramePopupHub uid={uid} onFind={()=>setFinder(true)} onOpenCalls={()=>go('calls')} onCall={setDirectCall}/>
  </div>;
 }
 
