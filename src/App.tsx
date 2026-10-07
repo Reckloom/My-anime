@@ -86,7 +86,7 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
   }catch{return[]}
  });
  const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sortMode,setSortMode]=useState('rating');
- const [finder,setFinder]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null);
+ const [finder,setFinder]=useState(false),[manualEntry,setManualEntry]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null),[appMessage,setAppMessage]=useState('');
  const [directCall,setDirectCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null),[commandOpen,setCommandOpen]=useState(false);
  const [radar,setRadar]=useState<Radar[]>([]),[radarBusy,setRadarBusy]=useState(false),[radarError,setRadarError]=useState('');
  const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('sky'),[appearanceMode,setAppearanceMode]=useState<'light'|'dark'|'system'>('light');
@@ -130,9 +130,16 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
   void load();
  },[user?.id]);
 
- const save=(list:MediaItem[])=>{
+ const save=async(list:MediaItem[])=>{
   const next=list.map(normalise);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
-  const client=supabase;if(client&&user?.id)void Promise.all(next.map(item=>client.from('media_items').upsert(toRow(item,user.id),{onConflict:'id'}))).catch(()=>{});
+  const client=supabase;
+  if(!client||!user?.id)return true;
+  try{
+   const results=await Promise.all(next.map(item=>client.from('media_items').upsert(toRow(item,user.id),{onConflict:'id'})));
+   const failed=results.find(x=>x.error);
+   if(failed?.error){setAppMessage('Cloud save failed: '+failed.error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
+   return true;
+  }catch(e){setAppMessage('Cloud save failed: '+(e instanceof Error?e.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),5000);return false}
  };
  const importItem=(raw:MediaItem)=>{
   const item=normalise(raw);
@@ -174,6 +181,7 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
  const go=(next:string)=>{setPage(next);setMenu(false);setSelected(null);if(next!=='friend-library')setFriendLibrary(null)};
 
  return <div className="frame-app">
+  {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
   <header className="frame-topbar">
    <button className="frame-brand" title="Open FRAME settings" onClick={()=>go('settings')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
    <nav className="frame-nav">
@@ -207,13 +215,20 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['chat','Chat'],MessageCircle],[['friends','Friends'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
   {selected&&<FrameDetail item={selected} library={items} close={()=>setSelected(null)} onRefreshMetadata={refreshMetadata} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>}
-  {finder&&<AniListSearch initialQuery={query} close={()=>setFinder(false)} onImported={importItem} onManual={()=>setFinder(false)} onAi={()=>{setFinder(false);go('ai')}}/>}
+  {finder&&<AniListSearch initialQuery={query} close={()=>setFinder(false)} onImported={importItem} onManual={()=>{setFinder(false);setManualEntry(true)}} onAi={()=>{setFinder(false);go('ai')}}/>}
+  {manualEntry&&<ManualEntryForm close={()=>setManualEntry(false)} onCreate={raw=>{const item=normalise({...raw,id:crypto.randomUUID()});save([item,...items]);setSelected(item);setManualEntry(false);}}/>}
   {!guest&&<FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/>} 
   <FramePopupHub uid={uid} onFind={()=>setFinder(true)} onOpenCalls={()=>go('calls')} onCall={setDirectCall}/>
   {commandOpen&&<FrameCommandPalette onGo={go} onFind={()=>setFinder(true)} onClose={()=>setCommandOpen(false)}/>}
  </div>;
 }
 
+function ManualEntryForm({close,onCreate}:{close:()=>void;onCreate:(item:MediaItem)=>void}){
+ const [title,setTitle]=useState(''),[medium,setMedium]=useState<Medium>('anime'),[status,setStatus]=useState<MediaItem['status']>('planned'),[progress,setProgress]=useState(0),[total,setTotal]=useState(0),[posterUrl,setPosterUrl]=useState(''),[description,setDescription]=useState('');
+ const units:Record<Medium,string>={anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'};
+ const submit=()=>{if(!title.trim())return;const t=total>0?Math.min(2000,total):undefined;const max=medium==='movie'?1:(medium==='game'||medium==='visual-novel'?100:(t||2000));onCreate({title:title.trim(),description,poster:posterUrl.trim(),backdrop:posterUrl.trim(),medium,status,progress:Math.max(0,Math.min(max,progress)),total:t,progressUnit:units[medium],genres:[],themes:[],favorite:false})};
+ return <div className="overlay"><aside className="detail-drawer manual-entry-drawer"><button className="close-btn" onClick={close} aria-label="Close"><X/></button><div className="manual-entry-head"><small>MANUAL ENTRY</small><h2>Add anything to FRAME.</h2><p>Use this for media that no catalogue can identify. You can edit all of it later.</p></div><div className="call-form manual-entry-form"><label>Title<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. a local series, book, game…" /></label><label>Media type<select value={medium} onChange={e=>setMedium(e.target.value as Medium)}>{Object.entries(types).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><label>Status<select value={status} onChange={e=>setStatus(e.target.value as MediaItem['status'])}>{[['planned','Planned'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['paused','Paused'],['dropped','Dropped']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><div className="manual-two-col"><label>Progress<input type="number" min="0" max="2000" value={progress} onChange={e=>setProgress(Number(e.target.value)||0)}/></label><label>Total<input type="number" min="0" max="2000" value={total||''} onChange={e=>setTotal(Number(e.target.value)||0)} placeholder="Optional" /></label></div><label>Poster URL<input value={posterUrl} onChange={e=>setPosterUrl(e.target.value)} placeholder="https://…" /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional description…" /></label><button className="primary" disabled={!title.trim()} onClick={submit}><CirclePlus size={16}/>Add to my library</button></div></aside></div>;
+}
 function Home({items,total,open,finder,go}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void}){
  const stats=[items.length,items.filter(x=>['watching','reading','playing'].includes(x.status)).length,items.filter(x=>x.status==='completed').length,items.filter(x=>x.favorite).length];
  return <div className="page">
