@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {Mic,MicOff,Phone,PhoneOff,PhoneCall,Radio,User} from 'lucide-react';
 import {supabase} from '../lib/supabase';
+import {FrameMicMeter} from './FrameMicMeter';
 
 type Profile={id:string;username:string;display_name:string;avatar_url?:string|null};
 type DirectTarget=Profile|null;
@@ -14,7 +15,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
  const [phase,setPhase]=useState<'idle'|'ringing'|'connecting'|'connected'>('idle');
  const [muted,setMuted]=useState(false);
  const [error,setError]=useState('');
- const [elapsed,setElapsed]=useState(0);
+ const [elapsed,setElapsed]=useState(0),[micStream,setMicStream]=useState<MediaStream|null>(null);
  const inbox=useRef<any>(null);
  const callChannel=useRef<any>(null);
  const callReady=useRef<Promise<void>|null>(null);
@@ -83,7 +84,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
  const setupPeer=async()=>{
   if(!navigator.mediaDevices?.getUserMedia)throw new Error('Your browser does not expose microphone access.');
   const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
-  local.current=stream;
+  local.current=stream;setMicStream(stream);
   const connection=new RTCPeerConnection({iceServers:[
    {urls:'stun:stun.l.google.com:19302'},
    {urls:'stun:stun1.l.google.com:19302'},
@@ -164,7 +165,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
    if(supabase&&id)await supabase.from('direct_call_sessions').update({status,ended_at:new Date().toISOString()}).eq('id',id);
   }catch{}
   pc.current?.close();pc.current=null;
-  local.current?.getTracks().forEach(t=>t.stop());local.current=null;
+  local.current?.getTracks().forEach(t=>t.stop());local.current=null;setMicStream(null);
   pendingIce.current=[];
   if(callChannel.current)void callChannel.current.unsubscribe();
   callChannel.current=null;callReady.current=null;callId.current=null;
@@ -230,7 +231,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
    <div className="direct-call-avatar">{shown?<img src={shown.avatar_url||''} alt="" onError={e=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>:<User size={30}/>}<span>{shown?avatarText(shown):'F'}</span></div>
    <small>{incoming?'Incoming voice call from':phase==='connected'?mm+':'+ss:'Voice call with'}</small>
    <h2>{shown?.display_name||shown?.username||'FRAME user'}</h2>
-   <p>{incoming?'They are calling you now.':phase==='connected'?'Encrypted peer connection · audio only':phase==='connecting'?'Connecting securely…':'Ready for a voice call.'}</p>
+   <p>{incoming?'They are calling you now.':phase==='connected'?'Encrypted peer connection · audio only':phase==='connecting'?'Connecting securely…':'Ready for a voice call.'}</p><FrameMicMeter stream={micStream} muted={muted}/>
    {error&&<div className="inline-error">{error}</div>}
    <audio ref={remoteAudio} autoPlay playsInline/>
    <div className="direct-call-actions">
