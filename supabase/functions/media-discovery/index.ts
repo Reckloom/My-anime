@@ -1,5 +1,3 @@
-import { withSupabase } from 'npm:@supabase/server@^1';
-
 const HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -209,12 +207,15 @@ function extractYear(value?:string|null){
   return m?Number(m[0]):undefined;
 }
 
-export default {
-  fetch: withSupabase({auth:'none'},async(req)=>{
+Deno.serve(async(req:Request)=>{
     if(req.method==='OPTIONS') return new Response('ok',{headers:HEADERS});
-    if(req.method!=='POST') return response({error:'POST required'},405);
+    let body:any={};
+    if(req.method==='GET'){
+      const url=new URL(req.url);body={action:url.searchParams.get('action')||'search',provider:url.searchParams.get('provider')||'',query:url.searchParams.get('query')||'',externalId:url.searchParams.get('externalId')||''};
+    }else if(req.method==='POST'){
+      try{body=await req.json()}catch{return response({error:'Invalid JSON request.'},400)}
+    }else return response({error:'POST or GET required'},405);
     try{
-      const body=await req.json();
       const action=String(body?.action||'search');
       const provider=String(body?.provider||'');
       if(!(['game','series','movie','book','visual-novel'].includes(provider))) return response({error:'Unsupported provider.'},400);
@@ -231,5 +232,4 @@ export default {
     }catch(error){
       return response({error:error instanceof Error?error.message:String(error)},400);
     }
-  })
-};
+});
