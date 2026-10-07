@@ -94,7 +94,9 @@ export function AniListSearch({close,onImported,onManual}:{close:()=>void;onImpo
        }catch{
          found=null;
        }
-       if(found===null){
+       // The Edge Function is the preferred path, but an empty/failed server
+       // response should never hide a valid public AniList result.
+       if(found===null||found.length===0){
          const d=await aniList<{Page:{media:AniListMedia[]}}>(SEARCH_QUERY,{search:term,page:1,perPage:12,type:mediaType});
          found=d.Page.media||[];
        }
