@@ -65,10 +65,10 @@ export default function App(){
  const [finder,setFinder]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null);
  const [call,setCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null);
  const [radar,setRadar]=useState<Radar[]>([]),[radarBusy,setRadarBusy]=useState(false),[radarError,setRadarError]=useState('');
- const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable');
+ const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('sky');
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
 
- useEffect(()=>{document.documentElement.dataset.density=density},[density]);
+ useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme},[density,theme]);
 
  useEffect(()=>{
   const client=supabase;
@@ -86,7 +86,7 @@ export default function App(){
     if(created)setProfile(created as Profile);
    }
    const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
-   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'))}
+   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'));setTheme(String(prefs.theme||'sky'))}
   };
   void load();
   return()=>{active=false};
@@ -149,7 +149,7 @@ export default function App(){
    {page==='ai'&&<FrameAI items={items} provider={aiProvider} setProvider={x=>{setAiProvider(x);void persist('ai_provider',x)}}/>}
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setCall}/>}
    {page==='connections'&&<Connections connections={connections} toggle={updateConnection}/>}
-   {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}}/>}
+   {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}}/>}
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
   </main>
   <nav className="mobile-bottom">
@@ -188,11 +188,11 @@ function Connections({connections,toggle}:{connections:Record<string,boolean>;to
  return <div className="page"><div className="page-heading"><div><small>SERVICE CONTROL</small><h1>Connections</h1><p>Choose which catalogues and services FRAME is allowed to use.</p></div></div><div className="connections-grid">{rows.map(r=><div className="connection-card" key={r[0]}><div className="connection-icon"><Link2 size={19}/></div><div><b>{r[1]}</b><p>{r[2]}</p><small>{r[3]}</small></div><button className={connections[r[0]]?'secondary active':'secondary'} onClick={()=>toggle(r[0])}>{connections[r[0]]?'Enabled':'Disabled'}</button></div>)}</div><section className="ai-connect-card"><Bot size={22}/><div><h2>AI providers</h2><p>FRAME AI is wired into this build. Other provider slots can be connected later without exposing keys in the browser.</p></div></section></div>;
 }
 
-function SettingsPage({user,profile,setProfile,guest,density,setDensity}:{user:any;profile:Profile|null;setProfile:(p:Profile)=>void;guest:boolean;density:string;setDensity:(x:string)=>void}){
+function SettingsPage({user,profile,setProfile,guest,density,setDensity,theme,setTheme}:{user:any;profile:Profile|null;setProfile:(p:Profile)=>void;guest:boolean;density:string;setDensity:(x:string)=>void;theme:string;setTheme:(x:string)=>void}){
  const[name,setName]=useState(profile?.display_name||''),[username,setUsername]=useState(profile?.username||''),[saved,setSaved]=useState(false);
  useEffect(()=>{setName(profile?.display_name||'');setUsername(profile?.username||'')},[profile?.id,profile?.display_name,profile?.username]);
  const save=async()=>{const client=supabase;if(!client||!user?.id)return;const clean=username.trim();if(clean.length<3)return;const p={id:user.id,username:clean,display_name:name.trim()||clean,avatar_url:profile?.avatar_url||null,bio:profile?.bio||''};const {error}=await client.from('profiles').upsert(p,{onConflict:'id'});if(!error){setProfile(p);setSaved(true);setTimeout(()=>setSaved(false),1400)}};
- return <div className="page"><div className="page-heading"><div><small>YOUR FRAME</small><h1>Settings</h1><p>Profile, appearance and account controls.</p></div></div><section className="settings-grid"><div className="settings-panel"><div className="section-title"><div><small>PROFILE</small><h2>Identity</h2></div></div>{guest?<p className="muted">Guest mode stays local to this device.</p>:<><label>Username<input value={username} onChange={e=>setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g,''))}/></label><label>Display name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Email<input value={user?.email||''} disabled/></label><button className="primary" onClick={()=>void save()}>{saved?'Saved':'Save profile'}</button></>}</div><div className="settings-panel"><div className="section-title"><div><small>APPEARANCE</small><h2>Samsung-style</h2></div></div><div className="setting-row"><span>Card density<small>Control how much media fits on screen.</small></span><select value={density} onChange={e=>setDensity(e.target.value)}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></div><div className="setting-row"><span>Theme<small>Premium dark glass is the current FRAME theme.</small></span><b>Dark</b></div></div><div className="settings-panel"><div className="section-title"><div><small>ACCOUNT</small><h2>Security</h2></div></div><button className="danger" onClick={()=>void signOut()}><LogOut size={16}/>Log out</button><p className="muted">Forgot-password recovery is available at the FRAME entrance.</p></div></section></div>;
+ return <div className="page"><div className="page-heading"><div><small>YOUR FRAME</small><h1>Settings</h1><p>Profile, appearance and account controls.</p></div></div><section className="settings-grid"><div className="settings-panel"><div className="section-title"><div><small>PROFILE</small><h2>Identity</h2></div></div>{guest?<p className="muted">Guest mode stays local to this device.</p>:<><label>Username<input value={username} onChange={e=>setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g,''))}/></label><label>Display name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Email<input value={user?.email||''} disabled/></label><button className="primary" onClick={()=>void save()}>{saved?'Saved':'Save profile'}</button></>}</div><div className="settings-panel"><div className="section-title"><div><small>APPEARANCE</small><h2>Samsung-style</h2></div></div><div className="setting-row"><span>Card density<small>Control how much media fits on screen.</small></span><select value={density} onChange={e=>setDensity(e.target.value)}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></div><div className="setting-row"><span>Theme<small>Switch the visual personality of FRAME.</small></span><select value={theme} onChange={e=>setTheme(e.target.value)}><option value="sky">Sky</option><option value="samsung">Samsung</option><option value="apple">Apple</option><option value="oneplus">OnePlus</option><option value="nothing">Nothing</option><option value="amoled">AMOLED</option></select></div></div><div className="settings-panel"><div className="section-title"><div><small>ACCOUNT</small><h2>Security</h2></div></div><button className="danger" onClick={()=>void signOut()}><LogOut size={16}/>Log out</button><p className="muted">Forgot-password recovery is available at the FRAME entrance.</p></div></section></div>;
 }
 function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){
  const[items,setItems]=useState<MediaItem[]>([]);
