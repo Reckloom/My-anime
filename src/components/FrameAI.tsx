@@ -25,7 +25,7 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
   r.onstart=()=>setListening(true);r.onend=()=>setListening(false);r.onerror=()=>setListening(false);
   r.onresult=(e:any)=>{const t=e.results?.[0]?.[0]?.transcript||'';setInput(t);void ask(t)};r.start();
  };
- return <div className="page"><div className="page-heading"><div><small>FRAME INTELLIGENCE</small><h1>AI Search</h1><p>Ask about your library, compare titles, discover what fits, or use your voice.</p></div></div>
+ return <div className="page ai-page"><div className="page-heading"><div><small>FRAME INTELLIGENCE</small><h1>AI Search</h1><p>Ask about your library, compare titles, discover what fits, or use your voice.</p></div></div>
   <div className="ai-provider-bar"><span>Provider</span>{[['frame','FRAME AI'],['openai','OpenAI'],['gemini','Gemini'],['claude','Claude']].map(([id,label])=><button key={id} className={provider===id?'active':''} onClick={()=>setProvider(id)}>{label}{id!=='frame'&&<small>connector</small>}</button>)}</div>
   <section className="ai-shell"><div className="ai-prompts">{['What should I watch next?','Find my best unfinished titles.','Recommend something like Steins;Gate.','Analyze my taste.'].map(x=><button key={x} onClick={()=>{setInput(x);void ask(x)}}>{x}</button>)}</div>
    <textarea value={input} onChange={e=>setInput(e.target.value)} placeholder="Describe exactly what you want…"/>
