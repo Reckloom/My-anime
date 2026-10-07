@@ -90,8 +90,11 @@ async function detailGame(id:string){
       releaseDate:game.release_date?.date||undefined,
       platforms:Array.isArray(game.platforms)?Object.entries(game.platforms).filter(([,v])=>Boolean(v)).map(([k])=>k):[],
       gameModes:categories.filter((x:string)=>/single-player|multi-player|co-op/i.test(x)),
+      isFree:Boolean(game.is_free),
+      priceText:game.price_overview?.final_formatted||game.price_overview?.initial_formatted||undefined,
+      storeUrl:`https://store.steampowered.com/app/${id}/`,
     },
-    meta:{website:game.website||undefined}
+    meta:{website:game.website||undefined,free:Boolean(game.is_free),price:game.price_overview?.final_formatted||game.price_overview?.initial_formatted||null}
   };
 }
 
