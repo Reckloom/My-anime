@@ -1,0 +1,13 @@
+{
+  "name":"FRAME — Universal Media Library",
+  "short_name":"FRAME",
+  "description":"Your private universal media library.",
+  "start_url":"/",
+  "scope":"/",
+  "display":"standalone",
+  "background_color":"#070a0d",
+  "theme_color":"#2398e8",
+  "icons":[
+    {"src":"/frame-ultra-instinct.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
