@@ -35,7 +35,7 @@ export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind
    {panel==='chat'&&<div className="frame-popup-chat">
     <div className="frame-popup-messages">{messages.map(m=><div key={m.id}><b>{m.user_id===uid?'You':m.profiles?.display_name||m.profiles?.username||'FRAME user'}</b><span>{m.body}</span></div>)}</div>
     <form onSubmit={e=>{e.preventDefault();void send()}}><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Message everyone…"/><button disabled={!draft.trim()}><Send size={14}/></button></form>
-    <button className="frame-popup-link" onClick={onOpenCalls}>Open full social space</button>
+    <button className="frame-popup-link" onClick={onOpenCalls}>Open call center</button>
    </div>}
    {panel==='call'&&<div className="frame-popup-calls">
     <div className="frame-popup-call-top"><span><Users size={14}/> Friends available</span><b>{friends.length}</b></div>
