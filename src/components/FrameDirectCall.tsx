@@ -54,7 +54,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
    void channel.unsubscribe();
    inbox.current=null;
   };
- },[uid,phase]);
+ },[uid]);
 
  useEffect(()=>{setPeer(target)},[target?.id]);
 
