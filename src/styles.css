@@ -1673,3 +1673,121 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
  .frame-brand{gap:7px}
  .frame-brand .frame-logo-mark{width:28px;height:28px}
 }
+
+
+/* FINAL CASCADE FIX — theme surfaces must win over generic light/dark mode */
+.settings-anchor-row,.frame-settings-link{display:none!important}
+.settings-page .section-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.settings-reset{flex:0 0 auto}
+
+:root[data-frame-theme="sky"][data-frame-mode="light"],
+:root[data-frame-theme="sky"][data-frame-mode="system"]{
+ --frame-bg:#edf7ff;--frame-surface:#ffffff;--frame-surface-2:#e6f4ff;--frame-surface-3:#d5ebfb;
+ --frame-line:#0b3b5a20;--frame-line-strong:#0b3b5a32;--frame-text:#092235;--frame-muted:#5e7485;--frame-dim:#8198a8;--frame-accent:#168fe0;--frame-accent-2:#126abb
+}
+:root[data-frame-theme="samsung"][data-frame-mode="light"],
+:root[data-frame-theme="samsung"][data-frame-mode="system"]{
+ --frame-bg:#edf4fb;--frame-surface:#f7fbff;--frame-surface-2:#e7f0fa;--frame-surface-3:#d9e6f3;
+ --frame-line:#1b46681f;--frame-line-strong:#1b466832;--frame-text:#14283a;--frame-muted:#627586;--frame-dim:#8495a4;--frame-accent:#4b92ea;--frame-accent-2:#3474c7
+}
+:root[data-frame-theme="apple"][data-frame-mode="light"],
+:root[data-frame-theme="apple"][data-frame-mode="system"]{
+ --frame-bg:#f5f5f7;--frame-surface:#ffffff;--frame-surface-2:#f0f0f2;--frame-surface-3:#e4e4e9;
+ --frame-line:#00000012;--frame-line-strong:#0000001e;--frame-text:#1d1d1f;--frame-muted:#6e6e73;--frame-dim:#8d8d93;--frame-accent:#0071e3;--frame-accent-2:#0071e3
+}
+:root[data-frame-theme="oneplus"][data-frame-mode="light"],
+:root[data-frame-theme="oneplus"][data-frame-mode="system"]{
+ --frame-bg:#f7f3f1;--frame-surface:#fffdfc;--frame-surface-2:#eee8e5;--frame-surface-3:#e5dcd8;
+ --frame-line:#43261c1c;--frame-line-strong:#43261c2d;--frame-text:#241714;--frame-muted:#766560;--frame-dim:#988883;--frame-accent:#e74a33;--frame-accent-2:#b82e1c
+}
+:root[data-frame-theme="nothing"][data-frame-mode="light"],
+:root[data-frame-theme="nothing"][data-frame-mode="system"]{
+ --frame-bg:#efefeb;--frame-surface:#ffffff;--frame-surface-2:#e7e7e2;--frame-surface-3:#dadad4;
+ --frame-line:#11111121;--frame-line-strong:#11111134;--frame-text:#111111;--frame-muted:#60605c;--frame-dim:#898984;--frame-accent:#e21f26;--frame-accent-2:#111111
+}
+:root[data-frame-theme="amoled"][data-frame-mode="light"],
+:root[data-frame-theme="amoled"][data-frame-mode="system"]{
+ --frame-bg:#000000;--frame-surface:#000000;--frame-surface-2:#080808;--frame-surface-3:#111111;
+ --frame-line:#ffffff18;--frame-line-strong:#ffffff2b;--frame-text:#ffffff;--frame-muted:#a5a5a5;--frame-dim:#707070;--frame-accent:#ffffff;--frame-accent-2:#d6d6d6
+}
+:root[data-frame-theme="pixel"][data-frame-mode="light"],
+:root[data-frame-theme="pixel"][data-frame-mode="system"]{
+ --frame-bg:#f3f6ff;--frame-surface:#ffffff;--frame-surface-2:#e9efff;--frame-surface-3:#dce5ff;
+ --frame-line:#233f831f;--frame-line-strong:#233f8330;--frame-text:#18243e;--frame-muted:#626f8c;--frame-dim:#8995ad;--frame-accent:#566bd8;--frame-accent-2:#3e54be
+}
+:root[data-frame-theme="material"][data-frame-mode="light"],
+:root[data-frame-theme="material"][data-frame-mode="system"]{
+ --frame-bg:#faf7ff;--frame-surface:#ffffff;--frame-surface-2:#f1eaff;--frame-surface-3:#e8dbff;
+ --frame-line:#43276b1e;--frame-line-strong:#43276b2d;--frame-text:#21162e;--frame-muted:#70627d;--frame-dim:#998ea1;--frame-accent:#6750a4;--frame-accent-2:#50388a
+}
+:root[data-frame-theme="retro"][data-frame-mode="light"],
+:root[data-frame-theme="retro"][data-frame-mode="system"]{
+ --frame-bg:#dfead8;--frame-surface:#edf7e8;--frame-surface-2:#d2e3cb;--frame-surface-3:#bfd4b8;
+ --frame-line:#18341d32;--frame-line-strong:#18341d4b;--frame-text:#18301c;--frame-muted:#526a56;--frame-dim:#718872;--frame-accent:#2d7d3f;--frame-accent-2:#205d2e
+}
+
+:root[data-frame-theme="sky"][data-frame-mode="dark"],
+:root[data-frame-theme="sky"][data-frame-mode="system"]{
+ --frame-bg:#09141c;--frame-surface:#0e1c26;--frame-surface-2:#142733;--frame-surface-3:#1b3342;
+ --frame-line:#8fd6ff18;--frame-line-strong:#8fd6ff2b;--frame-text:#eef8ff;--frame-muted:#9db7c8;--frame-dim:#718b9c;--frame-accent:#63b9ff;--frame-accent-2:#2f8fdc
+}
+:root[data-frame-theme="samsung"][data-frame-mode="dark"]{
+ --frame-bg:#080e14;--frame-surface:#101923;--frame-surface-2:#172431;--frame-surface-3:#21303f;
+ --frame-line:#8fc4ff16;--frame-line-strong:#8fc4ff29;--frame-text:#f2f7fc;--frame-muted:#a0afbd;--frame-dim:#748493;--frame-accent:#73b5ff;--frame-accent-2:#4c91df
+}
+:root[data-frame-theme="apple"][data-frame-mode="dark"]{
+ --frame-bg:#000000;--frame-surface:#1c1c1e;--frame-surface-2:#2c2c2e;--frame-surface-3:#3a3a3c;
+ --frame-line:#ffffff18;--frame-line-strong:#ffffff29;--frame-text:#f5f5f7;--frame-muted:#98989d;--frame-dim:#636366;--frame-accent:#2997ff;--frame-accent-2:#0a84ff
+}
+:root[data-frame-theme="oneplus"][data-frame-mode="dark"]{
+ --frame-bg:#0b0d0e;--frame-surface:#111416;--frame-surface-2:#181c1e;--frame-surface-3:#23282a;
+ --frame-line:#ffffff12;--frame-line-strong:#ffffff22;--frame-text:#f7f7f6;--frame-muted:#a3a8aa;--frame-dim:#6f777a;--frame-accent:#ff5a45;--frame-accent-2:#e74732
+}
+:root[data-frame-theme="nothing"][data-frame-mode="dark"]{
+ --frame-bg:#0b0b0a;--frame-surface:#11110f;--frame-surface-2:#191917;--frame-surface-3:#252521;
+ --frame-line:#ffffff14;--frame-line-strong:#ffffff24;--frame-text:#f3f3ee;--frame-muted:#a8a8a1;--frame-dim:#77776f;--frame-accent:#ff383e;--frame-accent-2:#f2f2ec
+}
+:root[data-frame-theme="amoled"][data-frame-mode="dark"]{
+ --frame-bg:#000000;--frame-surface:#000000;--frame-surface-2:#060606;--frame-surface-3:#101010;
+ --frame-line:#ffffff17;--frame-line-strong:#ffffff2a;--frame-text:#ffffff;--frame-muted:#a6a6a6;--frame-dim:#707070;--frame-accent:#ffffff;--frame-accent-2:#d8d8d8
+}
+:root[data-frame-theme="pixel"][data-frame-mode="dark"]{
+ --frame-bg:#101218;--frame-surface:#1a1d24;--frame-surface-2:#242832;--frame-surface-3:#303644;
+ --frame-line:#ffffff12;--frame-line-strong:#ffffff20;--frame-text:#f5f7ff;--frame-muted:#a8afc1;--frame-dim:#747b8c;--frame-accent:#aab7ff;--frame-accent-2:#8796ff
+}
+:root[data-frame-theme="material"][data-frame-mode="dark"]{
+ --frame-bg:#141218;--frame-surface:#211b24;--frame-surface-2:#2b2430;--frame-surface-3:#372e3c;
+ --frame-line:#ffffff14;--frame-line-strong:#ffffff22;--frame-text:#f8effa;--frame-muted:#c2b2c5;--frame-dim:#8c7e91;--frame-accent:#d0bcff;--frame-accent-2:#b69df8
+}
+:root[data-frame-theme="retro"][data-frame-mode="dark"]{
+ --frame-bg:#0e1510;--frame-surface:#152018;--frame-surface-2:#1b281e;--frame-surface-3:#243326;
+ --frame-line:#9ee49320;--frame-line-strong:#9ee49332;--frame-text:#dff8d6;--frame-muted:#91ad8a;--frame-dim:#63805f;--frame-accent:#9ee493;--frame-accent-2:#72c764
+}
+
+@media(prefers-color-scheme:dark){
+ :root[data-frame-theme="sky"][data-frame-mode="system"]{--frame-bg:#09141c;--frame-surface:#0e1c26;--frame-surface-2:#142733;--frame-surface-3:#1b3342;--frame-line:#8fd6ff18;--frame-line-strong:#8fd6ff2b;--frame-text:#eef8ff;--frame-muted:#9db7c8;--frame-dim:#718b9c;--frame-accent:#63b9ff;--frame-accent-2:#2f8fdc}
+ :root[data-frame-theme="samsung"][data-frame-mode="system"]{--frame-bg:#080e14;--frame-surface:#101923;--frame-surface-2:#172431;--frame-surface-3:#21303f;--frame-line:#8fc4ff16;--frame-line-strong:#8fc4ff29;--frame-text:#f2f7fc;--frame-muted:#a0afbd;--frame-dim:#748493;--frame-accent:#73b5ff;--frame-accent-2:#4c91df}
+ :root[data-frame-theme="apple"][data-frame-mode="system"]{--frame-bg:#000;--frame-surface:#1c1c1e;--frame-surface-2:#2c2c2e;--frame-surface-3:#3a3a3c;--frame-line:#ffffff18;--frame-line-strong:#ffffff29;--frame-text:#f5f5f7;--frame-muted:#98989d;--frame-dim:#636366;--frame-accent:#2997ff;--frame-accent-2:#0a84ff}
+ :root[data-frame-theme="oneplus"][data-frame-mode="system"]{--frame-bg:#0b0d0e;--frame-surface:#111416;--frame-surface-2:#181c1e;--frame-surface-3:#23282a;--frame-line:#ffffff12;--frame-line-strong:#ffffff22;--frame-text:#f7f7f6;--frame-muted:#a3a8aa;--frame-dim:#6f777a;--frame-accent:#ff5a45;--frame-accent-2:#e74732}
+ :root[data-frame-theme="nothing"][data-frame-mode="system"]{--frame-bg:#0b0b0a;--frame-surface:#11110f;--frame-surface-2:#191917;--frame-surface-3:#252521;--frame-line:#ffffff14;--frame-line-strong:#ffffff24;--frame-text:#f3f3ee;--frame-muted:#a8a8a1;--frame-dim:#77776f;--frame-accent:#ff383e;--frame-accent-2:#f2f2ec}
+ :root[data-frame-theme="amoled"][data-frame-mode="system"]{--frame-bg:#000;--frame-surface:#000;--frame-surface-2:#060606;--frame-surface-3:#101010;--frame-line:#ffffff17;--frame-line-strong:#ffffff2a;--frame-text:#fff;--frame-muted:#a6a6a6;--frame-dim:#707070;--frame-accent:#fff;--frame-accent-2:#d8d8d8}
+ :root[data-frame-theme="pixel"][data-frame-mode="system"]{--frame-bg:#101218;--frame-surface:#1a1d24;--frame-surface-2:#242832;--frame-surface-3:#303644;--frame-line:#ffffff12;--frame-line-strong:#ffffff20;--frame-text:#f5f7ff;--frame-muted:#a8afc1;--frame-dim:#747b8c;--frame-accent:#aab7ff;--frame-accent-2:#8796ff}
+ :root[data-frame-theme="material"][data-frame-mode="system"]{--frame-bg:#141218;--frame-surface:#211b24;--frame-surface-2:#2b2430;--frame-surface-3:#372e3c;--frame-line:#ffffff14;--frame-line-strong:#ffffff22;--frame-text:#f8effa;--frame-muted:#c2b2c5;--frame-dim:#8c7e91;--frame-accent:#d0bcff;--frame-accent-2:#b69df8}
+ :root[data-frame-theme="retro"][data-frame-mode="system"]{--frame-bg:#0e1510;--frame-surface:#152018;--frame-surface-2:#1b281e;--frame-surface-3:#243326;--frame-line:#9ee49320;--frame-line-strong:#9ee49332;--frame-text:#dff8d6;--frame-muted:#91ad8a;--frame-dim:#63805f;--frame-accent:#9ee493;--frame-accent-2:#72c764}
+}
+
+/* Make the visual languages diverge in layout as well as palette */
+:root[data-frame-theme="sky"] .home-intro{min-height:300px;border-radius:34px;padding:34px;box-shadow:0 24px 70px rgba(16,104,160,.12)}
+:root[data-frame-theme="samsung"] .page{padding-top:34px}:root[data-frame-theme="samsung"] .home-intro{min-height:340px;border-radius:38px;padding:42px 36px}.frame-topbar{}
+:root[data-frame-theme="apple"] .home-intro{min-height:220px;padding:34px 38px;border-radius:20px;box-shadow:0 1px 0 var(--frame-line)}:root[data-frame-theme="apple"] .home-overview{box-shadow:0 1px 0 var(--frame-line)}
+:root[data-frame-theme="oneplus"] .home-intro{min-height:250px;border-radius:10px;padding:34px}.oneplus{}
+:root[data-frame-theme="nothing"] .page{max-width:1440px}:root[data-frame-theme="nothing"] .home-intro{min-height:230px}
+:root[data-frame-theme="amoled"] .page{max-width:1600px;padding-inline:clamp(12px,3vw,44px)}:root[data-frame-theme="amoled"] .home-intro{min-height:230px}
+:root[data-frame-theme="pixel"] .home-intro{min-height:330px;border-radius:32px 32px 22px 22px}.pixel{}
+:root[data-frame-theme="material"] .home-intro{min-height:350px;border-radius:46px 22px 46px 22px;padding:40px}.material{}
+:root[data-frame-theme="retro"] .home-intro{min-height:260px;border-radius:2px}
+
+@media(max-width:800px){
+ .settings-page .section-title{align-items:flex-start}
+ .settings-reset{font-size:8px!important}
+}
