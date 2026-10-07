@@ -142,6 +142,12 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
 
  const send=async(payload:any)=>{await channel.current?.send({type:'broadcast',event:'signal',payload:{...payload,from:uid}})};
 
+ const flushIce=async(peerId:string,pc:RTCPeerConnection)=>{
+  const queued=pendingIce.current.get(peerId)||[];
+  for(const candidate of queued){try{await pc.addIceCandidate(candidate)}catch{}}
+  pendingIce.current.delete(peerId);
+ };
+
  const makePeer=async(peerId:string,initiator:boolean)=>{
   const existing=peers.current.get(peerId);if(existing)return existing;
   const pc=new RTCPeerConnection({iceServers:[
