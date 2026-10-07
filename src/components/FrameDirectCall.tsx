@@ -18,12 +18,12 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
  const inbox=useRef<any>(null);
  const callChannel=useRef<any>(null);
  const callReady=useRef<Promise<void>|null>(null);
- const callId=useRef<string|null>(null);
+ const callId=useRef<string|null>(null),inboxReady=useRef<Promise<void>|null>(null);
  const pc=useRef<RTCPeerConnection|null>(null);
  const local=useRef<MediaStream|null>(null);
  const remoteAudio=useRef<HTMLAudioElement|null>(null);
  const pendingIce=useRef<RTCIceCandidateInit[]>([]);
- const activeRef=useRef(true);
+ const activeRef=useRef(true),phaseRef=useRef<'idle'|'ringing'|'connecting'|'connected'>('idle');
 
  useEffect(()=>{
   if(!supabase||!uid)return;
@@ -33,7 +33,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
   const channel=client.channel('frame-direct-inbox:'+uid,{config:{private:true,broadcast:{ack:true}}});
   inbox.current=channel;
   channel.on('broadcast',{event:'ring'},async({payload}:any)=>{
-   if(disposed||!payload?.callId||payload.from===uid||phase!=='idle')return;
+   if(disposed||!payload?.callId||payload.from===uid||phaseRef.current!=='idle')return;
    const callerId=String(payload.from||'');
    const {data}=await client.from('profiles').select('id,username,display_name,avatar_url').eq('id',callerId).maybeSingle();
    if(!activeRef.current)return;
@@ -43,9 +43,12 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
     setError('');
    }
   });
-  channel.subscribe((status:string,err?:any)=>{
-   if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setError(err?.message||'Incoming call service could not connect. Reload FRAME and try again.');
-  });
+  inboxReady.current=new Promise<void>((resolve,reject)=>{
+   channel.subscribe((status:string,err?:any)=>{
+    if(status==='SUBSCRIBED')resolve();
+    else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')reject(new Error(err?.message||'Incoming call service could not connect. Reload FRAME and try again.'));
+   });
+  }).catch(()=>{});
   return()=>{
    disposed=true;
    void channel.unsubscribe();
@@ -177,6 +180,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
    const {error:e}=await supabase.from('direct_call_sessions').insert({id,caller_id:uid,callee_id:target.id,status:'ringing'});
    if(e)throw e;
    await openCallChannel(id);
+   await inboxReady.current;
    await inboxReady.current;
    const {error:re}=await inbox.current.send({type:'broadcast',event:'ring',payload:{callId:id,from:uid}});
    if(re)throw new Error('The other person could not be reached.');
