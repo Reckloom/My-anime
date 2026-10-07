@@ -178,7 +178,6 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
     <button className="primary top-find" onClick={()=>setFinder(true)}><Search size={16}/>Search</button>
     <button className="top-icon" title="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
-    <button className="top-icon" title="Settings" onClick={()=>go('settings')}><Settings size={18}/></button>
     <button className="top-avatar" onClick={()=>go('settings')}>{(profile?.display_name||user?.email||'G')[0].toUpperCase()}</button>
     <button className="top-icon mobile-only" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
