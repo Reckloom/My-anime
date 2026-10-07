@@ -1,9 +1,10 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Home as HomeIcon,Library,Link2,LogOut,Menu,Phone,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
+import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
 import {FrameAI} from './components/FrameAI';
+import {FrameGlobalChat} from './components/FrameGlobalChat';
 import {FrameDetail} from './components/FrameDetail';
 import {FrameSocial,VoiceCall} from './components/FrameSocial';
 import {CallsPage} from './components/FrameCalls';
@@ -79,10 +80,10 @@ export default function App(){
  const [finder,setFinder]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null);
  const [call,setCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null);
  const [radar,setRadar]=useState<Radar[]>([]),[radarBusy,setRadarBusy]=useState(false),[radarError,setRadarError]=useState('');
- const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('sky');
+ const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('sky'),[appearanceMode,setAppearanceMode]=useState<'light'|'dark'|'system'>('light');
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
 
- useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme},[density,theme]);
+ useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]);
 
  useEffect(()=>{
   try{localStorage.setItem(storageKey,JSON.stringify(items))}catch{}
@@ -104,7 +105,7 @@ export default function App(){
     if(created)setProfile(created as Profile);
    }
    const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
-   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'));setTheme(String(prefs.theme||'sky'))}
+   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'));setTheme(String(prefs.theme||'sky'));setAppearanceMode((['light','dark','system'].includes(String(prefs.appearance_mode))?String(prefs.appearance_mode):'light') as 'light'|'dark'|'system')}
   };
   void load();
   return()=>{active=false};
@@ -163,7 +164,7 @@ export default function App(){
   <header className="frame-topbar">
    <button className="frame-brand" onClick={()=>go('home')}><span>F</span><b>FRAME</b></button>
    <nav className="frame-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['radar','Radar'],CalendarDays],[['ai','AI'],Bot],[['friends','Friends'],Users],[['calls','Calls'],Phone]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
+    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['radar','Radar'],CalendarDays],[['ai','AI'],Bot],[['friends','Friends'],Users],[['chat','Chat'],MessageCircle],[['calls','Calls'],Phone]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
    </nav>
    <div className="frame-actions">
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
@@ -174,7 +175,7 @@ export default function App(){
     <button className="top-icon mobile-only" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['ai','AI'],['friends','Friends'],['calls','Calls'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['ai','AI'],['friends','Friends'],['chat','Global Chat'],['calls','Calls'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
    {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go}/>}
    {page==='library'&&<LibraryPage items={shown} filter={filter} setFilter={setFilter} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)}/>}
@@ -182,16 +183,17 @@ export default function App(){
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
    {page==='ai'&&<FrameAI items={items} provider={aiProvider} setProvider={x=>{setAiProvider(x);void persist('ai_provider',x)}}/>}
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setCall}/>}
+   {page==='chat'&&<FrameGlobalChat uid={uid} guest={guest}/>} 
    {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
    {page==='connections'&&<Connections connections={connections} toggle={updateConnection}/>}
-   {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}}/>}
+   {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}} appearanceMode={appearanceMode} setAppearanceMode={x=>{setAppearanceMode(x);void persist('appearance_mode',x)}}/>}
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
   </main>
   <nav className="mobile-bottom">
    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['friends','Friends'],Users],[['settings','Settings'],Settings]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
   {selected&&<FrameDetail item={selected} library={items} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>}
-  {finder&&<AniListSearch close={()=>setFinder(false)} onImported={importItem} onManual={()=>setFinder(false)}/>}
+  {finder&&<AniListSearch initialQuery={query} close={()=>setFinder(false)} onImported={importItem} onManual={()=>setFinder(false)}/>} 
   {call&&<VoiceCall uid={uid} friend={call} close={()=>setCall(null)}/>}
  </div>;
 }
@@ -300,11 +302,11 @@ function Connections({connections,toggle:_toggle}:{connections:Record<string,boo
  </div>;
 }
 
-function SettingsPage({user,profile,setProfile,guest,density,setDensity,theme,setTheme}:{user:any;profile:Profile|null;setProfile:(p:Profile)=>void;guest:boolean;density:string;setDensity:(x:string)=>void;theme:string;setTheme:(x:string)=>void}){
+function SettingsPage({user,profile,setProfile,guest,density,setDensity,theme,setTheme,appearanceMode,setAppearanceMode}:{user:any;profile:Profile|null;setProfile:(p:Profile)=>void;guest:boolean;density:string;setDensity:(x:string)=>void;theme:string;setTheme:(x:string)=>void;appearanceMode:'light'|'dark'|'system';setAppearanceMode:(x:'light'|'dark'|'system')=>void}){
  const[name,setName]=useState(profile?.display_name||''),[username,setUsername]=useState(profile?.username||''),[saved,setSaved]=useState(false);
  useEffect(()=>{setName(profile?.display_name||'');setUsername(profile?.username||'')},[profile?.id,profile?.display_name,profile?.username]);
  const save=async()=>{const client=supabase;if(!client||!user?.id)return;const clean=username.trim();if(clean.length<3)return;const p={id:user.id,username:clean,display_name:name.trim()||clean,avatar_url:profile?.avatar_url||null,bio:profile?.bio||''};const {error}=await client.from('profiles').upsert(p,{onConflict:'id'});if(!error){setProfile(p);setSaved(true);setTimeout(()=>setSaved(false),1400)}};
- return <div className="page"><div className="page-heading"><div><small>YOUR FRAME</small><h1>Settings</h1><p>Profile, appearance and account controls.</p></div></div><section className="settings-grid"><div className="settings-panel"><div className="section-title"><div><small>PROFILE</small><h2>Identity</h2></div></div>{guest?<p className="muted">Guest mode stays local to this device.</p>:<><label>Username<input value={username} onChange={e=>setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g,''))}/></label><label>Display name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Email<input value={user?.email||''} disabled/></label><button className="primary" onClick={()=>void save()}>{saved?'Saved':'Save profile'}</button></>}</div><div className="settings-panel"><div className="section-title"><div><small>APPEARANCE</small><h2>Samsung-style</h2></div></div><div className="setting-row"><span>Card density<small>Control how much media fits on screen.</small></span><select value={density} onChange={e=>setDensity(e.target.value)}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></div><div className="setting-row"><span>Theme<small>Switch the visual personality of FRAME.</small></span><select value={theme} onChange={e=>setTheme(e.target.value)}><option value="sky">Sky</option><option value="samsung">Samsung</option><option value="apple">Apple</option><option value="oneplus">OnePlus</option><option value="nothing">Nothing</option><option value="amoled">AMOLED</option></select></div></div><div className="settings-panel"><div className="section-title"><div><small>ACCOUNT</small><h2>Security</h2></div></div><button className="danger" onClick={()=>void signOut()}><LogOut size={16}/>Log out</button><p className="muted">Forgot-password recovery is available at the FRAME entrance.</p></div></section></div>;
+ return <div className="page"><div className="page-heading"><div><small>YOUR FRAME</small><h1>Settings</h1><p>Profile, appearance and account controls.</p></div></div><section className="settings-grid"><div className="settings-panel"><div className="section-title"><div><small>PROFILE</small><h2>Identity</h2></div></div>{guest?<p className="muted">Guest mode stays local to this device.</p>:<><label>Username<input value={username} onChange={e=>setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g,''))}/></label><label>Display name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Email<input value={user?.email||''} disabled/></label><button className="primary" onClick={()=>void save()}>{saved?'Saved':'Save profile'}</button></>}</div><div className="settings-panel"><div className="section-title"><div><small>APPEARANCE</small><h2>Samsung-style</h2></div></div><div className="setting-row"><span>Card density<small>Control how much media fits on screen.</small></span><select value={density} onChange={e=>setDensity(e.target.value)}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></div><div className="setting-row"><span>Visual style<small>Change the device-inspired personality without changing your library data.</small></span><select value={theme} onChange={e=>setTheme(e.target.value)}><option value="sky">Sky</option><option value="samsung">Samsung</option><option value="apple">Apple</option><option value="oneplus">OnePlus</option><option value="nothing">Nothing</option><option value="amoled">AMOLED</option></select></div><div className="setting-row"><span>Light / dark<small>Switch the interface mode independently from the visual style.</small></span><select value={appearanceMode} onChange={e=>setAppearanceMode(e.target.value as 'light'|'dark'|'system')}><option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option></select></div></div><div className="settings-panel"><div className="section-title"><div><small>ACCOUNT</small><h2>Security</h2></div></div><button className="danger" onClick={()=>void signOut()}><LogOut size={16}/>Log out</button><p className="muted">Forgot-password recovery is available at the FRAME entrance.</p></div></section></div>;
 }
 function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){
  const[items,setItems]=useState<MediaItem[]>([]);
