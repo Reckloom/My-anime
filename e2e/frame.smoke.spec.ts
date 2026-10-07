@@ -22,6 +22,19 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByRole('heading', { name: 'FRAME QA Test Title', exact: true })).toBeVisible();
   });
 
+  test('persists guest library changes across reloads', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('frame-guest', '1'));
+    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+    await page.getByRole('button', { name: /manual/i }).click();
+    await page.getByLabel('Title').fill('FRAME Guest Persistence Test');
+    await page.getByRole('button', { name: 'Add to my library' }).click();
+    await expect(page.getByRole('heading', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
+  });
+
   test('opens Settings and switches appearance controls', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
