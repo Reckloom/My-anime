@@ -116,11 +116,18 @@ export default function App(){
  const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sort,setSort]=useState('rating');
  const [selected,setSelected]=useState<MediaItem|null>(null),[finder,setFinder]=useState(false),[menu,setMenu]=useState(false),[settings,setSettings]=useState(false);
  const [radar,setRadar]=useState<RadarRelease[]>([]),[radarLoading,setRadarLoading]=useState(false),[radarError,setRadarError]=useState('');
- const [profile,setProfile]=useState<Profile|null>(null),[friends,setFriends]=useState<Friendship[]>([]),[friendProfiles,setFriendProfiles]=useState<Record<string,Profile>>({});
+ const [profile,setProfile]=useState<Profile|null>(null),[friends,setFriends]=useState<Friendship[]>([]),[callFriend,setCallFriend]=useState<Profile|null>(null),[friendProfiles,setFriendProfiles]=useState<Record<string,Profile>>({});
  const [permissions,setPermissions]=useState<Permission[]>([]),[selectedFriend,setSelectedFriend]=useState<Profile|null>(null),[friendLibraryId,setFriendLibraryId]=useState<string|null>(null);
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
  const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable');
  const currentUserId=user?.id||'guest';
+ useEffect(()=>{
+  const onCall=(event:Event)=>{const friend=(event as CustomEvent<{friend:Profile}>).detail?.friend;if(friend)setCallFriend(friend)};
+  const onLibrary=(event:Event)=>{const id=(event as CustomEvent<{id:string}>).detail?.id;if(id){setFriendLibraryId(id);setPage('friend-library')}};
+  window.addEventListener('frame-voice-call',onCall);
+  window.addEventListener('frame-open-friend-library',onLibrary);
+  return()=>{window.removeEventListener('frame-voice-call',onCall);window.removeEventListener('frame-open-friend-library',onLibrary)};
+ },[]);
 
  useEffect(()=>{
   document.documentElement.dataset.density=density;
@@ -138,6 +145,7 @@ export default function App(){
    }
    const {data:p}=await supabase.from('profiles').select('id,username,display_name,avatar_url,bio').eq('id',user.id).maybeSingle();
    if(p&&!cancelled)setProfile(p as Profile);
+   if(!p&&!cancelled){const base=(user.email?.split('@')[0]||'frameuser').replace(/[^A-Za-z0-9_]/g,'').slice(0,18)||'frameuser';const generated=base+'_'+user.id.replace(/-/g,'').slice(0,6);const {data:created}=await supabase.from('profiles').upsert({id:user.id,username:generated,display_name:user.email?.split('@')[0]||'FRAME User',bio:''},{onConflict:'id'}).select('id,username,display_name,avatar_url,bio').maybeSingle();if(created)setProfile(created as Profile);await supabase.from('user_preferences').upsert({user_id:user.id},{onConflict:'user_id'})}
    const {data:pref}=await supabase.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
    if(pref&&!cancelled){setSort(String(pref.default_sort||'rating'));setDensity(String(pref.density||'comfortable'));setAiProvider(String(pref.ai_provider||'frame'))}
    const {data:apps}=await supabase.from('connected_apps').select('provider,enabled').eq('user_id',user.id);
@@ -227,7 +235,7 @@ export default function App(){
    {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={(x)=>{setDensity(x);void persistPreference('density',x)}} signOut={()=>void signOut()}/>}
    {page==='friend-library'&&friendLibraryId&&<FriendLibraryPage ownerId={friendLibraryId} owner={friendProfiles[friendLibraryId]} back={()=>openPage('friends')}/>}
   </main>
-  <nav className="mobile-bottom">{[['home','Home',HomeIcon],['library','Library',Library],['search','Search',Search],['friends','Friends',Users],['settings','Settings',Settings]].map(([id,l,I])=><button key={id as string} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):openPage(id as string)}><(I as typeof Search) size={19}/><span>{l as string}</span></button>)}</nav>
+  <nav className="mobile-bottom">{[['home','Home',HomeIcon],['library','Library',Library],['search','Search',Search],['friends','Friends',Users],['settings','Settings',Settings]].map(([id,l,I])=><button key={id as string} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):openPage(id as string)}>{(()=>{const Icon=I as typeof Search;return <Icon size={19}/>})()}<span>{l as string}</span></button>)}</nav>
   {selected&&<Detail item={selected} library={items} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>}
   {finder&&<AniListSearch close={()=>setFinder(false)} onImported={importMediaItem} onManual={()=>setFinder(false)}/>}
  </div>;
@@ -376,5 +384,48 @@ function SettingsPage({user,profile,setProfile,guest,density,setDensity,signOut}
 }
 
 function EmptyState({text}:{text:string}){return <div className="empty-state"><Library size={24}/><p>{text}</p></div>}
-function VoiceCallOverlay({userId,friendId}:{userId:string;friendId:string}){return null}
+function VoiceCallOverlay({userId,friendId,friendName,close}:{userId:string;friendId:string;friendName:string;close:()=>void}){
+ const [status,setStatus]=useState<'idle'|'connecting'|'ringing'|'in-call'>('idle');
+ const [incoming,setIncoming]=useState(false);
+ const [error,setError]=useState('');
+ const pcRef=useRef<RTCPeerConnection|null>(null),streamRef=useRef<MediaStream|null>(null),channelRef=useRef<any>(null),pendingOffer=useRef<any>(null),pendingIce=useRef<any[]>([]);
+ const audioRef=useRef<HTMLAudioElement|null>(null);
+ const channelName='frame-voice-'+[userId,friendId].sort().join('-');
+ const cleanup=(notify:boolean)=>{
+  if(notify)void channelRef.current?.send({type:'broadcast',event:'voice',payload:{from:userId,type:'hangup'}});
+  pcRef.current?.close();pcRef.current=null;streamRef.current?.getTracks().forEach(t=>t.stop());streamRef.current=null;
+  pendingOffer.current=null;pendingIce.current=[];setIncoming(false);setStatus('idle');
+ };
+ useEffect(()=>{
+  if(!supabase)return;
+  const channel=supabase.channel(channelName);
+  channelRef.current=channel;
+  channel.on('broadcast',{event:'voice'},async(message:{payload?:any})=>{
+   const p=message.payload||{};if(p.from===userId)return;
+   if(p.type==='offer'){pendingOffer.current=p.offer;setIncoming(true);setStatus('ringing')}
+   else if(p.type==='answer'&&pcRef.current){try{await pcRef.current.setRemoteDescription(p.answer);for(const candidate of pendingIce.current)await pcRef.current.addIceCandidate(candidate);pendingIce.current=[];setStatus('in-call')}catch{}}
+   else if(p.type==='ice'){if(pcRef.current?.remoteDescription)void pcRef.current.addIceCandidate(p.candidate);else pendingIce.current.push(p.candidate)}
+   else if(p.type==='hangup')cleanup(false);
+  }).subscribe();
+  return()=>{void channel.unsubscribe();cleanup(false)};
+ },[channelName,userId]);
+ const makePeer=async()=>{
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not support microphone calls.');
+  const stream=await navigator.mediaDevices.getUserMedia({audio:true});streamRef.current=stream;
+  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+  for(const track of stream.getTracks())pc.addTrack(track,stream);
+  pc.onicecandidate=e=>{if(e.candidate)void channelRef.current?.send({type:'broadcast',event:'voice',payload:{from:userId,type:'ice',candidate:e.candidate}})};
+  pc.ontrack=e=>{if(audioRef.current){audioRef.current.srcObject=e.streams[0]||new MediaStream([e.track]);void audioRef.current.play().catch(()=>{})}};
+  pc.onconnectionstatechange=()=>{if(pc.connectionState==='connected')setStatus('in-call');if(['failed','disconnected','closed'].includes(pc.connectionState))setStatus('idle')};
+  pcRef.current=pc;return pc;
+ };
+ const call=async()=>{
+  try{setError('');setStatus('connecting');const pc=await makePeer();const offer=await pc.createOffer();await pc.setLocalDescription(offer);await channelRef.current?.send({type:'broadcast',event:'voice',payload:{from:userId,type:'offer',offer:pc.localDescription}});setStatus('ringing')}catch(e){setError(e instanceof Error?e.message:'Microphone access failed.');setStatus('idle');cleanup(false)}
+ };
+ const answer=async()=>{
+  try{setError('');setStatus('connecting');const pc=await makePeer();await pc.setRemoteDescription(pendingOffer.current);for(const candidate of pendingIce.current)await pc.addIceCandidate(candidate);pendingIce.current=[];const ans=await pc.createAnswer();await pc.setLocalDescription(ans);await channelRef.current?.send({type:'broadcast',event:'voice',payload:{from:userId,type:'answer',answer:pc.localDescription}});setIncoming(false);setStatus('in-call')}catch(e){setError(e instanceof Error?e.message:'Could not answer the call.');cleanup(false)}
+ };
+ const end=()=>{cleanup(true);close()};
+ return <div className="voice-overlay"><section className="voice-card"><div className="voice-orb"><Phone size={28}/></div><small>PRIVATE VOICE</small><h2>{friendName}</h2><p>{status==='ringing'&&incoming?'Incoming voice call':status==='ringing'?'Calling…':status==='in-call'?'Connected securely':'Voice chat'}</p>{error&&<div className="inline-error">{error}</div>}<audio ref={audioRef} autoPlay playsInline/><div className="voice-actions">{incoming?<><button className="primary" onClick={()=>void answer()}><Phone size={17}/>Answer</button><button className="secondary" onClick={()=>end()}><PhoneOff size={17}/>Decline</button></>:status==='in-call'||status==='ringing'?<button className="danger" onClick={end}><PhoneOff size={17}/>End call</button>:<><button className="primary" onClick={()=>void call()}><Phone size={17}/>Start voice call</button><button className="secondary" onClick={close}>Cancel</button></>}</div><small className="hint">Audio only. Your microphone is requested only when you start or answer a call.</small></section></div>;
+}
 
