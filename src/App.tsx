@@ -1,8 +1,9 @@
-import {useMemo,useState,type FormEvent} from 'react';
+import {useEffect,useMemo,useState,type FormEvent} from 'react';
 import {Bell,BookOpen,CalendarDays,ChevronRight,CirclePlus,Compass,Film,Gamepad2,Heart,Home as HomeIcon,Library,LogOut,Menu,Search,Settings,Star,Play,Tv,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium,Status} from './types';
 import {AniListSearch} from './components/AniListSearch';
+import {supabase} from './lib/supabase';
 
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
 const mediaTypes:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Games'};
@@ -14,11 +15,62 @@ const starter:MediaItem[]=[
 {id:'gta3',title:'Grand Theft Auto III',description:'Classic open-world game set in Liberty City. FRAME tracks story progress, overall completion and detailed game metadata.',poster:'https://upload.wikimedia.org/wikipedia/en/8/8f/GTA3boxcover.jpg',backdrop:'',status:'planned',progress:0,total:100,year:2001,score:9.7,genres:['Action','Adventure','Open World'],themes:['Single-player','Open World'],medium:'game',favorite:false,game:{developer:'DMA Design / Rockstar North',publisher:'Rockstar Games',releaseDate:'2001-10-22',platforms:['PlayStation 2','PC','Xbox','Mac','iOS','Android','PS4'],gameModes:['Single-player'],playtimeHours:37,storyProgress:0,completionProgress:0,difficulty:'Medium',complexity:{story:3,gameplay:3,systems:3,exploration:5},franchise:'Grand Theft Auto',edition:'Original release',dlc:[]}}
 ];
 
+function dbRowToMedia(row:unknown):MediaItem{
+ const r=row as Record<string,unknown>;
+ const meta=(r.media_metadata&&typeof r.media_metadata==='object'?r.media_metadata:{}) as Record<string,unknown>;
+ const value=(key:string)=>meta[key]??r[key];
+ const rawData=(r.data&&typeof r.data==='object'?r.data:{}) as Record<string,unknown>;
+ return {
+   id:String(r.id), parentId:r.parent_id?String(r.parent_id):undefined, metadataId:r.metadata_id?String(r.metadata_id):undefined,
+   anilistId:r.anilist_id==null?undefined:Number(r.anilist_id), title:String(value('title')??''),
+   alternativeTitles:Array.isArray(meta.alternative_titles)?meta.alternative_titles.map(String):[],
+   description:String(value('description')??''), poster:String(value('poster')??''), backdrop:String(value('backdrop')??''),
+   medium:String(r.medium) as MediaItem['medium'], status:String(r.status) as MediaItem['status'], progress:Number(r.progress??0),
+   total:value('episodes')==null?(r.total==null?undefined:Number(r.total)):Number(value('episodes')),
+   year:value('year')==null?undefined:Number(value('year')), score:value('score')==null?undefined:Number(value('score')),
+   genres:Array.isArray(value('genres'))?(value('genres') as unknown[]).map(String):[],
+   themes:Array.isArray(value('themes'))?(value('themes') as unknown[]).map(String):[],
+   studio:value('studio')?String(value('studio')):undefined, source:value('source')?String(value('source')):undefined,
+   season:meta.season?String(meta.season):undefined, duration:meta.duration==null?undefined:Number(meta.duration),
+   airStart:meta.air_start?String(meta.air_start):undefined, airEnd:meta.air_end?String(meta.air_end):undefined,
+   favorite:Boolean(r.favorite), notes:r.notes?String(r.notes):undefined,
+   game:rawData.game&&typeof rawData.game==='object'?rawData.game as MediaItem['game']:undefined
+ };
+}
+function mediaToDbRow(item:MediaItem,userId:string){
+ return {
+   id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,
+   title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,
+   progress:item.progress,total:item.total??null,year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,
+   studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,
+   data:{source:item.anilistId?'anilist':'frame',game:item.game??null}
+ };
+}
+
 export default function App(){
  const {user}=useAuth();
  const [items,setItems]=useState<MediaItem[]>(()=>{try{return JSON.parse(localStorage.getItem('frame-library')||'null')||starter}catch{return starter}});
  const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[selected,setSelected]=useState<MediaItem|null>(null),[add,setAdd]=useState(false),[aniSearch,setAniSearch]=useState(false),[menu,setMenu]=useState(false);
- const save=(xs:MediaItem[])=>{setItems(xs);try{localStorage.setItem('frame-library',JSON.stringify(xs))}catch{}};
+ useEffect(()=>{
+   let cancelled=false;
+   const load=async()=>{
+     if(!supabase||!user?.id)return;
+     const {data,error}=await supabase.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('created_at',{ascending:false});
+     if(cancelled||error)return;
+     const loaded=(data||[]).map(dbRowToMedia);
+     setItems(loaded);
+     try{localStorage.setItem('frame-library',JSON.stringify(loaded))}catch{}
+   };
+   void load();
+   return()=>{cancelled=true};
+ },[user?.id]);
+ const save=(xs:MediaItem[])=>{
+   setItems(xs);
+   try{localStorage.setItem('frame-library',JSON.stringify(xs))}catch{}
+   if(supabase&&user?.id){
+     void Promise.all(xs.map(item=>supabase.from('media_items').upsert(mediaToDbRow(item,user.id),{onConflict:'id'}))).catch(()=>{});
+   }
+ };
  const importAniListItem=(item:MediaItem)=>{const duplicate=item.anilistId?items.find(x=>x.anilistId===item.anilistId):undefined;if(duplicate){setSelected(duplicate);setAniSearch(false);return}const next=[item,...items];save(next);setSelected(item);setAniSearch(false)};
  const filtered=useMemo(()=>items.filter(x=>x.title.toLowerCase().includes(query.toLowerCase())&&(filter==='all'||x.status===filter||filter==='game'&&x.medium==='game')),[items,query,filter]);
  const watching=items.filter(x=>x.status==='watching'),games=items.filter(x=>x.medium==='game'),favorites=items.filter(x=>x.favorite);
