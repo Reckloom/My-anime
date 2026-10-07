@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Bot,CalendarDays,ChevronRight,CirclePlus,Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
+import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Settings,Star,Users,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
