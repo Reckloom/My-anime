@@ -2,9 +2,15 @@ import { withSupabase } from 'npm:@supabase/server@^1';
 
 const ANILIST_URL = 'https://graphql.anilist.co';
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 const SEARCH_QUERY = `query ($search:String!,$page:Int!,$perPage:Int!,$type:MediaType!){
   Page(page:$page,perPage:$perPage){
-    media(search:$search,type:$type,sort:[SEARCH_MATCH]){
+    media(search:$search,type:$type){
       id
       type
       format
@@ -84,26 +90,40 @@ function mediumOf(m:AniMedia){
 }
 
 async function postAniList(query:string,variables:Record<string,unknown>){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
-  try{
-    const response=await fetch(ANILIST_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify({query,variables}),
-      signal:controller.signal
-    });
-    let json:any;
-    try{json=await response.json()}catch{throw new Error('AniList returned an invalid response.')}
-    if(!response.ok||json.errors?.length) throw new Error(json.errors?.[0]?.message||'AniList request failed.');
-    if(!json.data) throw new Error('AniList returned no data.');
-    return json.data;
-  }catch(e){
-    if(e instanceof DOMException&&e.name==='AbortError') throw new Error('AniList request timed out.');
-    throw e;
-  }finally{
-    clearTimeout(timer);
+  let lastError='AniList request failed.';
+  for(let attempt=0;attempt<3;attempt++){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),12000);
+    try{
+      const response=await fetch(ANILIST_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json','User-Agent':'FRAME/1.0'},
+        body:JSON.stringify({query,variables}),
+        signal:controller.signal
+      });
+      const text=await response.text();
+      let json:any;
+      try{json=JSON.parse(text)}catch{json=null}
+      if(response.status===429){
+        lastError='AniList is temporarily rate-limiting requests. Please wait a moment and try again.';
+        if(attempt<2){ await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1))); continue; }
+        throw new Error(lastError);
+      }
+      if(!response.ok||json?.errors?.length){
+        lastError=json?.errors?.[0]?.message||`AniList request failed (HTTP ${response.status}).`;
+        throw new Error(lastError);
+      }
+      if(!json?.data) throw new Error('AniList returned no data.');
+      return json.data;
+    }catch(e){
+      if(e instanceof DOMException&&e.name==='AbortError') lastError='AniList request timed out.';
+      else if(e instanceof Error) lastError=e.message;
+      if(attempt===2) throw new Error(lastError);
+    }finally{
+      clearTimeout(timer);
+    }
   }
+  throw new Error(lastError);
 }
 
 function metadataRow(m:AniMedia){
@@ -154,24 +174,26 @@ function searchRow(m:AniMedia){
 
 export default {
   fetch: withSupabase({ auth: 'user' }, async (req, ctx) => {
-    if(req.method!=='POST') return Response.json({error:'POST required'},{status:405});
+    if(req.method==='OPTIONS') return new Response('ok',{headers:CORS_HEADERS});
+    const json=(body:Record<string,unknown>,status=200)=>Response.json(body,{status,headers:CORS_HEADERS});
+    if(req.method!=='POST') return json({error:'POST required'},405);
 
     let body:any;
     try{
       body=await req.json();
     }catch{
-      return Response.json({error:'Invalid JSON request.'},{status:400});
+      return json({error:'Invalid JSON request.'},400);
     }
 
     const userId=ctx.userClaims?.id;
-    if(!userId) return Response.json({error:'Authenticated user required.'},{status:401});
+    if(!userId) return json({error:'Authenticated user required.'},401);
 
     const action=String(body?.action||'import');
 
     try{
       if(action==='search'){
         const search=String(body?.query||'').trim();
-        if(search.length<2) return Response.json({results:[]});
+        if(search.length<2) return json({results:[]});
 
         const requestedType=String(body?.mediaType||'ANIME').toUpperCase();
         const type=requestedType==='MANGA'?'MANGA':'ANIME';
@@ -184,12 +206,12 @@ export default {
         const results=Array.isArray(data?.Page?.media)
           ? data.Page.media.map((x:AniMedia)=>searchRow(x))
           : [];
-        return Response.json({results});
+        return json({results});
       }
 
       const anilistId=Number(body?.anilistId);
       if(!Number.isInteger(anilistId)||anilistId<=0){
-        return Response.json({error:'A valid AniList ID is required.'},{status:400});
+        return json({error:'A valid AniList ID is required.'},400);
       }
 
       const scoped=ctx.supabase;
@@ -201,15 +223,15 @@ export default {
         .eq('anilist_id',anilistId)
         .maybeSingle();
 
-      if(existingError) return Response.json({error:existingError.message},{status:400});
+      if(existingError) return json({error:existingError.message},400);
 
       if(action==='import'&&existing){
-        return Response.json({existing:true,media:existing});
+        return json({existing:true,media:existing});
       }
 
       const data=await postAniList(DETAIL_QUERY,{id:anilistId});
       const media=data?.Media as AniMedia|undefined;
-      if(!media) return Response.json({error:'AniList returned no media data.'},{status:404});
+      if(!media) return json({error:'AniList returned no media data.'},404);
 
       const meta=metadataRow(media);
 
@@ -222,7 +244,7 @@ export default {
       if(metaError) throw metaError;
 
       if(action==='refresh'){
-        if(!existing) return Response.json({error:'That title is not in your library.'},{status:404});
+        if(!existing) return json({error:'That title is not in your library.'},404);
 
         const {data:updated,error:updateError}=await scoped
           .from('media_items')
@@ -232,7 +254,7 @@ export default {
           .single();
 
         if(updateError) throw updateError;
-        return Response.json({media:updated,refreshed:true});
+        return json({media:updated,refreshed:true});
       }
 
       const {data:created,error:createError}=await scoped
@@ -266,11 +288,11 @@ export default {
         .single();
 
       if(createError) throw createError;
-      return Response.json({media:created,imported:true});
+      return json({media:created,imported:true});
     }catch(error){
-      return Response.json({
+      return json({
         error:error instanceof Error?error.message:String(error)
-      },{status:400});
+      },400);
     }
   })
 };
