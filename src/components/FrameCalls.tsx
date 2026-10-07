@@ -192,7 +192,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
       if(payload.type==='kick'){setError('The host removed you from this room.');setTimeout(()=>{void onExit()},250)}
       if(payload.type==='left'){const id=String(payload.from);const pc=peers.current.get(id);pc?.close();peers.current.delete(id);setRemotes(prev=>prev.filter(x=>x.id!==id))}
     });
-    channelReady.current=new Promise((resolve,reject)=>{
+    channelReady.current=new Promise<void>((resolve,reject)=>{
      ch.subscribe((subStatus:string,err?:any)=>{
       if(subStatus==='SUBSCRIBED'){setStatus('Live · low-latency direct peer-to-peer audio');resolve();void send({type:'hello'}).catch(e=>setError(e instanceof Error?e.message:'Voice signaling failed.'));}
       else if(subStatus==='CHANNEL_ERROR'||subStatus==='TIMED_OUT'){const msg=err?.message||'Voice room realtime could not connect.';setError(msg);reject(new Error(msg));}
