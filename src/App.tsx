@@ -191,10 +191,10 @@ export default function App(){
    {page==='web'&&<FrameWebSearch/>}
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
    {page==='ai'&&<FrameAI items={items} provider={aiProvider} setProvider={x=>{setAiProvider(x);void persist('ai_provider',x)}}/>}
-   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setCall}/>}
+   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setDirectCall}/>}
    {page==='chat'&&<FrameGlobalChat uid={uid} guest={guest}/>} 
    {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
-   {page==='connections'&&<Connections connections={connections} toggle={updateConnection}/>}
+   {page==='connections'&&<Connections connections={connections} toggle={updateConnection} onImportSteamGame={addSteamGame}/>}
    {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}} appearanceMode={appearanceMode} setAppearanceMode={x=>{setAppearanceMode(x);void persist('appearance_mode',x)}}/>}
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
   </main>
@@ -202,8 +202,9 @@ export default function App(){
    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['chat','Chat'],MessageCircle],[['friends','Friends'],Users],[['settings','Settings'],Settings]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
   {selected&&<FrameDetail item={selected} library={items} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>}
-  {finder&&<AniListSearch initialQuery={query} close={()=>setFinder(false)} onImported={importItem} onManual={()=>setFinder(false)}/>} 
-  {call&&<VoiceCall uid={uid} friend={call} close={()=>setCall(null)}/>}
+  {finder&&<AniListSearch initialQuery={query} close={()=>setFinder(false)} onImported={importItem} onManual={()=>setFinder(false)} onAi={()=>{setFinder(false);go('ai')}}/>}
+  {!guest&&<FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/>} 
+  <FrameQuickDock onChat={()=>go('chat')} onCall={()=>go('calls')} onSearch={()=>setFinder(true)}/>
  </div>;
 }
 
