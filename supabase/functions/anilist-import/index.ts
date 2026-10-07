@@ -66,7 +66,7 @@ type AniMedia = {
 };
 
 function clean(value?:string|null){
-  return (value||'').replace(/<br\\s*\\/?>(\\s*)/gi,' ').replace(/<[^>]+>/g,'').trim();
+  return (value||'').replace(/<br\s*\/?>(\s*)/gi,' ').replace(/<[^>]+>/g,'').trim();
 }
 
 function date(value:AniMedia['startDate']){
