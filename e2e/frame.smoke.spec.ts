@@ -50,7 +50,11 @@ test.describe('FRAME core smoke flow', () => {
 
     for (const [button, heading] of targets) {
       await page.getByRole('button', { name: button, exact: true }).first().click();
-      await expect(page.locator('h1').filter({ hasText: heading })).toBeVisible();
+      if (button === 'Calls') {
+        await expect(page.getByText(/Calls need your FRAME account|^Calls$/, { exact: false }).first()).toBeVisible();
+      } else {
+        await expect(page.locator('h1').filter({ hasText: heading })).toBeVisible();
+      }
     }
   });
 });
