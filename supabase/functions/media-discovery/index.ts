@@ -119,15 +119,23 @@ async function detailSeries(id:string){
 }
 
 async function searchMovies(q:string){
-  const url=`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q+' film')}&gsrnamespace=0&gsrlimit=12&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
+  const url=`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q+' film')}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
   const data=await getJson(url);
   const pages=Object.values(data?.query?.pages||{}) as any[];
-  return pages.map((x:any)=>({
-    provider:'wikipedia',externalId:String(x.pageid),title:String(x.title||'Untitled'),medium:'movie',
-    poster:x.thumbnail?.source||'',backdrop:'',score:null,
-    year:extractYear(x.extract),description:clean(x.extract),genres:[],themes:[],
-    sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(String(x.title||''))}`
-  }));
+  const needle=q.trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const tokens=needle.split(/\s+/).filter(Boolean);
+  return pages.map((x:any)=>{
+    const title=String(x.title||'Untitled');
+    const hay=title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    let relevance=0;
+    if(hay===needle)relevance+=100;
+    if(hay.includes(needle))relevance+=45;
+    relevance+=tokens.filter(t=>hay.includes(t)).length*7;
+    const extract=clean(x.extract);
+    if(/\b(film|movie|cinema|feature film)\b/i.test(extract))relevance+=8;
+    if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
+    return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster:x.thumbnail?.source||'',backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
+  }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12).map(({_relevance,...x}:any)=>x);
 }
 
 async function detailMovie(id:string){
