@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">FRAME logo</title>
+  <desc id="desc">Geometric FRAME symbol combining an F with an open frame</desc>
+  <defs>
+    <linearGradient id="frameBlue" x1="42" y1="38" x2="214" y2="218" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FBFF"/>
+      <stop offset=".42" stop-color="#8DD6FF"/>
+      <stop offset="1" stop-color="#4D7CFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="18" y="18" width="220" height="220" rx="58" fill="#090D14"/>
+  <path d="M64 54h122v34h-84v31h62v32h-62v51H64z" fill="url(#frameBlue)"/>
+  <path d="M48 64V48h16M208 64V48h-16M48 192v16h16M208 192v16h-16" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" opacity=".78"/>
+  <path d="M48 103V64M208 103V64M48 153v39M208 153v39" fill="none" stroke="#8DD6FF" stroke-width="3" stroke-linecap="round" opacity=".38"/>
+  <circle cx="196" cy="60" r="6" fill="#FFFFFF" opacity=".9"/>
+</svg>
