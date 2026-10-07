@@ -70,11 +70,16 @@ export default function App(){
  const save=(xs:MediaItem[])=>{
    setItems(xs);
    try{localStorage.setItem('frame-library',JSON.stringify(xs))}catch{}
-   if(supabase&&user?.id){
-     void Promise.all(xs.map(item=>supabase.from('media_items').upsert(mediaToDbRow(item,user.id),{onConflict:'id'}))).catch(()=>{});
+   const client=supabase;
+   if(client&&user?.id){
+     void Promise.all(xs.map(item=>client.from('media_items').upsert(mediaToDbRow(item,user.id),{onConflict:'id'}))).catch(()=>{});
    }
  };
- const importAniListItem=(item:MediaItem)=>{const duplicate=item.anilistId?items.find(x=>x.anilistId===item.anilistId):undefined;if(duplicate){setSelected(duplicate);setAniSearch(false);return}const next=[item,...items];save(next);setSelected(item);setAniSearch(false)};
+ const importMediaItem=(item:MediaItem)=>{
+   const duplicate=items.find(x=>(item.anilistId&&x.anilistId===item.anilistId)||(item.sourceProvider&&item.externalId&&x.sourceProvider===item.sourceProvider&&x.externalId===item.externalId));
+   if(duplicate){setSelected(duplicate);setAniSearch(false);return}
+   const next=[item,...items];save(next);setSelected(item);setAniSearch(false);
+ };
  const filtered=useMemo(()=>items.filter(x=>x.title.toLowerCase().includes(query.toLowerCase())&&(filter==='all'||x.status===filter||filter==='game'&&x.medium==='game'||filter==='book'&&x.medium==='book'||filter===x.medium)),[items,query,filter]);
  const watching=items.filter(x=>x.status==='watching'),games=items.filter(x=>x.medium==='game'),favorites=items.filter(x=>x.favorite);
  const nav=[['home','Home',HomeIcon],['library','Library',Library],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays]] as const;
@@ -86,7 +91,7 @@ export default function App(){
  {page==='calendar'&&<div className="page padded"><div className="page-title"><div><small>COMING UP</small><h1>Release Radar</h1><p>Episodes, chapters and game releases will appear here when automatic tracking is connected.</p></div></div></div>}
  {page==='settings'&&<div className="page padded"><div className="page-title"><div><small>ACCOUNT</small><h1>Settings</h1><p>{user?.email||'FRAME user'}</p></div></div><button className="danger" onClick={()=>signOut()}><LogOut size={17}/> Sign out</button></div>}</main>
  <div className="mobile-tabs">{nav.slice(0,3).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>setPage(id)}><Icon size={19}/><span>{label}</span></button>)}<button onClick={()=>setPage('settings')}><Settings size={19}/><span>Settings</span></button></div>
- {selected&&<Detail item={selected} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>} {add&&<Add close={()=>setAdd(false)} add={x=>save([x,...items])}/>} {aniSearch&&<AniListSearch close={()=>setAniSearch(false)} onImported={importAniListItem} onManual={()=>{setAniSearch(false);setAdd(true)}}/>}</div>
+ {selected&&<Detail item={selected} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>} {add&&<Add close={()=>setAdd(false)} add={x=>save([x,...items])}/>} {aniSearch&&<AniListSearch close={()=>setAniSearch(false)} onImported={importMediaItem} onManual={()=>{setAniSearch(false);setAdd(true)}}/>}</div>
 }
 function Home({items,watching,games,favorites,open,add}:{items:MediaItem[];watching:MediaItem[];games:MediaItem[];favorites:MediaItem[];open:(x:MediaItem)=>void;add:()=>void}){const hero=items[0];return <div className="page"><section className="hero" style={{backgroundImage:'url('+hero.poster+')'}}><div className="hero-shade"/><div className="hero-content"><div className="eyebrow">YOUR MEDIA UNIVERSE</div><h1>{hero.title}</h1><p>{hero.description}</p><div className="hero-meta"><span><Star size={14} fill="currentColor"/> {hero.score}</span><span>{hero.year}</span><span>{hero.genres.join(' · ')}</span></div><button className="primary" onClick={()=>open(hero)}><Play size={17}/> Open title</button><button className="secondary" onClick={add}><CirclePlus size={17}/> Add media</button></div></section><section className="section stats-row"><Stat l="In library" n={items.length}/><Stat l="Watching" n={watching.length}/><Stat l="Games" n={games.length}/><Stat l="Favorites" n={favorites.length}/></section><Shelf title="Continue watching" items={watching} open={open}/><Shelf title="Games" items={games} open={open}/><Shelf title="Favorites" items={favorites} open={open}/></div>}
 function Stat({l,n}:{l:string;n:number}){return <div className="stat"><b>{n}</b><span>{l}</span></div>}
