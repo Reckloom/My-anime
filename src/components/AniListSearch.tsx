@@ -5,7 +5,7 @@ import {supabase} from '../lib/supabase';
 import type {MediaItem,Medium} from '../types';
 
 type CatalogType='ANIME'|'MANGA';
-type Tab='anime'|'manga'|'game'|'series'|'movie'|'book';
+type Tab='anime'|'manga'|'visual-novel'|'game'|'series'|'movie'|'book';
 type DiscoveryResult={
  provider:string;externalId:string;title:string;medium:Medium;poster?:string;backdrop?:string;
  description?:string;genres?:string[];themes?:string[];studio?:string;source?:string;
@@ -20,6 +20,7 @@ type ExternalResponse={results?:DiscoveryResult[]};
 const tabs:{id:Tab;label:string;icon:typeof Tv;hint:string}[]=[
  {id:'anime',label:'Anime',icon:Tv,hint:'AniList'},
  {id:'manga',label:'Manga / Manhwa / LN',icon:BookOpen,hint:'AniList'},
+ {id:'visual-novel',label:'Visual Novels',icon:BookOpen,hint:'VNDB'},
  {id:'game',label:'Games',icon:Gamepad2,hint:'Steam'},
  {id:'series',label:'Series',icon:Tv,hint:'TVmaze'},
  {id:'movie',label:'Movies',icon:Film,hint:'Wikipedia'},
@@ -92,7 +93,7 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
 async function detailExternal(result:DiscoveryResult){
  if(!supabase)return result;
  try{
-  const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':'book',externalId:result.externalId}});
+  const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book',externalId:result.externalId}});
   if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;
  }catch{}
  return result;
@@ -170,7 +171,7 @@ export function AniListSearch({close,onImported,onManual}:{close:()=>void;onImpo
  };
  return <div className="modalwrap"><div className="modal search-modal">
   <div className="modalhead"><div><small>MEDIA DISCOVERY</small><h2>Find anything for FRAME</h2><p className="muted">Live catalogues for anime, manga, manhwa, games, series, movies and books.</p></div><button onClick={close} aria-label="Close"><X/></button></div>
-  <div className="search-big"><Search size={18}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder={current.id==='game'?'Search games by title…':current.id==='series'?'Search TV series…':current.id==='movie'?'Search movies by title…':current.id==='book'?'Search books / novels…':current.id==='manga'?'Search manga, manhwa or light novels…':'Search anime, movies, seasons…'}/></div>
+  <div className="search-big"><Search size={18}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder={current.id==='game'?'Search games by title…':current.id==='series'?'Search TV series…':current.id==='movie'?'Search movies by title…':current.id==='book'?'Search books / novels…':current.id==='visual-novel'?'Search visual novels…':current.id==='manga'?'Search manga, manhwa or light novels…':'Search anime, movies, seasons…'}/></div>
   <div className="catalog-tabs catalog-tabs-wide" role="tablist" aria-label="Media catalogues">{tabs.map(t=>{const Icon=t.icon;return <button key={t.id} className={tab===t.id?'active':''} onClick={()=>{setTab(t.id);setResults([]);setError('')}}><Icon size={14}/>{t.label}<small>{t.hint}</small></button>})}</div>
   {error&&<div className="inline-error"><AlertCircle size={15}/><span>{error}</span></div>}
   {loading&&<div className="search-state"><Loader2 className="spin"/>Searching {current.hint}…</div>}
