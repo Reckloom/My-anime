@@ -177,6 +177,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
    const {error:e}=await supabase.from('direct_call_sessions').insert({id,caller_id:uid,callee_id:target.id,status:'ringing'});
    if(e)throw e;
    await openCallChannel(id);
+   await inboxReady.current;
    const {error:re}=await inbox.current.send({type:'broadcast',event:'ring',payload:{callId:id,from:uid}});
    if(re)throw new Error('The other person could not be reached.');
    await setupPeer();
