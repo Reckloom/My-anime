@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { Shield } from 'lucide-react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
