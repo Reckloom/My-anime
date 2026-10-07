@@ -105,7 +105,7 @@ export default function App(){
     if(created)setProfile(created as Profile);
    }
    const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
-   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'));setTheme(String(prefs.theme||'sky'));setAppearanceMode((['light','dark','system'].includes(String(prefs.appearance_mode))?String(prefs.appearance_mode):'light') as 'light'|'dark'|'system')}
+   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));setAiProvider(String(prefs.ai_provider||'frame'));const savedTheme=String(prefs.theme||'sky');setTheme((['sky','samsung','apple','oneplus','nothing','amoled'].includes(savedTheme)?savedTheme:'sky'));setAppearanceMode((['light','dark','system'].includes(String(prefs.appearance_mode))?String(prefs.appearance_mode):'light') as 'light'|'dark'|'system')}
   };
   void load();
   return()=>{active=false};
@@ -190,7 +190,7 @@ export default function App(){
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
   </main>
   <nav className="mobile-bottom">
-   {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['friends','Friends'],Users],[['settings','Settings'],Settings]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
+   {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['chat','Chat'],MessageCircle],[['friends','Friends'],Users],[['settings','Settings'],Settings]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
   {selected&&<FrameDetail item={selected} library={items} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>}
   {finder&&<AniListSearch initialQuery={query} close={()=>setFinder(false)} onImported={importItem} onManual={()=>setFinder(false)}/>} 
