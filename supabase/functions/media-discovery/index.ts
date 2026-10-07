@@ -141,6 +141,38 @@ async function detailMovie(id:string){
   };
 }
 
+async function searchVisualNovels(q:string){
+  const data=await postJson('https://api.vndb.org/kana/vn',{
+    filters:['search','=',q],
+    fields:'id,title,alttitle,image.url,description,rating,released',
+    sort:'searchrank',
+    results:12
+  });
+  const rows=Array.isArray(data?.results)?data.results:[];
+  return rows.map((x:any)=>({
+    provider:'vndb',externalId:String(x.id),title:String(x.title||'Untitled'),medium:'visual-novel',
+    poster:x.image?.url||'',backdrop:'',score:x.rating==null?null:Number(x.rating)/10,
+    year:extractYear(x.released),description:clean(x.description),genres:[],themes:[],
+    alternativeTitles:x.alttitle?[String(x.alttitle)]:[],source:'VNDB',
+    sourceUrl:`https://vndb.org/${x.id}`
+  }));
+}
+async function detailVisualNovel(id:string){
+  const data=await postJson('https://api.vndb.org/kana/vn',{
+    filters:['id','=',id],
+    fields:'id,title,alttitle,image.url,description,rating,released',
+    results:1
+  });
+  const x=data?.results?.[0];
+  if(!x) throw new Error('Visual novel details were not available.');
+  return {
+    provider:'vndb',externalId:String(x.id),title:String(x.title||'Untitled'),medium:'visual-novel',
+    poster:x.image?.url||'',backdrop:'',score:x.rating==null?undefined:Number(x.rating)/10,
+    year:extractYear(x.released),description:clean(x.description),genres:[],themes:[],
+    alternativeTitles:x.alttitle?[String(x.alttitle)]:[],source:'VNDB',
+    sourceUrl:`https://vndb.org/${x.id}`
+  };
+}
 async function searchBooks(q:string){
   const fields='key,title,author_name,first_publish_year,cover_i,subject';
   const data=await getJson(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=12&fields=${encodeURIComponent(fields)}`);
@@ -183,16 +215,16 @@ export default {
       const body=await req.json();
       const action=String(body?.action||'search');
       const provider=String(body?.provider||'');
-      if(!(['game','series','movie','book'].includes(provider))) return response({error:'Unsupported provider.'},400);
+      if(!(['game','series','movie','book','visual-novel'].includes(provider))) return response({error:'Unsupported provider.'},400);
       if(action==='search'){
         const query=String(body?.query||'').trim();
         if(query.length<2) return response({results:[]});
-        const fn=provider==='game'?searchGames:provider==='series'?searchSeries:provider==='movie'?searchMovies:searchBooks;
+        const fn=provider==='game'?searchGames:provider==='series'?searchSeries:provider==='movie'?searchMovies:provider==='book'?searchBooks:searchVisualNovels;
         return response({results:await fn(query)});
       }
       const id=String(body?.externalId||'').trim();
       if(!id) return response({error:'A valid external ID is required.'},400);
-      const fn=provider==='game'?detailGame:provider==='series'?detailSeries:provider==='movie'?detailMovie:detailBook;
+      const fn=provider==='game'?detailGame:provider==='series'?detailSeries:provider==='movie'?detailMovie:provider==='book'?detailBook:detailVisualNovels;
       return response({result:await fn(id)});
     }catch(error){
       return response({error:error instanceof Error?error.message:String(error)},400);
