@@ -30,7 +30,7 @@ export function FrameSocial({uid,guest,onOpenLibrary,onCall}:{uid:string;guest:b
   };
   void loadMessages();
   const room='frame-friend-chat:'+([uid,selected.id].sort().join(':'));
-  const channel=client.channel(room,{config:{private:true}});
+  const channel=client.channel(room);
   channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'friend_messages'},payload=>{
    const row=payload.new as Message;
    if(!row||!((row.sender_id===uid&&row.recipient_id===selected.id)||(row.sender_id===selected.id&&row.recipient_id===uid)))return;
