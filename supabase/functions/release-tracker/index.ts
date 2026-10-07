@@ -49,6 +49,8 @@ async function aniList(ids:number[],from:number,to:number){
 }
 
 function secretKeyFromEnv(){
+  const legacy=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if(legacy)return legacy;
   const raw=Deno.env.get('SUPABASE_SECRET_KEYS');
   if(raw){
     try{
@@ -56,7 +58,7 @@ function secretKeyFromEnv(){
       if(typeof parsed?.default==='string'&&parsed.default)return parsed.default;
     }catch{}
   }
-  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
+  return '';
 }
 
 Deno.serve(async req=>{
