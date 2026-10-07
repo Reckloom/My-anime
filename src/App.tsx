@@ -1,5 +1,5 @@
 import {useMemo,useState,type FormEvent} from 'react';
-import {Bell,BookOpen,CalendarDays,ChevronRight,CirclePlus,Compass,Film,Gamepad2,Heart,Home,Library,LogOut,Menu,Search,Settings,Star,Play,Tv,X} from 'lucide-react';
+import {Bell,BookOpen,CalendarDays,ChevronRight,CirclePlus,Compass,Film,Gamepad2,Heart,Home as HomeIcon,Library,LogOut,Menu,Search,Settings,Star,Play,Tv,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium,Status} from './types';
 import {AniListSearch} from './components/AniListSearch';
@@ -22,7 +22,7 @@ export default function App(){
  const importAniListItem=(item:MediaItem)=>{const duplicate=item.anilistId?items.find(x=>x.anilistId===item.anilistId):undefined;if(duplicate){setSelected(duplicate);setAniSearch(false);return}const next=[item,...items];save(next);setSelected(item);setAniSearch(false)};
  const filtered=useMemo(()=>items.filter(x=>x.title.toLowerCase().includes(query.toLowerCase())&&(filter==='all'||x.status===filter||filter==='game'&&x.medium==='game')),[items,query,filter]);
  const watching=items.filter(x=>x.status==='watching'),games=items.filter(x=>x.medium==='game'),favorites=items.filter(x=>x.favorite);
- const nav=[['home','Home',Home],['library','Library',Library],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays]] as const;
+ const nav=[['home','Home',HomeIcon],['library','Library',Library],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays]] as const;
  return <div className="app"><header className="topbar"><button className="brand" onClick={()=>setPage('home')}><span>F</span>FRAME</button><nav className="desktop-nav">{nav.map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>setPage(id)}><Icon size={17}/>{label}</button>)}</nav><div className="top-actions"><label className="search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search your library"/></label><button className="primary top-find" onClick={()=>setAniSearch(true)}><Search size={16}/> Find media</button><button className="icon-btn"><Bell size={18}/></button><button className="avatar" onClick={()=>setPage('settings')}>{(user?.email?.[0]||'F').toUpperCase()}</button><button className="mobile-menu-btn icon-btn" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button></div></header>
  {menu&&<div className="mobile-nav">{nav.map(([id,label,Icon])=><button key={id} onClick={()=>{setPage(id);setMenu(false)}}><Icon size={18}/>{label}</button>)}</div>}
  <main>{page==='home'&&<Home items={items} watching={watching} games={games} favorites={favorites} open={setSelected} add={()=>setAniSearch(true)}/>}
