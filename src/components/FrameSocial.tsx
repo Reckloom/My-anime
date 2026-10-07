@@ -20,14 +20,33 @@ export function FrameSocial({uid,guest,onOpenLibrary,onCall}:{uid:string;guest:b
   const {data:p}=await client.from('library_permissions').select('*').or('owner_id.eq.'+uid+',viewer_id.eq.'+uid);setPermissions((p||[]) as Permission[]);
  };
  useEffect(()=>{void load();if(guest)return;const t=window.setInterval(()=>void load(),5000);return()=>window.clearInterval(t)},[uid,guest]);
- useEffect(()=>{if(!supabase||guest||!selected)return;const loadMessages=async()=>{const client=supabase;if(!client)return;const {data}=await client.from('friend_messages').select('*').or('and(sender_id.eq.'+uid+',recipient_id.eq.'+selected.id+'),and(sender_id.eq.'+selected.id+',recipient_id.eq.'+uid+')').order('created_at',{ascending:true});setMessages((data||[]) as Message[])};void loadMessages();const t=window.setInterval(()=>void loadMessages(),2500);return()=>window.clearInterval(t)},[selected?.id,uid,guest]);
+ useEffect(()=>{
+  if(!supabase||guest||!selected)return;
+  let active=true;
+  const client=supabase;
+  const loadMessages=async()=>{
+   const {data}=await client.from('friend_messages').select('*').or('and(sender_id.eq.'+uid+',recipient_id.eq.'+selected.id+'),and(sender_id.eq.'+selected.id+',recipient_id.eq.'+uid+')').order('created_at',{ascending:true});
+   if(active&&data)setMessages(data as Message[]);
+  };
+  void loadMessages();
+  const room='frame-friend-chat:'+([uid,selected.id].sort().join(':'));
+  const channel=client.channel(room,{config:{private:true}});
+  channel.on('postgres_changes',{event:'INSERT',schema:'public',table:'friend_messages'},payload=>{
+   const row=payload.new as Message;
+   if(!row||!((row.sender_id===uid&&row.recipient_id===selected.id)||(row.sender_id===selected.id&&row.recipient_id===uid)))return;
+   setMessages(prev=>prev.some(x=>x.id===row.id)?prev:[...prev,row].sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at)));
+  });
+  channel.subscribe((status:string,err?:any)=>{if((status==='CHANNEL_ERROR'||status==='TIMED_OUT')&&active)void loadMessages().catch(()=>{});});
+  const t=window.setInterval(()=>void loadMessages(),5000);
+  return()=>{active=false;window.clearInterval(t);void channel.unsubscribe()};
+ },[selected?.id,uid,guest]);
  if(guest)return <div className="page"><div className="social-lock"><Users size={28}/><h2>Friends is account-only</h2><p>Sign in to use usernames, private chat, permission-based library sharing and voice calls.</p></div></div>;
  const accepted=friends.filter(x=>x.status==='accepted').map(x=>profiles[x.requester_id===uid?x.addressee_id:x.requester_id]).filter(Boolean);
  const incoming=friends.filter(x=>x.status==='pending'&&x.addressee_id===uid);
  const search=async()=>{const client=supabase;if(query.trim().length<2||!client)return;const {data}=await client.from('profiles').select('id,username,display_name,avatar_url').ilike('username','%'+query.trim()+'%').neq('id',uid).limit(10);setResults((data||[]) as Profile[])};
  const add=async(id:string)=>{const client=supabase;if(client)await client.from('friendships').insert({requester_id:uid,addressee_id:id,status:'pending'});setResults(results.filter(x=>x.id!==id))};
  const accept=async(id:string)=>{const client=supabase;if(client)await client.from('friendships').update({status:'accepted'}).eq('id',id).eq('addressee_id',uid);await load()};
- const send=async()=>{const client=supabase;if(!client||!selected||!draft.trim())return;const body=draft.trim();setDraft('');await client.from('friend_messages').insert({sender_id:uid,recipient_id:selected.id,body})};
+ const send=async()=>{const client=supabase;if(!client||!selected||!draft.trim())return;const body=draft.trim().slice(0,2000);setDraft('');const {data,error}=await client.from('friend_messages').insert({sender_id:uid,recipient_id:selected.id,body}).select('*').single();if(!error&&data)setMessages(prev=>prev.some(x=>x.id===data.id)?prev:[...prev,data as Message].sort((a,b)=>Date.parse(a.created_at)-Date.parse(b.created_at)));if(error)setDraft(body)};
  const shareState=(id:string)=>permissions.find(p=>p.owner_id===id&&p.viewer_id===uid)?.status||'none';
  const askLibrary=async()=>{const client=supabase;if(!client||!selected)return;await client.from('library_permissions').upsert({owner_id:selected.id,viewer_id:uid,status:'pending'},{onConflict:'owner_id,viewer_id'});await load()};
  const incomingShares=permissions.filter(p=>p.owner_id===uid&&p.status==='pending');
