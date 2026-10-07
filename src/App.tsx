@@ -146,6 +146,14 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
    if(next.length===0){const {error}=await client.from('media_items').delete().eq('user_id',user.id);if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}return true}
    const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});
    if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
+   const {data:cloudRows,error:cloudReadError}=await client.from('media_items').select('id').eq('user_id',user.id);
+   if(cloudReadError){setAppMessage('Cloud sync check failed: '+cloudReadError.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
+   const keep=new Set(next.map(item=>item.id));
+   const stale=(cloudRows||[]).map(row=>String(row.id)).filter(id=>!keep.has(id));
+   if(stale.length){
+    const {error:deleteError}=await client.from('media_items').delete().eq('user_id',user.id).in('id',stale);
+    if(deleteError){setAppMessage('Cloud cleanup failed: '+deleteError.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
+   }
    return true;
   }catch(e){setAppMessage('Cloud save failed: '+(e instanceof Error?e.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),5000);return false}
  };
