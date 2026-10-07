@@ -84,18 +84,45 @@ async function searchAni(term:string,type:CatalogType){
  const d=await aniList<{Page:{media:AniListMedia[]}}>(SEARCH_QUERY,{search:term,page:1,perPage:12,type});
  return d.Page.media||[];
 }
+async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'manga'>):Promise<DiscoveryResult[]>{
+ const q=encodeURIComponent(term.trim());
+ if(provider==='series'){
+  const res=await fetch('https://api.tvmaze.com/search/shows?q='+q);if(!res.ok)throw new Error('TV series catalogue is temporarily unavailable.');
+  const rows=await res.json() as Array<{show:any}>;
+  return rows.slice(0,12).map(({show})=>({provider:'tvmaze',externalId:String(show.id),title:String(show.name||term),medium:'series',poster:show.image?.original||show.image?.medium,description:show.summary||'',genres:Array.isArray(show.genres)?show.genres:[],year:show.premiered?Number(String(show.premiered).slice(0,4)):undefined,score:show.rating?.average??null,sourceUrl:show.officialSite||show.url,source:'tvmaze'}));
+ }
+ if(provider==='book'){
+  const res=await fetch('https://openlibrary.org/search.json?q='+q+'&limit=12&fields=key,title,author_name,first_publish_year,cover_i');if(!res.ok)throw new Error('Book catalogue is temporarily unavailable.');
+  const data=await res.json() as {docs?:any[]};
+  return (data.docs||[]).map(x=>({provider:'openlibrary',externalId:String(x.key||'').replace(/^\\/works\\//,''),title:String(x.title||term),medium:'book',poster:x.cover_i?'https://covers.openlibrary.org/b/id/'+x.cover_i+'-L.jpg':undefined,description:x.author_name?.length?'By '+x.author_name.slice(0,3).join(', '):'',year:x.first_publish_year?Number(x.first_publish_year):undefined,sourceUrl:x.key?'https://openlibrary.org'+x.key:undefined,source:'openlibrary',genres:[]}));
+ }
+ if(provider==='movie'){
+  const url='https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+q+'&gsrnamespace=0&gsrlimit=12&prop=extracts|pageimages|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=400&format=json&origin=*';
+  const res=await fetch(url);if(!res.ok)throw new Error('Movie catalogue is temporarily unavailable.');
+  const data=await res.json() as {query?:{pages?:Record<string,any>}};
+  return Object.values(data.query?.pages||{}).map(x=>({provider:'wikipedia',externalId:String(x.pageid),title:String(x.title||term),medium:'movie',poster:x.thumbnail?.source,description:String(x.extract||''),sourceUrl:x.fullurl||('https://en.wikipedia.org/?curid='+x.pageid),source:'wikipedia',genres:[]}));
+ }
+ if(provider==='visual-novel'){
+  const res=await fetch('https://api.vndb.org/kana/vn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:['search','=',term.trim()],fields:'title,alttitle,description,image.url,released,rating',sort:'searchrank',results:12})});if(!res.ok)throw new Error('Visual novel catalogue is temporarily unavailable.');
+  const data=await res.json() as {results?:any[]};
+  return (data.results||[]).map(x=>({provider:'vndb',externalId:String(x.id),title:String(x.title||term),alternativeTitles:x.alttitle?[x.alttitle]:[],medium:'visual-novel',poster:x.image?.url,description:x.description||'',year:x.released?Number(String(x.released).slice(0,4)):undefined,score:x.rating?Number(x.rating)/10:null,sourceUrl:'https://vndb.org/'+x.id,source:'vndb',genres:[]}));
+ }
+ if(provider==='game'){
+  const res=await fetch('https://store.steampowered.com/api/storesearch/?term='+q+'&l=english&cc=IN');if(!res.ok)throw new Error('Game catalogue is temporarily unavailable.');
+  const data=await res.json() as {items?:any[]};
+  return (data.items||[]).slice(0,12).map(x=>({provider:'steam',externalId:String(x.id),title:String(x.name||term),medium:'game',poster:x.tiny_image,score:null,sourceUrl:'https://store.steampowered.com/app/'+x.id+'/',source:'steam',genres:[],game:{isFree:Boolean(x.is_free),priceText:x.price_overview?.final_formatted||x.price_overview?.initial_formatted,storeUrl:'https://store.steampowered.com/app/'+x.id+'/'}}));
+ }
+ return [];
+}
+
 async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>){
- if(!supabase)throw new Error('FRAME search service is not configured.');
- const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'search',query:term,provider}});
- if(error)throw error;
- return((data||{}) as ExternalResponse).results||[];
+ if(supabase){try{const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'search',query:term,provider}});const found=((data||{}) as ExternalResponse).results||[];if(!error&&found.length)return found;}catch{}}
+ return directExternalSearch(term,provider);
 }
 async function detailExternal(result:DiscoveryResult){
- if(!supabase)return result;
- try{
-  const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book',externalId:result.externalId}});
-  if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;
- }catch{}
+ if(supabase){try{const p=result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:p,externalId:result.externalId}});if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;}catch{}}
+ if(result.provider==='tvmaze'){try{const res=await fetch('https://api.tvmaze.com/shows/'+encodeURIComponent(result.externalId)+'?embed=episodes');if(res.ok){const x=await res.json() as any;return{...result,total:Array.isArray(x._embedded?.episodes)?x._embedded.episodes.length:result.total,description:x.summary||result.description,poster:x.image?.original||result.poster,sourceUrl:x.officialSite||x.url}}}catch{}}
+ if(result.provider==='steam'){try{const res=await fetch('https://store.steampowered.com/api/appdetails?appids='+encodeURIComponent(result.externalId)+'&cc=IN&l=english');if(res.ok){const raw=await res.json() as Record<string,{success:boolean;data?:any}>;const x=raw[result.externalId];if(x?.success&&x.data)return{...result,description:x.data.short_description||x.data.detailed_description||result.description,poster:x.data.header_image||result.poster,year:x.data.release_date?.date?Number(String(x.data.release_date.date).slice(-4)):result.year,game:{...(result.game||{}),developer:x.data.developers?.[0],publisher:x.data.publishers?.[0],releaseDate:x.data.release_date?.date,isFree:Boolean(x.data.is_free),priceText:x.data.price_overview?.final_formatted||x.data.price_overview?.initial_formatted,storeUrl:'https://store.steampowered.com/app/'+result.externalId+'/'}}}}}catch{}}
  return result;
 }
 function externalToMedia(r:DiscoveryResult):MediaItem{
