@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState,type FormEvent} from 'react';
-import {Bell,BookOpen,CalendarDays,ChevronRight,Clock3,RefreshCw,CirclePlus,Compass,Film,Gamepad2,Heart,Home as HomeIcon,Library,LogOut,Menu,Search,Settings,Star,Play,Tv,X} from 'lucide-react';
+import {AlertCircle,Bell,BookOpen,CalendarDays,ChevronRight,Clock3,RefreshCw,CirclePlus,Compass,Film,Gamepad2,Heart,Home as HomeIcon,Library,LogOut,Menu,Search,Settings,Star,Play,Tv,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium,Status} from './types';
 import {AniListSearch} from './components/AniListSearch';
@@ -8,7 +8,7 @@ import {supabase} from './lib/supabase';
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
 const mediaTypes:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Games',book:'Book'};
 const labels:Record<Status,string>={watching:'Watching',completed:'Completed',planned:'Plan to Play/Watch',paused:'Paused',dropped:'Dropped'};
-type RadarRelease={mediaId:string;anilistId:number;title:string;episode:number;airingAt:string;released:boolean;status:'released'|'scheduled'};
+type RadarRelease={mediaId:string;anilistId:number;title:string;poster:string;episode:number;airingAt:string;released:boolean;status:'released'|'scheduled'};
 const starter:MediaItem[]=[
 {id:'aot',title:'Attack on Titan',description:'A complete franchise entry with seasons, parts and specials.',poster,backdrop:'',status:'completed',progress:89,total:89,year:2013,score:9.8,genres:['Action','Dark Fantasy','Mystery'],themes:[],medium:'anime',favorite:true},
 {id:'sg',title:'Steins;Gate',description:'A fully watched classic tracked as the parent entry for related releases.',poster,backdrop:'',status:'completed',progress:24,total:24,year:2011,score:10,genres:['Sci-Fi','Thriller','Drama'],themes:[],medium:'anime',favorite:true},
@@ -126,7 +126,7 @@ function ReleaseRadarPage({upcoming,due,loading,error,refresh,enableAlerts}:{upc
  const fmt=(iso:string)=>new Date(iso).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
  return <div className="page padded"><div className="page-title"><div><small>AUTOMATIC TRACKING</small><h1>Release Radar</h1><p>FRAME checks your tracked AniList titles automatically and looks ahead 45 days.</p></div><div className="detail-actions"><button className="secondary" onClick={refresh} disabled={loading}>{loading?<RefreshCw className="spin"/>:<RefreshCw/>}Refresh</button><button className="primary" onClick={enableAlerts}><Bell/>Enable browser alerts</button></div></div>
  {error&&<div className="inline-error"><AlertCircle size={15}/><span>{error}</span></div>}
- <section className="release-section"><div className="heading"><h2>Up next</h2><span>{upcoming.length} scheduled</span></div>{upcoming.length?<div className="releases">{upcoming.slice(0,30).map(x=><div key={x.anilistId+'-'+x.episode}><div className="release-poster"/><section><b>{x.title}</b><span>Episode {x.episode}</span><small><Clock3 size={12}/> {fmt(x.airingAt)}</small></section></div>)}</div>:<div className="state"><CalendarDays size={24}/><h2>No upcoming episodes found</h2><p>Keep anime in your library and FRAME will check the schedule for you.</p></div>}</section>
+ <section className="release-section"><div className="heading"><h2>Up next</h2><span>{upcoming.length} scheduled</span></div>{upcoming.length?<div className="releases">{upcoming.slice(0,30).map(x=><div key={x.anilistId+'-'+x.episode}><img className="release-poster" src={x.poster||poster} alt="" loading="lazy"/><section><b>{x.title}</b><span>Episode {x.episode}</span><small><Clock3 size={12}/> {fmt(x.airingAt)}</small></section></div>)}</div>:<div className="state"><CalendarDays size={24}/><h2>No upcoming episodes found</h2><p>Keep anime in your library and FRAME will check the schedule for you.</p></div>}</section>
  {due.length>0&&<section className="release-section"><div className="heading"><h2>Released recently</h2><span>{due.length} need your attention</span></div><div className="releases">{due.slice(0,20).map(x=><div key={x.anilistId+'-'+x.episode}><div className="release-poster"/><section><b>{x.title}</b><span>Episode {x.episode} released</span><small>{fmt(x.airingAt)} · your progress may need an update</small></section></div>)}</div></section>}
  </div>;
 }
