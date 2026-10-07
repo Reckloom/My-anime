@@ -210,10 +210,9 @@ function extractYear(value?:string|null){
 }
 
 export default {
-  fetch: withSupabase({auth:'user'},async(req,ctx)=>{
+  fetch: withSupabase({auth:'none'},async(req)=>{
     if(req.method==='OPTIONS') return new Response('ok',{headers:HEADERS});
     if(req.method!=='POST') return response({error:'POST required'},405);
-    if(!ctx.userClaims?.id) return response({error:'Authenticated user required.'},401);
     try{
       const body=await req.json();
       const action=String(body?.action||'search');
