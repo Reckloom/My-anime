@@ -186,8 +186,35 @@ function Discover({finder,ai}:{finder:()=>void;ai:()=>void}){return <div classNa
 function RadarPage({releases,busy,error,refresh}:{releases:Radar[];busy:boolean;error:string;refresh:()=>void}){const up=releases.filter(x=>!x.released).sort((a,b)=>Date.parse(a.airingAt)-Date.parse(b.airingAt));return <div className="page"><div className="page-heading"><div><small>RELEASE INTELLIGENCE</small><h1>Release Radar</h1><p>Upcoming releases for tracked AniList titles.</p></div><button className="secondary" disabled={busy} onClick={refresh}>{busy?<RefreshCw className="spin"/>:<RefreshCw/>}Refresh</button></div>{error&&<div className="inline-error">{error}</div>}<section className="radar-panel"><div className="section-title"><div><small>UP NEXT</small><h2>Upcoming</h2></div><span>{up.length}</span></div>{up.length?<div className="release-list">{up.slice(0,30).map(x=><div key={x.anilistId+'-'+x.episode}><img src={x.poster||poster} alt=""/><section><b>{x.title}</b><small>Episode {x.episode}</small><span>{new Date(x.airingAt).toLocaleString()}</span></section></div>)}</div>:<Empty text="No upcoming tracked releases."/ >}</section></div>}
 
 function Connections({connections,toggle}:{connections:Record<string,boolean>;toggle:(id:string)=>void}){
- const rows=[['anilist','AniList','Anime, manga and light novels','Built-in'],['steam','Steam','Games, platforms, prices and free status','Built-in'],['tvmaze','TVMaze','Series and episode data','Built-in'],['vndb','VNDB','Visual novels','Built-in'],['openlibrary','Open Library','Books and novels','Built-in'],['imdb','IMDb search','Web title discovery','Search'],['justwatch','JustWatch','Legal watch/buy discovery','Search']];
- return <div className="page"><div className="page-heading"><div><small>SERVICE CONTROL</small><h1>Connections</h1><p>Choose which catalogues and services FRAME is allowed to use.</p></div></div><div className="connections-grid">{rows.map(r=><div className="connection-card" key={r[0]}><div className="connection-icon"><Link2 size={19}/></div><div><b>{r[1]}</b><p>{r[2]}</p><small>{r[3]}</small></div><button className={connections[r[0]]?'secondary active':'secondary'} onClick={()=>toggle(r[0])}>{connections[r[0]]?'Enabled':'Disabled'}</button></div>)}</div><section className="ai-connect-card"><Bot size={22}/><div><h2>AI providers</h2><p>FRAME AI is wired into this build. Other provider slots can be connected later without exposing keys in the browser.</p></div></section></div>;
+ const [linkMessage,setLinkMessage]=useState('');
+ const [steamId,setSteamId]=useState(localStorage.getItem('frame-steam-id')||'');
+ const [steamGames,setSteamGames]=useState<Array<{name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>>([]);
+ const {user}=useAuth();
+ const socialConnect=async(provider:'spotify'|'discord')=>{
+  const client=supabase;if(!client||!user){setLinkMessage('Log in to connect external accounts.');return}
+  setLinkMessage('');
+  try{const {error}=await client.auth.linkIdentity({provider,options:{redirectTo:window.location.origin}} as any);if(error)throw error}catch(e){setLinkMessage(e instanceof Error?e.message:'That connection could not be started.')}
+ };
+ const syncSteam=async()=>{
+  const client=supabase;if(!client||!user){setLinkMessage('Log in to sync your Steam library.');return}
+  if(!steamId.trim()){setLinkMessage('Enter your SteamID64 or public profile identifier first.');return}
+  setLinkMessage('');
+  const {data,error}=await client.functions.invoke('steam-library',{body:{steamId:steamId.trim()}});
+  if(error){setLinkMessage(error.message);return}
+  const games=((data as {games?:Array<{name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>})?.games||[]);
+  localStorage.setItem('frame-steam-id',steamId.trim());setSteamGames(games);setLinkMessage(games.length+' Steam games synced.');
+ };
+ const rows=[['anilist','AniList','Anime, manga and light novels','Catalogue'],['tvmaze','TVMaze','Series and episode data','Catalogue'],['vndb','VNDB','Visual novels','Catalogue'],['openlibrary','Open Library','Books and novels','Catalogue'],['imdb','IMDb search','Web title discovery','Search'],['justwatch','JustWatch','Legal watch/buy discovery','Search']];
+ return <div className="page"><div className="page-heading"><div><small>SERVICE CONTROL</small><h1>Connections</h1><p>Catalogues, account links and game-library sync all live here.</p></div></div>
+  <div className="connections-grid">{rows.map(r=><div className="connection-card" key={r[0]}><div className="connection-icon"><Link2 size={19}/></div><div><b>{r[1]}</b><p>{r[2]}</p><small>{r[3]}</small></div><button className={connections[r[0]]?'secondary active':'secondary'} onClick={()=>toggle(r[0])}>{connections[r[0]]?'Enabled':'Disabled'}</button></div>)}
+  <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Spotify</b><p>Connect your account for identity-aware music recommendations later.</p><small>OAuth identity link</small></div><button className="secondary" onClick={()=>void socialConnect('spotify')}>Connect</button></div>
+  <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Discord</b><p>Connect your account for social identity and future rich presence.</p><small>OAuth identity link</small></div><button className="secondary" onClick={()=>void socialConnect('discord')}>Connect</button></div>
+  <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Steam</b><p>Sync a public Steam games library into FRAME.</p><small>Server-side Steam Web API</small></div><div className="call-form"><input value={steamId} onChange={e=>setSteamId(e.target.value)} placeholder="SteamID64 / public profile ID"/><button className="secondary" onClick={()=>void syncSteam()}>Sync games</button></div></div>
+  </div>
+  {linkMessage&&<div className="inline-error" style={{marginTop:12}}>{linkMessage}</div>}
+  {steamGames.length>0&&<section className="calls-panel" style={{marginTop:14}}><div className="section-title"><div><small>STEAM LIBRARY</small><h2>Synced games</h2></div><span>{steamGames.length}</span></div><div className="media-grid">{steamGames.slice(0,24).map(g=><a key={g.name} className="media-card" href={g.storeUrl||'#'} target="_blank" rel="noreferrer"><div className="media-poster"><img src={g.header||''} alt="" loading="lazy"/></div><div className="media-copy"><b>{g.name}</b><small>{Math.round(g.playtimeMinutes/60)}h played</small></div></a>)}</div></section>}
+  <section className="ai-connect-card"><Bot size={22}/><div><h2>AI providers</h2><p>FRAME AI is the working provider; additional AI accounts can be connected server-side without exposing API keys.</p></div></section>
+ </div>;
 }
 
 function SettingsPage({user,profile,setProfile,guest,density,setDensity,theme,setTheme}:{user:any;profile:Profile|null;setProfile:(p:Profile)=>void;guest:boolean;density:string;setDensity:(x:string)=>void;theme:string;setTheme:(x:string)=>void}){
