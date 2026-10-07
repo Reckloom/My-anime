@@ -69,7 +69,7 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
 
  if(guest)return <div className="page"><div className="social-lock"><Users size={28}/><h2>Global chat is account-only</h2><p>Sign in to join the FRAME community chat. Your media library stays separate from chat data.</p></div></div>;
 
- return <div className="page">
+ return <div className="page chat-page">
   <div className="page-heading"><div><small>FRAME COMMUNITY</small><h1>Global Chat</h1><p>One live room for everyone using FRAME, with private conversations still available in Friends.</p></div></div>
   <section className="global-chat-panel">
    <header className="global-chat-head"><div><MessageCircle size={18}/><div><b>FRAME lobby</b><small>Live chat · authenticated users</small></div></div><span>{messages.length} visible</span></header>
