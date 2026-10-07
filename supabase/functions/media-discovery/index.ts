@@ -110,13 +110,13 @@ async function searchSeries(q:string){
 }
 
 async function detailSeries(id:string){
-  const data=await getJson(`https://api.tvmaze.com/shows/${encodeURIComponent(id)}`);
+  const data=await getJson(`https://api.tvmaze.com/shows/${encodeURIComponent(id)}?embed=episodes`);
   return {
     provider:'tvmaze',externalId:String(data.id),title:String(data.name||'Untitled'),medium:'series',
     poster:data.image?.original||data.image?.medium||'',backdrop:data.image?.original||'',
     description:clean(data.summary),genres:data.genres||[],themes:[],year:data.premiered?Number(String(data.premiered).slice(0,4)):undefined,
     score:data.rating?.average??undefined,source:data.network?.name||data.webChannel?.name||'TVmaze',
-    sourceUrl:data.url,airStart:data.premiered||undefined,airEnd:data.ended||undefined
+    sourceUrl:data.url,airStart:data.premiered||undefined,airEnd:data.ended||undefined,total:Array.isArray(data?._embedded?.episodes)?data._embedded.episodes.length:undefined
   };
 }
 
