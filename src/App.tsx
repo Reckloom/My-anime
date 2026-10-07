@@ -143,7 +143,7 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
   const client=supabase;
   if(!client||!user?.id)return true;
   try{
-   if(next.length===0)return true;
+   if(next.length===0){const {error}=await client.from('media_items').delete().eq('user_id',user.id);if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}return true}
    const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});
    if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
    return true;
