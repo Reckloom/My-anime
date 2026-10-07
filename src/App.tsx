@@ -11,6 +11,7 @@ import {CallsPage} from './components/FrameCalls';
 import {FrameDirectCall} from './components/FrameDirectCall';
 import {FrameWebSearch} from './components/FrameWebSearch';
 import {FrameQuickDock} from './components/FrameQuickDock';
+import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
 
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
@@ -248,7 +249,8 @@ function Connections({connections,toggle:_toggle,onImportSteamGame}:{connections
   const client=supabase;if(!client||!user){setLinkMessage('Log in to connect external accounts.');return}
   setLinkMessage('');
   try{
-   const {error}=await client.auth.linkIdentity({provider,options:{redirectTo:window.location.origin}} as any);
+   const scopes=provider==='spotify'?'user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-private':'identify email';
+   const {error}=await client.auth.linkIdentity({provider,options:{redirectTo:window.location.origin,scopes}} as any);
    if(error)throw error;
   }catch(e){setLinkMessage(e instanceof Error?e.message:'That connection could not be started.')}
  };
@@ -287,6 +289,7 @@ function Connections({connections,toggle:_toggle,onImportSteamGame}:{connections
   </div></section>
 
   {linkMessage&&<div className="inline-error" style={{marginTop:12}}>{linkMessage}</div>}
+  <FrameSpotifyControls connected={identityProviders.includes('spotify')} />
   {steamGames.length>0&&<section className="calls-panel" style={{marginTop:14}}><div className="section-title"><div><small>STEAM LIBRARY</small><h2>Import and play</h2></div><span>{steamGames.length} synced</span></div><div className="media-grid">{steamGames.slice(0,30).map(g=><div key={g.appId} className="media-card steam-library-card"><div className="media-poster"><img src={g.header||''} alt="" loading="lazy"/></div><div className="media-copy"><b>{g.name}</b><small>{Math.round(g.playtimeMinutes/60)}h played</small><div className="steam-actions"><button className="secondary" onClick={()=>onImportSteamGame(g)}>Add to FRAME</button><a className="secondary" href={g.storeUrl||'#'} target="_blank" rel="noreferrer">Steam</a></div></div></div>)}</div></section>}
 
   <section className="connections-section"><div className="connections-section-head"><div><small>AI CONNECTIONS</small><h2>Secure providers</h2></div><span>Browser never holds provider secrets</span></div><div className="connections-grid ai-provider-grid">
