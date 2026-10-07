@@ -182,7 +182,6 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
    if(e)throw e;
    await openCallChannel(id);
    await inboxReady.current;
-   await inboxReady.current;
    const {error:re}=await inbox.current.send({type:'broadcast',event:'ring',payload:{callId:id,from:uid}});
    if(re)throw new Error('The other person could not be reached.');
    await setupPeer();
