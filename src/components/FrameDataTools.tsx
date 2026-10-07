@@ -6,6 +6,23 @@ type Profile={id:string;username:string;display_name:string;avatar_url?:string|n
 export function FrameDataTools({items,profile,preferences,onImport}:{items:MediaItem[];profile:Profile|null;preferences:Record<string,unknown>;onImport:(items:MediaItem[])=>void}){
  const input=useRef<HTMLInputElement>(null);const[msg,setMsg]=useState('');
  const exportData=()=>{const payload={format:'FRAME backup',version:1,exportedAt:new Date().toISOString(),profile,preferences,library:items};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='frame-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href);setMsg('Backup exported.')};
- const importFile=async(file:File)=>{try{const raw=JSON.parse(await file.text()) as any;const list=Array.isArray(raw?.library)?raw.library:[];if(!list.length)throw new Error('No FRAME library was found in that file.');const valid=list.filter((x:any)=>x&&typeof x.title==='string'&&typeof x.medium==='string'&&typeof x.status==='string'&&typeof x.progress==='number').map((x:any)=>x as MediaItem);if(!valid.length)throw new Error('The backup contains no valid media entries.');onImport(valid);setMsg(valid.length+' media entries imported. Existing entries will be merged by FRAME.')}catch(e){setMsg(e instanceof Error?e.message:'That backup could not be imported.')}};
+ const importFile=async(file:File)=>{
+  try{
+   if(file.size>10*1024*1024)throw new Error('FRAME backups must be 10 MB or smaller.');
+   const raw=JSON.parse(await file.text()) as any;
+   if(raw?.format&&raw.format!=='FRAME backup')throw new Error('That file is not a FRAME backup.');
+   const list=Array.isArray(raw?.library)?raw.library:[];
+   if(!list.length)throw new Error('No FRAME library was found in that file.');
+   const mediaTypes=new Set(['anime','manga','manhwa','light-novel','visual-novel','movie','series','game','book']);
+   const statuses=new Set(['watching','reading','playing','completed','planned','paused','dropped']);
+   const valid=list.filter((x:any)=>{
+     if(!x||typeof x.title!=='string'||!x.title.trim()||typeof x.medium!=='string'||!mediaTypes.has(x.medium)||typeof x.status!=='string'||!statuses.has(x.status)||typeof x.progress!=='number'||!Number.isFinite(x.progress)||x.progress<0||x.progress>2000)return false;
+     if(x.total!=null&&(!Number.isFinite(Number(x.total))||Number(x.total)<1||Number(x.total)>2000))return false;
+     return true;
+   }).map((x:any)=>({...x,title:String(x.title).trim(),id:typeof x.id==='string'&&x.id?x.id:crypto.randomUUID()})) as MediaItem[];
+   if(!valid.length)throw new Error('The backup contains no valid FRAME media entries.');
+   onImport(valid);setMsg(valid.length+' media entries imported. Existing entries will be merged by FRAME.');
+  }catch(e){setMsg(e instanceof Error?e.message:'That backup could not be imported.')}
+ };
  return <div className="data-tools"><div><b>Backup & restore</b><small>Keep an offline copy of your library and restore it on another device.</small></div><div><button className="secondary" type="button" onClick={exportData}><Download size={14}/>Export JSON</button><button className="secondary" type="button" onClick={()=>input.current?.click()}><Upload size={14}/>Import JSON</button><input ref={input} type="file" accept="application/json,.json" hidden onChange={e=>{const file=e.target.files?.[0];if(file)void importFile(file);e.currentTarget.value=''}}/></div>{msg&&<small className="data-tools-message">{msg}</small>}</div>;
 }
