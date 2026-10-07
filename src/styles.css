@@ -652,3 +652,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
 :root[data-frame-theme="sky"] .connections-section-head h2{color:#092235}
 :root[data-frame-theme="sky"] .connections-section-head>span{color:#668092}
 :root[data-frame-theme="sky"] .connection-status{background:#fff;border-color:#0b3b5a18}
+
+.ai-provider-grid{margin-top:0}
+.connection-status.not-configured{background:#d8892b12;color:#a7631b;border-color:#a7631b22}
+:root[data-frame-theme="sky"] .connection-status.not-configured{background:#fff7eb;color:#9a5b10;border-color:#9a5b1022}
