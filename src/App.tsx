@@ -104,7 +104,15 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
   let active=true;
   const load=async()=>{
    const {data}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
-   if(active&&data){const next=data.map(dbToMedia);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}
+   if(active&&data){
+    if(data.length){const next=data.map(dbToMedia);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}
+    else{
+     try{
+      const raw=localStorage.getItem(storageKey);const local=raw?JSON.parse(raw):[];
+      if(Array.isArray(local)&&local.length){const next=local.map(normalise);setItems(next);const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});if(error)console.warn('[FRAME cloud seed]',error)}
+     }catch(e){console.warn('[FRAME local library recovery]',e)}
+    }
+   }
    const {data:p}=await client.from('profiles').select('*').eq('id',user.id).maybeSingle();
    if(p)setProfile({...p,frame_logo:p.frame_logo||'ultra-instinct'} as Profile);
    else{
