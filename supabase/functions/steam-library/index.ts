@@ -13,10 +13,24 @@ Deno.serve(async(req)=>{
   const {data:userData,error:userError}=await client.auth.getUser();
   if(userError||!userData.user)return new Response(JSON.stringify({error:"Authentication required"}),{status:401,headers:{...cors,"Content-Type":"application/json"}});
   const body=await req.json().catch(()=>({}));
-  const steamId=String(body.steamId||"").trim();
-  if(!/^(\\d{17}|[A-Za-z0-9_-]{3,64})$/.test(steamId))return new Response(JSON.stringify({error:"Enter a valid SteamID64 or profile identifier."}),{status:400,headers:{...cors,"Content-Type":"application/json"}});
+  const input=String(body.steamId||"").trim();
+  if(!/^(\\d{17}|[A-Za-z0-9_./:-]{3,160})$/.test(input))return new Response(JSON.stringify({error:"Enter a valid SteamID64, Steam vanity name, or Steam profile URL."}),{status:400,headers:{...cors,"Content-Type":"application/json"}});
   const key=Deno.env.get("STEAM_WEB_API_KEY");
   if(!key)return new Response(JSON.stringify({error:"Steam library sync needs the server-side Steam Web API key."}),{status:503,headers:{...cors,"Content-Type":"application/json"}});
+  const resolveSteamId=async(value:string)=>{
+    const profile=value.match(/steamcommunity\\.com\\/(?:profiles\\/)?(\\d{17})(?:[/?#]|$)/i);
+    if(profile?.[1])return profile[1];
+    const vanity=value.match(/steamcommunity\\.com\\/id\\/([^/?#]+)/i)?.[1]||value;
+    if(/^\\d{17}$/.test(vanity))return vanity;
+    const resolved=await fetch("https://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key="+encodeURIComponent(key)+"&vanityurl="+encodeURIComponent(vanity)+"&format=json");
+    if(!resolved.ok)throw new Error("Steam could not resolve that profile.");
+    const data=await resolved.json();
+    const id=String(data?.response?.steamid||"");
+    if(!/^\\d{17}$/.test(id))throw new Error("Steam profile could not be resolved. Make sure the profile URL or vanity name is correct.");
+    return id;
+  };
+  let steamId:string;
+  try{steamId=await resolveSteamId(input)}catch(e){return new Response(JSON.stringify({error:e instanceof Error?e.message:"Steam profile resolution failed."}),{status:400,headers:{...cors,"Content-Type":"application/json"}})}
   const url="https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key="+encodeURIComponent(key)+"&steamid="+encodeURIComponent(steamId)+"&format=json&include_appinfo=1&include_played_free_games=1";
   const res=await fetch(url);
   if(!res.ok)return new Response(JSON.stringify({error:"Steam did not return a library for this account. Make sure the profile and games list are public."}),{status:502,headers:{...cors,"Content-Type":"application/json"}});
