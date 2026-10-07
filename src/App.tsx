@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState,type FormEvent} from 'react';
-import {Bell,BookOpen,CalendarDays,ChevronRight,CirclePlus,Compass,Film,Gamepad2,Heart,Home as HomeIcon,Library,LogOut,Menu,Search,Settings,Star,Play,Tv,X} from 'lucide-react';
+import {Bell,BookOpen,CalendarDays,ChevronRight,Clock3,RefreshCw,CirclePlus,Compass,Film,Gamepad2,Heart,Home as HomeIcon,Library,LogOut,Menu,Search,Settings,Star,Play,Tv,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium,Status} from './types';
 import {AniListSearch} from './components/AniListSearch';
@@ -8,6 +8,7 @@ import {supabase} from './lib/supabase';
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
 const mediaTypes:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Games',book:'Book'};
 const labels:Record<Status,string>={watching:'Watching',completed:'Completed',planned:'Plan to Play/Watch',paused:'Paused',dropped:'Dropped'};
+type RadarRelease={mediaId:string;anilistId:number;title:string;episode:number;airingAt:string;released:boolean;status:'released'|'scheduled'};
 const starter:MediaItem[]=[
 {id:'aot',title:'Attack on Titan',description:'A complete franchise entry with seasons, parts and specials.',poster,backdrop:'',status:'completed',progress:89,total:89,year:2013,score:9.8,genres:['Action','Dark Fantasy','Mystery'],themes:[],medium:'anime',favorite:true},
 {id:'sg',title:'Steins;Gate',description:'A fully watched classic tracked as the parent entry for related releases.',poster,backdrop:'',status:'completed',progress:24,total:24,year:2011,score:10,genres:['Sci-Fi','Thriller','Drama'],themes:[],medium:'anime',favorite:true},
@@ -53,6 +54,7 @@ function mediaToDbRow(item:MediaItem,userId:string){
 export default function App(){
  const {user}=useAuth();
  const [items,setItems]=useState<MediaItem[]>(()=>{try{return JSON.parse(localStorage.getItem('frame-library')||'null')||starter}catch{return starter}});
+ const [radar,setRadar]=useState<RadarRelease[]>([]),[radarLoading,setRadarLoading]=useState(false),[radarError,setRadarError]=useState('');
  const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[selected,setSelected]=useState<MediaItem|null>(null),[add,setAdd]=useState(false),[aniSearch,setAniSearch]=useState(false),[menu,setMenu]=useState(false);
  useEffect(()=>{
    let cancelled=false;
@@ -80,6 +82,32 @@ export default function App(){
    if(duplicate){setSelected(duplicate);setAniSearch(false);return}
    const next=[item,...items];save(next);setSelected(item);setAniSearch(false);
  };
+ const refreshRadar=async()=>{
+   if(!supabase||!user?.id)return;
+   setRadarLoading(true);setRadarError('');
+   try{
+     const {data,error}=await supabase.functions.invoke('release-radar',{body:{action:'refresh'}});
+     if(error)throw error;
+     setRadar(Array.isArray((data as {releases?:RadarRelease[]}|null)?.releases)?((data as {releases?:RadarRelease[]}).releases||[]):[]);
+   }catch(e){setRadarError(e instanceof Error?e.message:'Could not refresh Release Radar.')}
+   finally{setRadarLoading(false)}
+ };
+ useEffect(()=>{
+   if(!supabase||!user?.id)return;
+   void refreshRadar();
+   const id=window.setInterval(()=>void refreshRadar(),30*60*1000);
+   return()=>window.clearInterval(id);
+ },[user?.id]);
+ const upcomingRadar=useMemo(()=>radar.filter(x=>!x.released).sort((a,b)=>new Date(a.airingAt).getTime()-new Date(b.airingAt).getTime()),[radar]);
+ const dueRadar=useMemo(()=>radar.filter(x=>x.released).sort((a,b)=>new Date(b.airingAt).getTime()-new Date(a.airingAt).getTime()),[radar]);
+ const enableBrowserAlerts=async()=>{
+   if(!('Notification' in window))return;
+   const permission=await Notification.requestPermission();
+   if(permission==='granted'){
+     const soon=upcomingRadar.find(x=>new Date(x.airingAt).getTime()-Date.now()<=24*3600*1000);
+     if(soon)new Notification('FRAME Release Radar',{body:soon.title+' episode '+soon.episode+' is releasing soon.'});
+   }
+ };
  const filtered=useMemo(()=>items.filter(x=>x.title.toLowerCase().includes(query.toLowerCase())&&(filter==='all'||x.status===filter||filter==='game'&&x.medium==='game'||filter==='book'&&x.medium==='book'||filter===x.medium)),[items,query,filter]);
  const watching=items.filter(x=>x.status==='watching'),games=items.filter(x=>x.medium==='game'),favorites=items.filter(x=>x.favorite);
  const nav=[['home','Home',HomeIcon],['library','Library',Library],['discover','Discover',Compass],['calendar','Release Radar',CalendarDays]] as const;
@@ -88,12 +116,20 @@ export default function App(){
  <main>{page==='home'&&<Home items={items} watching={watching} games={games} favorites={favorites} open={setSelected} add={()=>setAniSearch(true)}/>}
  {page==='library'&&<LibraryPage items={filtered} query={query} filter={filter} setFilter={setFilter} open={setSelected} add={()=>setAdd(true)}/>}
  {page==='discover'&&<Discover add={()=>setAdd(true)}/>}
- {page==='calendar'&&<div className="page padded"><div className="page-title"><div><small>COMING UP</small><h1>Release Radar</h1><p>Episodes, chapters and game releases will appear here when automatic tracking is connected.</p></div></div></div>}
+ {page==='calendar'&&<ReleaseRadarPage upcoming={upcomingRadar} due={dueRadar} loading={radarLoading} error={radarError} refresh={()=>void refreshRadar()} enableAlerts={()=>void enableBrowserAlerts()}/>
  {page==='settings'&&<div className="page padded"><div className="page-title"><div><small>ACCOUNT</small><h1>Settings</h1><p>{user?.email||'FRAME user'}</p></div></div><button className="danger" onClick={()=>signOut()}><LogOut size={17}/> Sign out</button></div>}</main>
  <div className="mobile-tabs">{nav.slice(0,3).map(([id,label,Icon])=><button key={id} className={page===id?'active':''} onClick={()=>setPage(id)}><Icon size={19}/><span>{label}</span></button>)}<button onClick={()=>setPage('settings')}><Settings size={19}/><span>Settings</span></button></div>
  {selected&&<Detail item={selected} close={()=>setSelected(null)} save={x=>save(items.map(i=>i.id===x.id?x:i))}/>} {add&&<Add close={()=>setAdd(false)} add={x=>save([x,...items])}/>} {aniSearch&&<AniListSearch close={()=>setAniSearch(false)} onImported={importMediaItem} onManual={()=>{setAniSearch(false);setAdd(true)}}/>}</div>
 }
 function Home({items,watching,games,favorites,open,add}:{items:MediaItem[];watching:MediaItem[];games:MediaItem[];favorites:MediaItem[];open:(x:MediaItem)=>void;add:()=>void}){const hero=items[0];return <div className="page"><section className="hero" style={{backgroundImage:'url('+hero.poster+')'}}><div className="hero-shade"/><div className="hero-content"><div className="eyebrow">YOUR MEDIA UNIVERSE</div><h1>{hero.title}</h1><p>{hero.description}</p><div className="hero-meta"><span><Star size={14} fill="currentColor"/> {hero.score}</span><span>{hero.year}</span><span>{hero.genres.join(' · ')}</span></div><button className="primary" onClick={()=>open(hero)}><Play size={17}/> Open title</button><button className="secondary" onClick={add}><CirclePlus size={17}/> Add media</button></div></section><section className="section stats-row"><Stat l="In library" n={items.length}/><Stat l="Watching" n={watching.length}/><Stat l="Games" n={games.length}/><Stat l="Favorites" n={favorites.length}/></section><Shelf title="Continue watching" items={watching} open={open}/><Shelf title="Games" items={games} open={open}/><Shelf title="Favorites" items={favorites} open={open}/></div>}
+function ReleaseRadarPage({upcoming,due,loading,error,refresh,enableAlerts}:{upcoming:RadarRelease[];due:RadarRelease[];loading:boolean;error:string;refresh:()=>void;enableAlerts:()=>void}){
+ const fmt=(iso:string)=>new Date(iso).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+ return <div className="page padded"><div className="page-title"><div><small>AUTOMATIC TRACKING</small><h1>Release Radar</h1><p>FRAME checks your tracked AniList titles automatically and looks ahead 45 days.</p></div><div className="detail-actions"><button className="secondary" onClick={refresh} disabled={loading}>{loading?<RefreshCw className="spin"/>:<RefreshCw/>}Refresh</button><button className="primary" onClick={enableAlerts}><Bell/>Enable browser alerts</button></div></div>
+ {error&&<div className="inline-error"><AlertCircle size={15}/><span>{error}</span></div>}
+ <section className="release-section"><div className="heading"><h2>Up next</h2><span>{upcoming.length} scheduled</span></div>{upcoming.length?<div className="releases">{upcoming.slice(0,30).map(x=><div key={x.anilistId+'-'+x.episode}><div className="release-poster"/><section><b>{x.title}</b><span>Episode {x.episode}</span><small><Clock3 size={12}/> {fmt(x.airingAt)}</small></section></div>)}</div>:<div className="state"><CalendarDays size={24}/><h2>No upcoming episodes found</h2><p>Keep anime in your library and FRAME will check the schedule for you.</p></div>}</section>
+ {due.length>0&&<section className="release-section"><div className="heading"><h2>Released recently</h2><span>{due.length} need your attention</span></div><div className="releases">{due.slice(0,20).map(x=><div key={x.anilistId+'-'+x.episode}><div className="release-poster"/><section><b>{x.title}</b><span>Episode {x.episode} released</span><small>{fmt(x.airingAt)} · your progress may need an update</small></section></div>)}</div></section>}
+ </div>;
+}
 function Stat({l,n}:{l:string;n:number}){return <div className="stat"><b>{n}</b><span>{l}</span></div>}
 function Shelf({title,items,open}:{title:string;items:MediaItem[];open:(x:MediaItem)=>void}){return <section className="section"><div className="section-head"><div><small>LIBRARY</small><h2>{title}</h2></div><ChevronRight/></div><div className="cards">{items.length?items.map(x=><Card key={x.id} item={x} open={open}/>):<div className="empty">Nothing here yet.</div>}</div></section>}
 function Card({item,open}:{item:MediaItem;open:(x:MediaItem)=>void}){const p=item.medium==='game'?(item.game?.completionProgress||0):(item.total?item.progress/item.total*100:0);return <button className="media-card" onClick={()=>open(item)}><div className="poster"><img src={item.poster} alt=""/><span className="status">{item.medium==='game'?'GAME':labels[item.status]}</span><span className="score"><Star size={11} fill="currentColor"/> {item.score||'—'}</span></div><div className="card-copy"><b>{item.title}</b><span>{mediaTypes[item.medium]}</span><div className="progress"><i style={{width:p+'%'}}/></div><small>{item.medium==='game'?(item.game?.completionProgress||0)+'% complete':item.progress+(item.total?' / '+item.total:'')+' progress'}</small></div></button>}
