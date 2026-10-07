@@ -135,12 +135,12 @@ export function CallsPage({uid,profile,onCloseCall}:{uid:string;profile:Profile|
 
 function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:{uid:string;room:Room;profile:Profile|null;host:boolean;onExit:()=>Promise<void>;pending:Participant[];profiles:Record<string,Profile>;approve:(p:Participant,status:'approved'|'rejected')=>Promise<void>}){
  const [muted,setMuted]=useState(false),[hostMuted,setHostMuted]=useState(false),[remotes,setRemotes]=useState<Remote[]>([]),[members,setMembers]=useState<Participant[]>([]),[copy,setCopy]=useState(false),[status,setStatus]=useState('Connecting microphone…'),[error,setError]=useState('');
- const local=useRef<MediaStream|null>(null),channel=useRef<any>(null),peers=useRef<Map<string,RTCPeerConnection>>(new Map());
+ const local=useRef<MediaStream|null>(null),channel=useRef<any>(null),channelReady=useRef<Promise<void>|null>(null),peers=useRef<Map<string,RTCPeerConnection>>(new Map());
  const pendingIce=useRef<Map<string,any[]>>(new Map());
  const audioRefs=useRef<Record<string,HTMLAudioElement|null>>({});
  const roomChannel='frame-call-'+room.id;
 
- const send=async(payload:any)=>{await channel.current?.send({type:'broadcast',event:'signal',payload:{...payload,from:uid}})};
+ const send=async(payload:any)=>{await channelReady.current;if(!channel.current)throw new Error('Voice room is not connected.');const result=await channel.current.send({type:'broadcast',event:'signal',payload:{...payload,from:uid}});if(result!=='ok')throw new Error('Voice signal was not delivered.');};
 
  const flushIce=async(peerId:string,pc:RTCPeerConnection)=>{
   const queued=pendingIce.current.get(peerId)||[];
@@ -158,7 +158,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
   local.current?.getTracks().forEach(t=>pc.addTrack(t,local.current!));
   pc.onicecandidate=e=>{if(e.candidate)void send({type:'ice',to:peerId,candidate:e.candidate})};
   pc.ontrack=e=>{const stream=e.streams[0]||new MediaStream([e.track]);setRemotes(prev=>{const found=prev.find(x=>x.id===peerId);return found?prev.map(x=>x.id===peerId?{id:peerId,stream}:x):[...prev,{id:peerId,stream}]})};
-  pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState)){pc.close();peers.current.delete(peerId);setRemotes(prev=>prev.filter(x=>x.id!==peerId))}};
+  pc.onconnectionstatechange=()=>{if(pc.connectionState==='connected')setStatus('Live · '+peerId.slice(0,6)+' connected');if(['failed','closed'].includes(pc.connectionState)){pc.close();peers.current.delete(peerId);setRemotes(prev=>prev.filter(x=>x.id!==peerId))}};
   peers.current.set(peerId,pc);
   if(initiator){const offer=await pc.createOffer();await pc.setLocalDescription(offer);await send({type:'offer',to:peerId,sdp:pc.localDescription})}
   return pc;
@@ -176,7 +176,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
     const {data,error:participantError}=await client.from('call_participants').select('*').eq('room_id',room.id).eq('status','approved');
     if(participantError){setError(participantError.message);return}
     setMembers((data||[]) as Participant[]);
-    const ch=client.channel(roomChannel);channel.current=ch;
+    const ch=client.channel(roomChannel,{config:{private:true,broadcast:{ack:true}}});channel.current=ch;
     ch.on('broadcast',{event:'signal'},async({payload}:any)=>{
       if(!payload||payload.from===uid||payload.to&&payload.to!==uid)return;
       if(payload.type==='hello'){
@@ -191,7 +191,13 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
       if(payload.type==='host-mute'){const next=Boolean(payload.muted);local.current?.getAudioTracks().forEach(t=>t.enabled=!next);setHostMuted(next);if(next)setMuted(true)}
       if(payload.type==='kick'){setError('The host removed you from this room.');setTimeout(()=>{void onExit()},250)}
       if(payload.type==='left'){const id=String(payload.from);const pc=peers.current.get(id);pc?.close();peers.current.delete(id);setRemotes(prev=>prev.filter(x=>x.id!==id))}
-    }).subscribe(async()=>{await send({type:'hello'})});
+    });
+    channelReady.current=new Promise((resolve,reject)=>{
+     ch.subscribe((subStatus:string,err?:any)=>{
+      if(subStatus==='SUBSCRIBED'){setStatus('Live · low-latency direct peer-to-peer audio');resolve();void send({type:'hello'}).catch(e=>setError(e instanceof Error?e.message:'Voice signaling failed.'));}
+      else if(subStatus==='CHANNEL_ERROR'||subStatus==='TIMED_OUT'){const msg=err?.message||'Voice room realtime could not connect.';setError(msg);reject(new Error(msg));}
+     });
+    }).catch(()=>{});
     return()=>{void ch.unsubscribe()};
    }catch(e){
     if(e instanceof DOMException&&e.name==='NotAllowedError')setError('Microphone permission was denied. Allow microphone access in your browser settings and rejoin.');
@@ -200,7 +206,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
    }
   };
   void start();
-  return()=>{active=false;local.current?.getTracks().forEach(t=>t.stop());peers.current.forEach(p=>p.close());peers.current.clear();pendingIce.current.clear()};
+  return()=>{active=false;local.current?.getTracks().forEach(t=>t.stop());peers.current.forEach(p=>p.close());peers.current.clear();pendingIce.current.clear();if(channel.current)void channel.current.unsubscribe();channel.current=null;channelReady.current=null};
  },[room.id,roomChannel,uid]);
 
  useEffect(()=>{for(const x of remotes){const node=audioRefs.current[x.id];if(node)node.srcObject=x.stream}},[remotes]);
