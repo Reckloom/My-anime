@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Star,Users,X} from 'lucide-react';
+import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Star,Users,X,Settings} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
@@ -233,7 +233,7 @@ function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?
  return <div className="frame-app">
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
   <header className="frame-topbar">
-   <button className="frame-brand" title="Open FRAME settings" onClick={()=>go('settings')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
+   <button className="frame-brand" title="Open FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
    <nav className="frame-nav">
     {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['web','Web'],Globe],[['radar','Radar'],CalendarDays],[['ai','AI'],Bot],[['friends','Friends'],Users],[['chat','Chat'],MessageCircle],[['calls','Calls'],Phone]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
    </nav>
@@ -241,7 +241,7 @@ function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
     <button className="primary top-find" onClick={()=>setFinder(true)}><Search size={16}/>Search</button>
     <button className="top-icon" title="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
-    <FrameNotifications uid={uid} onNavigate={href=>href&&go(href)}/>
+    <FrameNotifications uid={uid} onNavigate={href=>href&&go(href)}/><button className="frame-settings-link" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}><Settings size={17}/><span>Settings</span></button>
     <span className="top-avatar" title={profile?.display_name||user?.email||'FRAME account'} aria-label={profile?.display_name||user?.email||'FRAME account'}>{(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
     <button className="top-icon mobile-only" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
