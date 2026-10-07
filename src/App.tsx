@@ -199,7 +199,7 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setDirectCall}/>}
    {page==='chat'&&<FrameGlobalChat uid={uid} guest={guest}/>} 
    {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
-   {page==='connections'&&<Connections connections={connections} toggle={updateConnection} onImportSteamGame={addSteamGame}/><FrameLibraryImport onImport={mergeImported}/>}
+   {page==='connections'&&<><Connections connections={connections} toggle={updateConnection} onImportSteamGame={addSteamGame}/><FrameLibraryImport onImport={mergeImported}/></>}
    {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}} appearanceMode={appearanceMode} setAppearanceMode={x=>{setAppearanceMode(x);void persist('appearance_mode',x)}} items={items} onImport={mergeImported} preferences={{default_sort:sortMode,density,theme,appearance_mode:appearanceMode,ai_provider:aiProvider}}/>}
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
   </main>
