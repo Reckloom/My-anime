@@ -727,3 +727,20 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
 .global-chat-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--frame-line);background:var(--frame-surface)}.global-chat-input input{flex:1;min-height:44px;border-radius:11px;padding:10px 12px}.global-chat-input .primary{white-space:nowrap}
 :root[data-frame-mode="dark"] .global-chat-panel,:root[data-frame-mode="dark"] .global-chat-messages{box-shadow:none}
 @media(max-width:800px){.global-chat-messages{height:58vh;min-height:300px}.global-message{max-width:100%}.global-chat-input{position:sticky;bottom:0}.global-chat-input button{min-width:92px}.mobile-bottom{grid-template-columns:repeat(6,1fr)}}
+
+
+:root[data-frame-mode="light"] .group-call-overlay,
+:root[data-frame-mode="light"] .voice-overlay{
+  background:rgba(204,229,245,.72);
+}
+:root[data-frame-mode="dark"] .group-call-overlay,
+:root[data-frame-mode="dark"] .voice-overlay{
+  background:rgba(0,6,10,.78);
+}
+:root[data-frame-theme="sky"][data-frame-mode="light"] .group-call,
+:root[data-frame-theme="sky"][data-frame-mode="light"] .voice-card{
+  box-shadow:0 30px 90px #0b4a7022;
+}
+:root[data-frame-theme="sky"][data-frame-mode="light"] .global-chat-panel{
+  box-shadow:0 20px 60px #0d4a7020;
+}
