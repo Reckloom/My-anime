@@ -1382,3 +1382,9 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
  .ai-page .ai-prompts{grid-template-columns:1fr}
  .library-page .library-controls{top:0}
 }
+
+.gate-brand .gate-logo-image,.gate-mobile-brand .gate-logo-image{
+ width:32px;height:32px;display:block;object-fit:cover;border-radius:10px;
+ background:#0a0a0a;border:1px solid #ffffff18;box-shadow:0 7px 22px color-mix(in srgb,var(--frame-accent) 22%,transparent);
+}
+.gate-mobile-brand .gate-logo-image{width:30px;height:30px}
