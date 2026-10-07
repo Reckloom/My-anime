@@ -227,7 +227,7 @@ export default {
       }
       const id=String(body?.externalId||'').trim();
       if(!id) return response({error:'A valid external ID is required.'},400);
-      const fn=provider==='game'?detailGame:provider==='series'?detailSeries:provider==='movie'?detailMovie:provider==='book'?detailBook:detailVisualNovels;
+      const fn=provider==='game'?detailGame:provider==='series'?detailSeries:provider==='movie'?detailMovie:provider==='book'?detailBook:detailVisualNovel;
       return response({result:await fn(id)});
     }catch(error){
       return response({error:error instanceof Error?error.message:String(error)},400);
