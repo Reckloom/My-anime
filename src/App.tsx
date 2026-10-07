@@ -59,8 +59,21 @@ function sortMedia(items:MediaItem[],mode:string){
 
 export default function App(){
  const {user}=useAuth(),guest=localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
+ const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
  const [items,setItems]=useState<MediaItem[]>(()=>{
-  try{const raw=JSON.parse(localStorage.getItem('frame-library')||'null');return(raw||[]).map(normalise)}catch{return[]}
+  try{
+   const scoped=localStorage.getItem(storageKey);
+   if(scoped)return JSON.parse(scoped).map(normalise);
+   if(uid!=='guest'){
+    const legacy=localStorage.getItem('frame-library');
+    if(legacy){
+     const migrated=JSON.parse(legacy).map(normalise);
+     localStorage.setItem(storageKey,JSON.stringify(migrated));
+     return migrated;
+    }
+   }
+   return[];
+  }catch{return[]}
  });
  const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sortMode,setSortMode]=useState('rating');
  const [finder,setFinder]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null);
@@ -72,12 +85,16 @@ export default function App(){
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme},[density,theme]);
 
  useEffect(()=>{
+  try{localStorage.setItem(storageKey,JSON.stringify(items))}catch{}
+ },[items,storageKey]);
+
+ useEffect(()=>{
   const client=supabase;
   if(!client||!user?.id)return;
   let active=true;
   const load=async()=>{
    const {data}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
-   if(active&&data){const next=data.map(dbToMedia);setItems(next);try{localStorage.setItem('frame-library',JSON.stringify(next))}catch{}}
+   if(active&&data){const next=data.map(dbToMedia);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}
    const {data:p}=await client.from('profiles').select('*').eq('id',user.id).maybeSingle();
    if(p)setProfile(p as Profile);
    else{
