@@ -1,5 +1,5 @@
 export type Status='watching'|'completed'|'planned'|'paused'|'dropped';
-export type Medium='anime'|'manga'|'manhwa'|'light-novel'|'visual-novel'|'movie'|'series'|'game';
+export type Medium='anime'|'manga'|'manhwa'|'light-novel'|'visual-novel'|'movie'|'series'|'game'|'book';
 
 export interface GameDetails{
  developer?:string;
