@@ -5,7 +5,8 @@ import {supabase} from '../lib/supabase';
 type Profile={id:string;username:string;display_name:string};
 type Msg={id:string;user_id:string;body:string;created_at:string;profiles?:{display_name?:string;username?:string}|null};
 
-export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind:()=>void;onOpenCalls:()=>void;onCall:(friend:Profile)=>void}){\n if(uid==='guest')return null;
+export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind:()=>void;onOpenCalls:()=>void;onCall:(friend:Profile)=>void}){
+ if(uid==='guest')return null;
  const [open,setOpen]=useState(false),[panel,setPanel]=useState<'chat'|'call'|null>(null);
  const [messages,setMessages]=useState<Msg[]>([]),[draft,setDraft]=useState(''),[friends,setFriends]=useState<Profile[]>([]),[error,setError]=useState('');
  const loadChat=async()=>{
