@@ -84,8 +84,14 @@ async function detailGame(id:string){
     source:publishers.join(', ')||'Steam',year:game.release_date?.date?Number(String(game.release_date.date).match(/(19|20)\d{2}/)?.[0]):undefined,
     score:game.metacritic?.score?Number(game.metacritic.score)/10:undefined,
     sourceUrl:`https://store.steampowered.com/app/${id}/`,
-    platforms:Array.isArray(game.platforms)?Object.entries(game.platforms).filter(([,v])=>Boolean(v)).map(([k])=>k):[],
-    website:game.website||undefined
+    game:{
+      developer:developers.join(', ')||undefined,
+      publisher:publishers.join(', ')||undefined,
+      releaseDate:game.release_date?.date||undefined,
+      platforms:Array.isArray(game.platforms)?Object.entries(game.platforms).filter(([,v])=>Boolean(v)).map(([k])=>k):[],
+      gameModes:categories.filter((x:string)=>/single-player|multi-player|co-op/i.test(x)),
+    },
+    meta:{website:game.website||undefined}
   };
 }
 
