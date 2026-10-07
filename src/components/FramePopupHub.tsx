@@ -5,13 +5,13 @@ import {supabase} from '../lib/supabase';
 type Profile={id:string;username:string;display_name:string};
 type Msg={id:string;user_id:string;body:string;created_at:string;profiles?:{display_name?:string;username?:string}|null};
 
-export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind:()=>void;onOpenCalls:()=>void;onCall:(friend:Profile)=>void}){
+export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind:()=>void;onOpenCalls:()=>void;onCall:(friend:Profile)=>void}){\n if(uid==='guest')return null;
  const [open,setOpen]=useState(false),[panel,setPanel]=useState<'chat'|'call'|null>(null);
- const [messages,setMessages]=useState<Msg[]>([]),[draft,setDraft]=useState(''),[friends,setFriends]=useState<Profile[]>([]);
+ const [messages,setMessages]=useState<Msg[]>([]),[draft,setDraft]=useState(''),[friends,setFriends]=useState<Profile[]>([]),[error,setError]=useState('');
  const loadChat=async()=>{
   if(!supabase)return;
   const {data}=await supabase.from('global_messages').select('id,user_id,body,created_at,profiles(display_name,username)').order('created_at',{ascending:true}).limit(60);
-  if(data)setMessages(data as Msg[]);
+  if(data)setMessages(data as Msg[]);else setError('Chat is temporarily unavailable.');
  };
  const loadFriends=async()=>{
   if(!supabase)return;
@@ -26,14 +26,14 @@ export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind
   if(!supabase||!draft.trim())return;
   const body=draft.trim().slice(0,2000);
   const {data}=await supabase.from('global_messages').insert({user_id:uid,body}).select('id,user_id,body,created_at').single();
-  if(data){setMessages(prev=>[...prev,{...(data as Msg),profiles:{display_name:'You'}}].slice(-60));setDraft('')}
+  if(data){setMessages(prev=>[...prev,{...(data as Msg),profiles:{display_name:'You'}}].slice(-60));setDraft('');setError('')}else setError('Message could not be sent.');
  };
  const choose=(next:'chat'|'call')=>{setOpen(true);setPanel(next)};
  return <div className="frame-popup-system">
   <div className={'frame-popup-panel '+(open&&panel?'visible':'')} role="dialog" aria-label="FRAME quick panel">
-   <header><div><small>FRAME QUICK</small><b>{panel==='chat'?'Global chat':'Voice calls'}</b></div><button onClick={()=>setPanel(null)}><Minimize2 size={15}/></button></header>
+   <header><div><small>FRAME QUICK</small><b>{panel==='chat'?'Global chat':'Voice calls'}</b></div><button aria-label="Minimize quick panel" onClick={()=>setPanel(null)}><Minimize2 size={15}/></button></header>
    {panel==='chat'&&<div className="frame-popup-chat">
-    <div className="frame-popup-messages">{messages.map(m=><div key={m.id}><b>{m.user_id===uid?'You':m.profiles?.display_name||m.profiles?.username||'FRAME user'}</b><span>{m.body}</span></div>)}</div>
+    <div className="frame-popup-messages">{error&&<small className="inline-error" role="alert">{error}</small>}{messages.map(m=><div key={m.id}><b>{m.user_id===uid?'You':m.profiles?.display_name||m.profiles?.username||'FRAME user'}</b><span>{m.body}</span></div>)}</div>
     <form onSubmit={e=>{e.preventDefault();void send()}}><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Message everyone…"/><button disabled={!draft.trim()}><Send size={14}/></button></form>
     <button className="frame-popup-link" onClick={onOpenCalls}>Open call center</button>
    </div>}
