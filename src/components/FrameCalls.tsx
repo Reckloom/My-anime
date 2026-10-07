@@ -136,6 +136,7 @@ export function CallsPage({uid,profile,onCloseCall}:{uid:string;profile:Profile|
 function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:{uid:string;room:Room;profile:Profile|null;host:boolean;onExit:()=>Promise<void>;pending:Participant[];profiles:Record<string,Profile>;approve:(p:Participant,status:'approved'|'rejected')=>Promise<void>}){
  const [muted,setMuted]=useState(false),[hostMuted,setHostMuted]=useState(false),[remotes,setRemotes]=useState<Remote[]>([]),[members,setMembers]=useState<Participant[]>([]),[copy,setCopy]=useState(false),[status,setStatus]=useState('Connecting microphone…'),[error,setError]=useState('');
  const local=useRef<MediaStream|null>(null),channel=useRef<any>(null),peers=useRef<Map<string,RTCPeerConnection>>(new Map());
+ const pendingIce=useRef<Map<string,any[]>>(new Map());
  const audioRefs=useRef<Record<string,HTMLAudioElement|null>>({});
  const roomChannel='frame-call-'+room.id;
 
@@ -178,9 +179,9 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
       if(payload.type==='hello-ack'){
        const id=String(payload.from);if(uid<id)await makePeer(id,true)
       }
-      if(payload.type==='offer'){const pc=await makePeer(String(payload.from),false);await pc.setRemoteDescription(payload.sdp);const ans=await pc.createAnswer();await pc.setLocalDescription(ans);await send({type:'answer',to:payload.from,sdp:pc.localDescription})}
-      if(payload.type==='answer'){const pc=peers.current.get(String(payload.from));if(pc){await pc.setRemoteDescription(payload.sdp)}}
-      if(payload.type==='ice'){const pc=peers.current.get(String(payload.from));if(pc?.remoteDescription)await pc.addIceCandidate(payload.candidate)}
+      if(payload.type==='offer'){const id=String(payload.from);const pc=await makePeer(id,false);await pc.setRemoteDescription(payload.sdp);await flushIce(id,pc);const ans=await pc.createAnswer();await pc.setLocalDescription(ans);await send({type:'answer',to:payload.from,sdp:pc.localDescription})}
+      if(payload.type==='answer'){const id=String(payload.from);const pc=peers.current.get(id);if(pc){await pc.setRemoteDescription(payload.sdp);await flushIce(id,pc)}}
+      if(payload.type==='ice'){const id=String(payload.from);const pc=peers.current.get(id);if(pc?.remoteDescription){try{await pc.addIceCandidate(payload.candidate)}catch{}}else{const queued=pendingIce.current.get(id)||[];queued.push(payload.candidate);pendingIce.current.set(id,queued)}}
       if(payload.type==='host-mute'){const next=Boolean(payload.muted);local.current?.getAudioTracks().forEach(t=>t.enabled=!next);setHostMuted(next);if(next)setMuted(true)}
       if(payload.type==='kick'){setError('The host removed you from this room.');setTimeout(()=>{void onExit()},250)}
       if(payload.type==='left'){const id=String(payload.from);const pc=peers.current.get(id);pc?.close();peers.current.delete(id);setRemotes(prev=>prev.filter(x=>x.id!==id))}
@@ -193,7 +194,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
    }
   };
   void start();
-  return()=>{active=false;local.current?.getTracks().forEach(t=>t.stop());peers.current.forEach(p=>p.close());peers.current.clear()};
+  return()=>{active=false;local.current?.getTracks().forEach(t=>t.stop());peers.current.forEach(p=>p.close());peers.current.clear();pendingIce.current.clear()};
  },[room.id,roomChannel,uid]);
 
  useEffect(()=>{for(const x of remotes){const node=audioRefs.current[x.id];if(node)node.srcObject=x.stream}},[remotes]);
