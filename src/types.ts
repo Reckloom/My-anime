@@ -1,5 +1,4 @@
-export type Status='watching'|'completed'|'planned'|'paused'|'dropped';
-// FRAME supports both first-party and imported external catalogue identities.
+export type Status='watching'|'reading'|'playing'|'completed'|'planned'|'paused'|'dropped';
 export type Medium='anime'|'manga'|'manhwa'|'light-novel'|'visual-novel'|'movie'|'series'|'game'|'book';
 
 export interface GameDetails{
@@ -16,13 +15,25 @@ export interface GameDetails{
  franchise?:string;
  edition?:string;
  dlc?:string[];
+ isFree?:boolean;
+ priceText?:string;
+ storeUrl?:string;
+}
+
+export interface MediaAvailability{
+ watch?:string[];
+ buy?:string[];
+ read?:string[];
+ play?:string[];
 }
 
 export interface MediaItem{
  id:string; parentId?:string; metadataId?:string; anilistId?:number; sourceProvider?:string; externalId?:string;
  title:string; alternativeTitles?:string[]; description:string; poster:string; backdrop:string;
  medium:Medium; status:Status; progress:number; total?:number; year?:number; score?:number;
+ personalRating?:number; progressUnit?:string; customTotal?:number;
  genres:string[]; themes:string[]; studio?:string; source?:string; season?:string; duration?:number;
  airStart?:string; airEnd?:string; favorite:boolean; notes?:string; nextRelease?:string; nextReleaseNumber?:number;
+ availability?:MediaAvailability;
  game?:GameDetails;
 }
