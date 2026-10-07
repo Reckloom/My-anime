@@ -6,8 +6,11 @@ import {AniListSearch} from './components/AniListSearch';
 import {FrameAI} from './components/FrameAI';
 import {FrameGlobalChat} from './components/FrameGlobalChat';
 import {FrameDetail} from './components/FrameDetail';
-import {FrameSocial,VoiceCall} from './components/FrameSocial';
+import {FrameSocial} from './components/FrameSocial';
 import {CallsPage} from './components/FrameCalls';
+import {FrameDirectCall} from './components/FrameDirectCall';
+import {FrameWebSearch} from './components/FrameWebSearch';
+import {FrameQuickDock} from './components/FrameQuickDock';
 import {supabase} from './lib/supabase';
 
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
@@ -78,7 +81,7 @@ export default function App(){
  });
  const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sortMode,setSortMode]=useState('rating');
  const [finder,setFinder]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null);
- const [call,setCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null);
+ const [directCall,setDirectCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null);
  const [radar,setRadar]=useState<Radar[]>([]),[radarBusy,setRadarBusy]=useState(false),[radarError,setRadarError]=useState('');
  const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('sky'),[appearanceMode,setAppearanceMode]=useState<'light'|'dark'|'system'>('light');
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
@@ -131,6 +134,10 @@ export default function App(){
   if(duplicate){setSelected(duplicate);setFinder(false);return}
   save([item,...items]);setSelected(item);setFinder(false);
  };
+ const addSteamGame=(game:{appId?:string;name:string;header?:string;storeUrl?:string})=>{
+  if(!game.name.trim())return;
+  importItem({id:crypto.randomUUID(),sourceProvider:'steam',externalId:game.appId,title:game.name,description:'Imported from your Steam library.',poster:game.header||'',backdrop:game.header||'',medium:'game',status:'planned',progress:0,total:100,progressUnit:'%',year:undefined,score:undefined,genres:[],themes:[],favorite:false,game:{storeUrl:game.storeUrl||undefined}});
+ };
  const refreshRadar=async()=>{
   const client=supabase;if(!client||!user?.id)return;
   setRadarBusy(true);setRadarError('');
@@ -175,11 +182,12 @@ export default function App(){
     <button className="top-icon mobile-only" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['ai','AI'],['friends','Friends'],['chat','Global Chat'],['calls','Calls'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['web','Google Search'],['radar','Release Radar'],['ai','AI'],['friends','Friends'],['chat','Global Chat'],['calls','Calls'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
    {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go}/>}
    {page==='library'&&<LibraryPage items={shown} filter={filter} setFilter={setFilter} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)}/>}
-   {page==='discover'&&<Discover finder={()=>setFinder(true)} ai={()=>go('ai')}/>}
+   {page==='discover'&&<Discover finder={()=>setFinder(true)} ai={()=>go('ai')}/>} 
+   {page==='web'&&<FrameWebSearch/>}
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
    {page==='ai'&&<FrameAI items={items} provider={aiProvider} setProvider={x=>{setAiProvider(x);void persist('ai_provider',x)}}/>}
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setCall}/>}
@@ -220,25 +228,22 @@ function LibraryPage({items,filter,setFilter,sort,setSort,open,add}:{items:Media
 function Discover({finder,ai}:{finder:()=>void;ai:()=>void}){return <div className="page"><div className="page-heading"><div><small>UNIVERSAL DISCOVERY</small><h1>Explore everything.</h1><p>One consistent interface for media, metadata, availability, AI and connected services.</p></div></div><div className="feature-grid"><button className="feature-card" onClick={finder}><Search size={22}/><h3>Universal search</h3><p>AniList, Steam, TVMaze, VNDB, Open Library and more.</p><ChevronRight/></button><button className="feature-card" onClick={ai}><Bot size={22}/><h3>AI search</h3><p>Describe a story, mood, genre or similarity in plain language.</p><ChevronRight/></button><div className="feature-card"><ExternalLink size={22}/><h3>Where to find it</h3><p>Open legal watch, read, play and buying destinations.</p></div><div className="feature-card"><Link2 size={22}/><h3>Connections</h3><p>Control the catalogues and services FRAME uses.</p></div></div></div>}
 function RadarPage({releases,busy,error,refresh}:{releases:Radar[];busy:boolean;error:string;refresh:()=>void}){const up=releases.filter(x=>!x.released).sort((a,b)=>Date.parse(a.airingAt)-Date.parse(b.airingAt));return <div className="page"><div className="page-heading"><div><small>RELEASE INTELLIGENCE</small><h1>Release Radar</h1><p>Upcoming releases for tracked AniList titles.</p></div><button className="secondary" disabled={busy} onClick={refresh}>{busy?<RefreshCw className="spin"/>:<RefreshCw/>}Refresh</button></div>{error&&<div className="inline-error">{error}</div>}<section className="radar-panel"><div className="section-title"><div><small>UP NEXT</small><h2>Upcoming</h2></div><span>{up.length}</span></div>{up.length?<div className="release-list">{up.slice(0,30).map(x=><div key={x.anilistId+'-'+x.episode}><img src={x.poster||poster} alt=""/><section><b>{x.title}</b><small>Episode {x.episode}</small><span>{new Date(x.airingAt).toLocaleString()}</span></section></div>)}</div>:<Empty text="No upcoming tracked releases."/ >}</section></div>}
 
-function Connections({connections,toggle:_toggle}:{connections:Record<string,boolean>;toggle:(id:string)=>void}){
+function Connections({connections,toggle:_toggle,onImportSteamGame}:{connections:Record<string,boolean>;toggle:(id:string)=>void;onImportSteamGame:(game:{appId?:string;name:string;header?:string;storeUrl?:string})=>void}){
  const [linkMessage,setLinkMessage]=useState('');
  const [steamId,setSteamId]=useState('');
- const [steamGames,setSteamGames]=useState<Array<{name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>>([]);
+ const [steamGames,setSteamGames]=useState<Array<{appId:string;name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>>([]);
  const [identityProviders,setIdentityProviders]=useState<string[]>([]);
  const {user}=useAuth();
- useEffect(()=>{
-  setIdentityProviders((user?.identities||[]).map(x=>String(x.provider)));
- },[user?.id,user?.identities?.length]);
+ useEffect(()=>{setIdentityProviders((user?.identities||[]).map(x=>String(x.provider)))},[user?.id,user?.identities?.length]);
  useEffect(()=>{
   if(!supabase||!user?.id)return;
   void (async()=>{
    const {data}=await supabase.from('connected_apps').select('config').eq('user_id',user.id).eq('provider','steam').maybeSingle();
-   const value=data?.config&&typeof data.config==='object' ? (data.config as {steamId?:unknown}).steamId : undefined;
+   const value=data?.config&&typeof data.config==='object'?(data.config as {steamId?:unknown}).steamId:undefined;
    if(typeof value==='string'&&value.trim()){setSteamId(value);localStorage.setItem('frame-steam-id:'+user.id,value)}
    else setSteamId(localStorage.getItem('frame-steam-id:'+user.id)||'');
   })();
  },[user?.id]);
-
  const socialConnect=async(provider:'spotify'|'discord')=>{
   const client=supabase;if(!client||!user){setLinkMessage('Log in to connect external accounts.');return}
   setLinkMessage('');
@@ -247,58 +252,47 @@ function Connections({connections,toggle:_toggle}:{connections:Record<string,boo
    if(error)throw error;
   }catch(e){setLinkMessage(e instanceof Error?e.message:'That connection could not be started.')}
  };
-
+ const disconnect=async(provider:string)=>{
+  const client=supabase;if(!client||!user)return;
+  const identity=(user.identities||[]).find(x=>x.provider===provider);
+  if(!identity){return}
+  const {error}=await client.auth.unlinkIdentity(identity);
+  if(error)setLinkMessage(error.message);
+  else setIdentityProviders((user.identities||[]).filter(x=>x.provider!==provider).map(x=>String(x.provider)));
+ };
  const syncSteam=async()=>{
   const client=supabase;if(!client||!user){setLinkMessage('Log in to sync your Steam library.');return}
   if(!steamId.trim()){setLinkMessage('Enter your SteamID64 or public profile identifier first.');return}
   setLinkMessage('');
   const {data,error}=await client.functions.invoke('steam-library',{body:{steamId:steamId.trim()}});
   if(error){setLinkMessage(error.message);return}
-  const games=((data as {games?:Array<{name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>})?.games||[]);
-  localStorage.setItem('frame-steam-id:'+user.id,steamId.trim());setSteamGames(games);setLinkMessage(games.length+' Steam games synced.');
+  const games=((data as {games?:Array<{appId:string;name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>})?.games||[]);
+  localStorage.setItem('frame-steam-id:'+user.id,steamId.trim());setSteamGames(games);
+  setLinkMessage(games.length+' Steam games synced.');
   await client.from('connected_apps').upsert({user_id:user.id,provider:'steam',enabled:true,config:{steamId:steamId.trim()}},{onConflict:'user_id,provider'});
  };
-
  const catalogueRows=[
-  ['AniList','Anime, manga, manhwa and light novels'],
-  ['TVMaze','Series and episode metadata'],
-  ['VNDB','Visual novels'],
-  ['Open Library','Books and novels'],
-  ['Steam Store','Game discovery and store metadata'],
-  ['Wikipedia','Movie discovery'],
+  ['AniList','Anime, manga, manhwa and light novels'],['TVMaze','Series and episode metadata'],['VNDB','Visual novels'],['Open Library','Books and novels'],['Steam Store','Game discovery and store metadata'],['Wikipedia','Movie discovery']
  ] as const;
-
  return <div className="page">
-  <div className="page-heading"><div><small>SERVICE CONTROL</small><h1>Connections</h1><p>Built-in catalogues, optional account connections and secure integrations are kept separate.</p></div></div>
+  <div className="page-heading"><div><small>SERVICE CONTROL</small><h1>Connections</h1><p>Keep catalogues, account identities and media libraries connected without mixing credentials into the browser.</p></div></div>
+  <section className="connections-section"><div className="connections-section-head"><div><small>BUILT-IN CATALOGUES</small><h2>Ready to use</h2></div><span>{catalogueRows.length} sources</span></div><div className="connections-grid">{catalogueRows.map(([name,description])=><div className="connection-card" key={name}><div className="connection-icon"><Link2 size={19}/></div><div><b>{name}</b><p>{description}</p><small>Built in · no account connection</small></div><span className="connection-status built-in">Available</span></div>)}</div></section>
 
-  <section className="connections-section">
-   <div className="connections-section-head"><div><small>BUILT-IN CATALOGUES</small><h2>Ready to use</h2></div><span>6 sources</span></div>
-   <div className="connections-grid">{catalogueRows.map(([name,description])=><div className="connection-card" key={name}>
-    <div className="connection-icon"><Link2 size={19}/></div>
-    <div><b>{name}</b><p>{description}</p><small>Built in · no account connection</small></div>
-    <span className="connection-status built-in">Available</span>
-   </div>)}</div>
-  </section>
-
-  <section className="connections-section">
-   <div className="connections-section-head"><div><small>ACCOUNT CONNECTIONS</small><h2>Optional services</h2></div><span>2 OAuth · 1 sync</span></div>
-   <div className="connections-grid">
-    <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Spotify</b><p>Connect your account for future music-aware recommendations and identity features.</p><small>{identityProviders.includes('spotify')?'OAuth · connected':'OAuth · not connected'}</small></div><button className="secondary" onClick={()=>void socialConnect('spotify')}>{identityProviders.includes('spotify')?'Reconnect':'Connect'}</button></div>
-    <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Discord</b><p>Connect your account for future social identity and rich-presence features.</p><small>{identityProviders.includes('discord')?'OAuth · connected':'OAuth · not connected'}</small></div><button className="secondary" onClick={()=>void socialConnect('discord')}>{identityProviders.includes('discord')?'Reconnect':'Connect'}</button></div>
-    <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Steam account</b><p>Sync games from a public Steam library through the secure server-side Steam integration.</p><small>{steamGames.length?'Synced':'Not synced'} · server side</small></div><div className="call-form"><input value={steamId} onChange={e=>setSteamId(e.target.value)} placeholder="SteamID64 / public profile ID"/><button className="secondary" onClick={()=>void syncSteam()}>Sync games</button></div></div>
-   </div>
-  </section>
+  <section className="connections-section"><div className="connections-section-head"><div><small>ACCOUNT CONNECTIONS</small><h2>Your services</h2></div><span>Secure OAuth / server sync</span></div><div className="connections-grid">
+   {(['spotify','discord'] as const).map(provider=>{
+    const name=provider[0].toUpperCase()+provider.slice(1),connected=identityProviders.includes(provider);
+    return <div className="connection-card" key={provider}><div className="connection-icon"><Link2 size={19}/></div><div><b>{name}</b><p>{provider==='spotify'?'Link Spotify for identity, music-aware features and optional playback controls. Playback control requires the Spotify permissions and Premium requirements.':'Link Discord for identity, friend/community workflows and future presence features.'}</p><small>{connected?'OAuth · connected':'OAuth · not connected'}</small></div>{connected?<button className="secondary" onClick={()=>void disconnect(provider)}>Disconnect</button>:<button className="secondary" onClick={()=>void socialConnect(provider)}>Connect</button>}</div>;
+   })}
+   <div className="connection-card"><div className="connection-icon"><Gamepad2 size={19}/></div><div><b>Steam account</b><p>Import your owned games and use FRAME as the tracking layer for your Steam library.</p><small>{steamGames.length?'Synced '+steamGames.length+' games':'Not synced'} · server-side Web API</small></div><div className="call-form"><input value={steamId} onChange={e=>setSteamId(e.target.value)} placeholder="SteamID64 / public profile ID"/><button className="secondary" onClick={()=>void syncSteam()}>Sync Steam</button></div></div>
+  </div></section>
 
   {linkMessage&&<div className="inline-error" style={{marginTop:12}}>{linkMessage}</div>}
-  {steamGames.length>0&&<section className="calls-panel" style={{marginTop:14}}><div className="section-title"><div><small>STEAM LIBRARY</small><h2>Synced games</h2></div><span>{steamGames.length}</span></div><div className="media-grid">{steamGames.slice(0,24).map(g=><a key={g.name} className="media-card" href={g.storeUrl||'#'} target="_blank" rel="noreferrer"><div className="media-poster"><img src={g.header||''} alt="" loading="lazy"/></div><div className="media-copy"><b>{g.name}</b><small>{Math.round(g.playtimeMinutes/60)}h played</small></div></a>)}</div></section>}
+  {steamGames.length>0&&<section className="calls-panel" style={{marginTop:14}}><div className="section-title"><div><small>STEAM LIBRARY</small><h2>Import and play</h2></div><span>{steamGames.length} synced</span></div><div className="media-grid">{steamGames.slice(0,30).map(g=><div key={g.appId} className="media-card steam-library-card"><div className="media-poster"><img src={g.header||''} alt="" loading="lazy"/></div><div className="media-copy"><b>{g.name}</b><small>{Math.round(g.playtimeMinutes/60)}h played</small><div className="steam-actions"><button className="secondary" onClick={()=>onImportSteamGame(g)}>Add to FRAME</button><a className="secondary" href={g.storeUrl||'#'} target="_blank" rel="noreferrer">Steam</a></div></div></div>)}</div></section>}
 
-  <section className="connections-section">
-   <div className="connections-section-head"><div><small>AI CONNECTIONS</small><h2>Server-side providers</h2></div><span>Configured per provider</span></div>
-   <div className="connections-grid ai-provider-grid">
-    <div className="connection-card"><div className="connection-icon"><Bot size={19}/></div><div><b>FRAME AI</b><p>Secure built-in provider for library-aware questions and voice assistance.</p><small>Built in · ready</small></div><span className="connection-status built-in">Ready</span></div>
-    {['OpenAI','Gemini','Claude'].map(name=><div className="connection-card" key={name}><div className="connection-icon"><Bot size={19}/></div><div><b>{name}</b><p>Optional external provider connection for future server-side AI routing.</p><small>Connector · not configured</small></div><span className="connection-status not-configured">Not configured</span></div>)}
-   </div>
-  </section>
+  <section className="connections-section"><div className="connections-section-head"><div><small>AI CONNECTIONS</small><h2>Secure providers</h2></div><span>Browser never holds provider secrets</span></div><div className="connections-grid ai-provider-grid">
+   <div className="connection-card"><div className="connection-icon"><Bot size={19}/></div><div><b>FRAME AI</b><p>Built-in library-aware assistant routed through the secure server function.</p><small>Built in · ready</small></div><span className="connection-status built-in">Ready</span></div>
+   {['OpenAI','Gemini','Claude'].map(name=><div className="connection-card" key={name}><div className="connection-icon"><Bot size={19}/></div><div><b>{name}</b><p>Optional server-side provider. Configure its secret only on the backend before enabling it.</p><small>Server connector · not configured</small></div><span className="connection-status not-configured">Not configured</span></div>)}
+  </div></section>
  </div>;
 }
 
@@ -306,7 +300,19 @@ function SettingsPage({user,profile,setProfile,guest,density,setDensity,theme,se
  const[name,setName]=useState(profile?.display_name||''),[username,setUsername]=useState(profile?.username||''),[saved,setSaved]=useState(false);
  useEffect(()=>{setName(profile?.display_name||'');setUsername(profile?.username||'')},[profile?.id,profile?.display_name,profile?.username]);
  const save=async()=>{const client=supabase;if(!client||!user?.id)return;const clean=username.trim();if(clean.length<3)return;const p={id:user.id,username:clean,display_name:name.trim()||clean,avatar_url:profile?.avatar_url||null,bio:profile?.bio||''};const {error}=await client.from('profiles').upsert(p,{onConflict:'id'});if(!error){setProfile(p);setSaved(true);setTimeout(()=>setSaved(false),1400)}};
- return <div className="page"><div className="page-heading"><div><small>YOUR FRAME</small><h1>Settings</h1><p>Profile, appearance and account controls.</p></div></div><section className="settings-grid"><div className="settings-panel"><div className="section-title"><div><small>PROFILE</small><h2>Identity</h2></div></div>{guest?<p className="muted">Guest mode stays local to this device.</p>:<><label>Username<input value={username} onChange={e=>setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g,''))}/></label><label>Display name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Email<input value={user?.email||''} disabled/></label><button className="primary" onClick={()=>void save()}>{saved?'Saved':'Save profile'}</button></>}</div><div className="settings-panel"><div className="section-title"><div><small>APPEARANCE</small><h2>Samsung-style</h2></div></div><div className="setting-row"><span>Card density<small>Control how much media fits on screen.</small></span><select value={density} onChange={e=>setDensity(e.target.value)}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></div><div className="setting-row"><span>Visual style<small>Change the device-inspired personality without changing your library data.</small></span><select value={theme} onChange={e=>setTheme(e.target.value)}><option value="sky">Sky</option><option value="samsung">Samsung</option><option value="apple">Apple</option><option value="oneplus">OnePlus</option><option value="nothing">Nothing</option><option value="amoled">AMOLED</option></select></div><div className="setting-row"><span>Light / dark<small>Switch the interface mode independently from the visual style.</small></span><select value={appearanceMode} onChange={e=>setAppearanceMode(e.target.value as 'light'|'dark'|'system')}><option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option></select></div></div><div className="settings-panel"><div className="section-title"><div><small>ACCOUNT</small><h2>Security</h2></div></div><button className="danger" onClick={()=>void signOut()}><LogOut size={16}/>Log out</button><p className="muted">Forgot-password recovery is available at the FRAME entrance.</p></div></section></div>;
+ const themes=[['sky','Sky','Blue sky · FRAME'],['samsung','Samsung','One UI · soft panels'],['apple','Apple','Minimal · glassy'],['oneplus','OnePlus','Bold · fast · warm'],['nothing','Nothing','Dot-matrix · industrial'],['amoled','AMOLED','Pure black · OLED'],['pixel','Pixel','Material You · clean'],['material','Material','Cards · expressive'],['retro','Retro','Classic desktop · playful']] as const;
+ return <div className="page"><div className="page-heading"><div><small>YOUR FRAME</small><h1>Settings</h1><p>Profile, appearance, account connections and privacy controls. Appearance never changes library data.</p></div></div>
+  <section className="settings-grid">
+   <div className="settings-panel"><div className="section-title"><div><small>PROFILE</small><h2>Identity</h2></div></div>{guest?<p className="muted">Guest mode stays local to this device.</p>:<><label>Username<input value={username} onChange={e=>setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g,''))}/></label><label>Display name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Email<input value={user?.email||''} disabled/></label><button className="primary" onClick={()=>void save()}>{saved?'Saved':'Save profile'}</button></>}</div>
+   <div className="settings-panel appearance-panel"><div className="section-title"><div><small>APPEARANCE</small><h2>Make FRAME yours</h2></div></div>
+    <div className="appearance-control"><b>Theme</b><span>Choose the visual language. Your media stays exactly where it is.</span><div className="theme-picker">{themes.map(([id,label,sub])=><button key={id} className={'theme-choice '+(theme===id?'selected':'')} onClick={()=>setTheme(id)}><i className={'theme-preview '+id}><span/></i><strong>{label}</strong><small>{sub}</small></button>)}</div></div>
+    <div className="appearance-control"><b>Appearance mode</b><span>Light, dark or follow your device.</span><div className="segmented-control">{(['light','dark','system'] as const).map(mode=><button key={mode} className={appearanceMode===mode?'active':''} onClick={()=>setAppearanceMode(mode)}>{mode[0].toUpperCase()+mode.slice(1)}</button>)}</div></div>
+    <div className="setting-row compact-row"><span>Card density<small>Control how much media fits on screen.</small></span><select value={density} onChange={e=>setDensity(e.target.value)}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></div>
+    <div className="appearance-live"><span>Live preview</span><div><b>Sky / Dark / Apple / Nothing</b><small>Every page, chat and call overlay follows these settings.</small></div></div>
+   </div>
+   <div className="settings-panel"><div className="section-title"><div><small>ACCOUNT</small><h2>Security</h2></div></div><button className="danger" onClick={()=>void signOut()}><LogOut size={16}/>Log out</button><p className="muted">Forgot-password recovery is available at the FRAME entrance.</p></div>
+  </section>
+ </div>;
 }
 function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){
  const[items,setItems]=useState<MediaItem[]>([]);
