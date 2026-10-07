@@ -65,10 +65,10 @@ using (
     )
     or (
       realtime.topic() like 'frame-direct-call:%'
-      and substring(realtime.topic() from 20) ~ '^[0-9a-fA-F-]{36}$'
+      and substring(realtime.topic() from 19) ~ '^[0-9a-fA-F-]{36}$'
       and exists (
         select 1 from public.direct_call_sessions s
-        where s.id=substring(realtime.topic() from 20)::uuid
+        where s.id=substring(realtime.topic() from 19)::uuid
           and (select auth.uid()) in (s.caller_id,s.callee_id)
       )
     )
@@ -106,10 +106,10 @@ with check (
     )
     or (
       realtime.topic() like 'frame-direct-call:%'
-      and substring(realtime.topic() from 20) ~ '^[0-9a-fA-F-]{36}$'
+      and substring(realtime.topic() from 19) ~ '^[0-9a-fA-F-]{36}$'
       and exists (
         select 1 from public.direct_call_sessions s
-        where s.id=substring(realtime.topic() from 20)::uuid
+        where s.id=substring(realtime.topic() from 19)::uuid
           and (select auth.uid()) in (s.caller_id,s.callee_id)
       )
     )
