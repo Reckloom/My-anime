@@ -189,7 +189,7 @@ export function AniListSearch({close,onImported,onManual}:{close:()=>void;onImpo
      selectedExt?<><small>{selectedExt.medium.toUpperCase()} · {selectedExt.provider}</small><h3>{selectedExt.title}</h3></>:null}
     {detailLoading?<p><Loader2 className="spin"/> Loading metadata…</p>:<>
       <p>{cleanDescription(isAni&&selectedAni?selectedAni.description:selectedExt?.description)||'No description available.'}</p>
-      <div className="tags">{(isAni&&selectedAni?selectedAni.genres:selectedExt?.genres||[]).map((x:string)=><span key={x}>{x}</span>)}</div>
+      <div className="tags">{((isAni && selectedAni?.genres) || selectedExt?.genres || []).map((x:string)=><span key={x}>{x}</span>)}</div>
       {!isAni&&selectedExt?.sourceUrl&&<p className="info-line">Source: {selectedExt.sourceUrl}</p>}
     </>}
     <div className="ani-actions">
