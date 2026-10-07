@@ -30,16 +30,14 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
    }
   };
   void load();
-  const channel=client.channel('frame-global-chat')
-   .on('postgres_changes',{event:'INSERT',schema:'public',table:'global_messages'},payload=>{
-    const row=payload.new as GlobalMessage;
+  const channel=client.channel('frame-global-chat',{config:{private:true,broadcast:{ack:true}}})
+   .on('broadcast',{event:'message'},({payload}:any)=>{
+    const row=payload?.row as GlobalMessage|undefined;
+    if(!active||!row)return;
     void client.from('profiles').select('username,display_name,avatar_url').eq('id',row.user_id).maybeSingle()
-      .then(({data})=>{
-       if(!active)return;
-       setMessages(prev=>prev.some(x=>x.id===row.id)?prev:[...prev,{...row,profiles:data||null}].slice(-200));
-      });
-   })
-   .subscribe();
+      .then(({data})=>{if(active)setMessages(prev=>prev.some(x=>x.id===row.id)?prev:[...prev,{...row,profiles:data||null}].slice(-200));});
+   });
+  channel.subscribe((status:string,err?:any)=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setError(err?.message||'Live chat connection was interrupted; messages are still saved.');});
   return()=>{active=false;void channel.unsubscribe()};
  },[guest]);
 
@@ -50,8 +48,12 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
   setBusy(true);setError('');
   try{
    const body=draft.trim().slice(0,2000);
-   const {error:e}=await supabase.from('global_messages').insert({user_id:uid,body});
-   if(e)throw e;
+   const {data:row,error:e}=await supabase.from('global_messages').insert({user_id:uid,body}).select('id,user_id,body,created_at').single();
+   if(e||!row)throw e||new Error('Message could not be saved.');
+   const {data:profile}=await supabase.from('profiles').select('username,display_name,avatar_url').eq('id',uid).maybeSingle();
+   setMessages(prev=>prev.some(x=>x.id===row.id)?prev:[...prev,{...(row as GlobalMessage),profiles:profile||null}].slice(-200));
+   const result=await client.channel('frame-global-chat').send({type:'broadcast',event:'message',payload:{row}}).catch(()=>null);
+   void result;
    setDraft('');
   }catch(e){setError(e instanceof Error?e.message:'Message could not be sent.')}
   finally{setBusy(false)}
