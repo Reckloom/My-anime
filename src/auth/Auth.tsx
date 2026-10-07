@@ -32,7 +32,6 @@ function AuthScreen(){
  const [message,setMessage]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[showPass,setShowPass]=useState(false);
  useEffect(()=>{if(window.location.hash.includes('type=recovery'))setMode('update')},[]);
  const reset=()=>{setError('');setMessage('')};
- const guest=()=>{localStorage.setItem('frame-guest','1');window.location.reload()};
  const submit=async(event:FormEvent)=>{
   event.preventDefault();if(!supabase)return;setBusy(true);reset();
   try{
