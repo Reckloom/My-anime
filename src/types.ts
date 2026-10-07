@@ -1,4 +1,5 @@
 export type Status='watching'|'completed'|'planned'|'paused'|'dropped';
+// FRAME supports both first-party and imported external catalogue identities.
 export type Medium='anime'|'manga'|'manhwa'|'light-novel'|'visual-novel'|'movie'|'series'|'game'|'book';
 
 export interface GameDetails{
