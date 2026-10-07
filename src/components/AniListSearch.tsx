@@ -194,6 +194,11 @@ async function detailExternal(result:DiscoveryResult){
  return result;
 }
 
+function extractYear(value?:string|null){
+ const m=String(value||'').match(/(?:18|19|20)\d{2}/);
+ return m?Number(m[0]):undefined;
+}
+
 function externalToMedia(r:DiscoveryResult):MediaItem{
  return{
   id:crypto.randomUUID(),sourceProvider:r.provider,externalId:r.externalId,title:r.title,description:cleanDescription(r.description),
