@@ -121,7 +121,7 @@ export default function App(){
  },[user?.id]);
 
  const save=(list:MediaItem[])=>{
-  const next=list.map(normalise);setItems(next);try{localStorage.setItem('frame-library',JSON.stringify(next))}catch{}
+  const next=list.map(normalise);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
   const client=supabase;if(client&&user?.id)void Promise.all(next.map(item=>client.from('media_items').upsert(toRow(item,user.id),{onConflict:'id'}))).catch(()=>{});
  };
  const importItem=(raw:MediaItem)=>{
