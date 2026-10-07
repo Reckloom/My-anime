@@ -169,13 +169,16 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
    const filterMatch=filter==='all'||x.status===filter||x.medium===filter;
    return textMatch&&filterMatch;
   };
+  const statusFilter=['watching','reading','playing','completed','planned','paused','dropped'].includes(filter);
+  const hasMatchingDescendant=(id:string):boolean=>items.some(child=>child.parentId===id&&(matches(child)||hasMatchingDescendant(child.id)));
   return sortMedia(items,sortMode).filter(x=>{
    if(matches(x))return true;
+   if(statusFilter)return !x.parentId&&hasMatchingDescendant(x.id);
    if(x.parentId){
     const parent=items.find(y=>y.id===x.parentId);
     return Boolean(parent&&matches(parent));
    }
-   return items.some(child=>child.parentId===x.id&&matches(child));
+   return hasMatchingDescendant(x.id);
   });
  },[items,sortMode,query,filter]);
  const go=(next:string)=>{setPage(next);setMenu(false);setSelected(null);if(next!=='friend-library')setFriendLibrary(null)};
