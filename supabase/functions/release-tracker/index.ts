@@ -154,18 +154,17 @@ Deno.serve(async req=>{
     const users=byAni.get(Number(schedule.mediaId))||[];
     if(!users.length)continue;
     const releaseTitle=schedule.media?.title?titleOf(schedule.media):users[0].title;
-    const releaseAt=new Date(schedule.airingAt*1000).toISOString();
-    for(const item of users){
+        for(const item of users){
       const episode=Number(schedule.episode||0);
       if(schedule.airingAt<=now && episode>Number(item.progress||0)){
-        const {error}=await admin.from('frame_notifications').upsert({
+        const {error}=await admin.from('frame_notifications').insert({
           user_id:item.user_id,
           type:'release',
           title:releaseTitle+' · Episode '+episode,
           body:'A new tracked episode is available now.',
           href:'radar',
           dedupe_key:'release:'+schedule.mediaId+':'+episode
-        },{onConflict:'user_id,dedupe_key'});
+        },{onConflict:'user_id,dedupe_key',ignoreDuplicates:true});
         if(!error)notifications++;
       }else{
         const secondsUntil=schedule.airingAt-now;
