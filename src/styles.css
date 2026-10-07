@@ -641,3 +641,14 @@ button:disabled{opacity:.48;cursor:not-allowed}
 :root[data-frame-theme="sky"] .group-call{background:#f4faff;border-color:#0b3b5a18;box-shadow:0 28px 90px #0b4a7026}
 :root[data-frame-theme="sky"] .group-call .calls-panel{background:#ffffffa8;border-color:#0b3b5a16}
 :root[data-frame-theme="sky"] .call-mini-action{background:#ffffff;color:#234458;border-color:#0b3b5a18}
+
+.connections-section{margin-top:18px}
+.connections-section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:10px}
+.connections-section-head h2{margin:5px 0 0;font-size:21px;color:var(--frame-text,#f5f5f7)}
+.connections-section-head small{font-size:8px;letter-spacing:.14em;color:var(--frame-muted,#7f8792)}
+.connections-section-head>span{font-size:9px;color:var(--frame-dim,#8b93a0)}
+.connection-status{align-self:center;white-space:nowrap;border:1px solid var(--frame-line);border-radius:999px;padding:6px 9px;font-size:8px;font-weight:700}
+.connection-status.built-in{background:#20996b10;color:var(--frame-success,#20996b)}
+:root[data-frame-theme="sky"] .connections-section-head h2{color:#092235}
+:root[data-frame-theme="sky"] .connections-section-head>span{color:#668092}
+:root[data-frame-theme="sky"] .connection-status{background:#fff;border-color:#0b3b5a18}
