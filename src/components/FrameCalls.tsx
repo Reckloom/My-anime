@@ -120,6 +120,7 @@ export function CallsPage({uid,profile,onCloseCall}:{uid:string;profile:Profile|
   setActiveRoom(null);setPending([]);setJoinStatus(null);setAwaitingRoom(null);onCloseCall();
  };
 
+ if(uid==='guest')return <div className="page calls-page"><div className="social-lock"><Phone size={30}/><h2>Calls need your FRAME account</h2><p>Sign in to create rooms, join calls, receive calls and use the microphone securely.</p></div></div>;
  if(activeRoom)return <GroupVoiceCall uid={uid} room={activeRoom} profile={profile} host={activeRoom.host_id===uid} onExit={leave} pending={pending} profiles={participantProfiles} approve={approve}/>;
 
  return <div className="page calls-page">
