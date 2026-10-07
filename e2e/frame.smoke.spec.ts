@@ -50,7 +50,7 @@ test.describe('FRAME core smoke flow', () => {
 
     for (const [button, heading] of targets) {
       await page.getByRole('button', { name: button, exact: true }).first().click();
-      await expect(page.getByRole('heading').filter({ hasText: heading })).toBeVisible();
+      await expect(page.locator('h1').filter({ hasText: heading })).toBeVisible();
     }
   });
 });
