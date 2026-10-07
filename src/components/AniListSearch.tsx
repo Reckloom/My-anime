@@ -181,18 +181,20 @@ export function AniListSearch({close,onImported,onManual}:{close:()=>void;onImpo
    <span><b>{i.title}</b><small>{i.meta}</small><em>{i.tags.join(' · ')||'Metadata available on selection'}</em></span>
   </button>})}</div>
   {selected&&<div className="ani-detail">
-   <img src={selectedAni?.coverImage?.extraLarge||selectedExt?.poster||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>
+   {isAni&&selectedAni?<img src={selectedAni.coverImage?.extraLarge||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>:
+    selectedExt?<img src={selectedExt.poster||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>:null}
    <div>
-    <small>{isAni?(anilistMediumLabel(selectedAni!)):(selectedExt!.medium.toUpperCase())} · {isAni?'AniList':selectedExt!.provider}</small>
-    <h3>{isAni?titleOf(selectedAni!):selectedExt!.title}</h3>
+    {isAni&&selectedAni?<><small>{anilistMediumLabel(selectedAni)} · AniList</small><h3>{titleOf(selectedAni)}</h3></>:
+     selectedExt?<><small>{selectedExt.medium.toUpperCase()} · {selectedExt.provider}</small><h3>{selectedExt.title}</h3></>:null}
     {detailLoading?<p><Loader2 className="spin"/> Loading metadata…</p>:<>
-      <p>{cleanDescription(isAni?selectedAni?.description:selectedExt?.description)||'No description available.'}</p>
-      <div className="tags">{(isAni?selectedAni?.genres:selectedExt?.genres||[] as string[]).map((x:string)=><span key={x}>{x}</span>)}</div>
+      <p>{cleanDescription(isAni&&selectedAni?selectedAni.description:selectedExt?.description)||'No description available.'}</p>
+      <div className="tags">{(isAni&&selectedAni?selectedAni.genres:selectedExt?.genres||[]).map((x:string)=><span key={x}>{x}</span>)}</div>
       {!isAni&&selectedExt?.sourceUrl&&<p className="info-line">Source: {selectedExt.sourceUrl}</p>}
     </>}
     <div className="ani-actions">
      <button className="primary" disabled={importing||detailLoading} onClick={()=>void importMedia()}>{importing?<Loader2 className="spin"/>:<Download/>}{importing?'Importing…':'Add to my library'}</button>
-     {(isAni||selectedExt?.sourceUrl)&&<a href={isAni?`https://anilist.co/${selectedAni!.type.toLowerCase()}/${selectedAni!.id}`:selectedExt!.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>}
+     {isAni&&selectedAni?<a href={'https://anilist.co/'+selectedAni.type.toLowerCase()+'/'+selectedAni.id} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:
+      selectedExt?.sourceUrl?<a href={selectedExt.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:null}
      {onManual&&<button className="secondary" onClick={onManual}>Manual entry</button>}
     </div>
    </div>
