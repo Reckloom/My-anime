@@ -67,8 +67,10 @@ function sortMedia(items:MediaItem[],mode:string){
  });
 }
 
-function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?:boolean}){ const mode=logo&&logo!=='ultra-instinct'?logo:'frame-mark'; if(mode.startsWith('http'))return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src={mode} alt="Custom FRAME logo"/></span>; if(mode==='classic-f')return <span className={'frame-logo-mark classic-f '+(small?'small':'')}>F</span>; if(mode==='minimal-ring')return <span className={'frame-logo-mark minimal-ring '+(small?'small':'')}><i/></span>; return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src="/frame-logo.svg" alt="FRAME logo"/></span>;}export default function App(){
- const {user}=useAuth(),guest=localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
+function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?:boolean}){ const mode=logo&&logo!=='ultra-instinct'?logo:'frame-mark'; if(mode.startsWith('http'))return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src={mode} alt="Custom FRAME logo"/></span>; if(mode==='classic-f')return <span className={'frame-logo-mark classic-f '+(small?'small':'')}>F</span>; if(mode==='minimal-ring')return <span className={'frame-logo-mark minimal-ring '+(small?'small':'')}><i/></span>; return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src="/frame-logo.svg" alt="FRAME logo"/></span>;}
+function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){ const merged=[...primary]; for(const incomingRaw of secondary){ const incoming=normalise(incomingRaw); const index=merged.findIndex(x=>(incoming.anilistId&&x.anilistId===incoming.anilistId)||(incoming.sourceProvider&&incoming.externalId&&x.sourceProvider===incoming.sourceProvider&&x.externalId===incoming.externalId)||((x.title||'').trim().toLowerCase()===(incoming.title||'').trim().toLowerCase()&&x.medium===incoming.medium)); if(index<0){merged.push(incoming);continue} const current=merged[index]; merged[index]=normalise({...current,...incoming,id:current.id,parentId:incoming.parentId??current.parentId,metadataId:incoming.metadataId??current.metadataId}); } return merged; }
+export default function App(){
+ const {user}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
  const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
  const [items,setItems]=useState<MediaItem[]>(()=>{
   try{
@@ -98,20 +100,40 @@ function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?
  useEffect(()=>{
   try{localStorage.setItem(storageKey,JSON.stringify(items))}catch{}
  },[items,storageKey]);
+ useEffect(()=>{if(!guest)return;try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};if(prefs.default_sort)setSortMode(String(prefs.default_sort));if(prefs.density)setDensity(String(prefs.density));if(prefs.ai_provider)setAiProvider(String(prefs.ai_provider));if(prefs.theme&&['sky','samsung','apple','oneplus','nothing','amoled','pixel','material','retro'].includes(String(prefs.theme)))setTheme(String(prefs.theme));if(prefs.appearance_mode&&['light','dark','system'].includes(String(prefs.appearance_mode)))setAppearanceMode(String(prefs.appearance_mode) as 'light'|'dark'|'system')}catch{}},[guest]);
 
  useEffect(()=>{
   const client=supabase;
   if(!client||!user?.id)return;
   let active=true;
   const load=async()=>{
+   const guestRaw=localStorage.getItem('frame-library:guest');
+   let guestItems:MediaItem[]=[];
+   try{const parsed=guestRaw?JSON.parse(guestRaw):[];if(Array.isArray(parsed))guestItems=parsed.map(normalise)}catch{}
+   const guestPrefsRaw=localStorage.getItem('frame-guest-preferences');
+   let guestPrefs:Record<string,string>={};
+   try{const parsed=guestPrefsRaw?JSON.parse(guestPrefsRaw):{};if(parsed&&typeof parsed==='object')guestPrefs=parsed as Record<string,string>}catch{}
    const {data}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
    if(active&&data){
-    if(data.length){const next=data.map(dbToMedia);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}
+    const cloudItems=data.map(dbToMedia);
+    const merged=guestItems.length?mergeMediaLists(cloudItems,guestItems):cloudItems;
+    if(merged.length){
+     setItems(merged);try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
+     if(guestItems.length){const {error}=await client.from('media_items').upsert(merged.map(item=>toRow(item,user.id)),{onConflict:'id'});if(!error)localStorage.removeItem('frame-library:guest');else console.warn('[FRAME guest migration]',error)}
+    }
     else{
      try{
-      const raw=localStorage.getItem(storageKey);const local=raw?JSON.parse(raw):[];
+      const raw=localStorage.getItem(`frame-library:${user.id}`);const local=raw?JSON.parse(raw):[];
       if(Array.isArray(local)&&local.length){const next=local.map(normalise);setItems(next);const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});if(error)console.warn('[FRAME cloud seed]',error)}
      }catch(e){console.warn('[FRAME local library recovery]',e)}
+    }
+    const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
+    const effectivePrefs={...(prefs||{}),...guestPrefs};
+    if(Object.keys(effectivePrefs).length){
+     setSortMode(String(effectivePrefs.default_sort||'rating'));setDensity(String(effectivePrefs.density||'comfortable'));setAiProvider(String(effectivePrefs.ai_provider||'frame'));
+     const savedTheme=String(effectivePrefs.theme||'sky');setTheme((['sky','samsung','apple','oneplus','nothing','amoled','pixel','material','retro'].includes(savedTheme)?savedTheme:'sky'));
+     setAppearanceMode((['light','dark','system'].includes(String(effectivePrefs.appearance_mode))?String(effectivePrefs.appearance_mode):'light') as 'light'|'dark'|'system');
+     if(Object.keys(guestPrefs).length){const {error}=await client.from('user_preferences').upsert({...guestPrefs,user_id:user.id,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(!error)localStorage.removeItem('frame-guest-preferences')}
     }
    }
    const {data:p}=await client.from('profiles').select('*').eq('id',user.id).maybeSingle();
@@ -187,7 +209,7 @@ function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?
   finally{setRadarBusy(false)}
  };
  useEffect(()=>{if(!supabase||!user?.id)return;void refreshRadar();const timer=window.setInterval(()=>void refreshRadar(),30*60*1000);return()=>window.clearInterval(timer)},[user?.id]);
- const persist=async(key:string,value:string)=>{const client=supabase;if(client&&user?.id)await client.from('user_preferences').upsert({user_id:user.id,[key]:value,updated_at:new Date().toISOString()},{onConflict:'user_id'})};
+ const persist=async(key:string,value:string)=>{const client=supabase;if(client&&user?.id){await client.from('user_preferences').upsert({user_id:user.id,[key]:value,updated_at:new Date().toISOString()},{onConflict:'user_id'});return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs[key]=value;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
  const removeOwnedArtwork=async(url?:string)=>{const client=supabase;if(!client||!user?.id||!url)return;try{const parsed=new URL(url);const prefix='/storage/v1/object/public/frame-media-art/';if(!parsed.pathname.startsWith(prefix))return;const path=decodeURIComponent(parsed.pathname.slice(prefix.length));if(path.startsWith(user.id+'/'))await client.storage.from('frame-media-art').remove([path]);}catch{}};
  const updateConnection=async(id:string)=>{const enabled=!connections[id];setConnections({...connections,[id]:enabled});const client=supabase;if(client&&user?.id)await client.from('connected_apps').upsert({user_id:user.id,provider:id,enabled,config:{}},{onConflict:'user_id,provider'})};
  const shown=useMemo(()=>{
