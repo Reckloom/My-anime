@@ -172,7 +172,12 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
     const ch=client.channel(roomChannel);channel.current=ch;
     ch.on('broadcast',{event:'signal'},async({payload}:any)=>{
       if(!payload||payload.from===uid||payload.to&&payload.to!==uid)return;
-      if(payload.type==='hello'){const id=String(payload.from);if(uid<id)await makePeer(id,true)}
+      if(payload.type==='hello'){
+       await send({type:'hello-ack',to:String(payload.from)})
+      }
+      if(payload.type==='hello-ack'){
+       const id=String(payload.from);if(uid<id)await makePeer(id,true)
+      }
       if(payload.type==='offer'){const pc=await makePeer(String(payload.from),false);await pc.setRemoteDescription(payload.sdp);const ans=await pc.createAnswer();await pc.setLocalDescription(ans);await send({type:'answer',to:payload.from,sdp:pc.localDescription})}
       if(payload.type==='answer'){const pc=peers.current.get(String(payload.from));if(pc){await pc.setRemoteDescription(payload.sdp)}}
       if(payload.type==='ice'){const pc=peers.current.get(String(payload.from));if(pc?.remoteDescription)await pc.addIceCandidate(payload.candidate)}
@@ -192,6 +197,18 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
  },[room.id,roomChannel,uid]);
 
  useEffect(()=>{for(const x of remotes){const node=audioRefs.current[x.id];if(node)node.srcObject=x.stream}},[remotes]);
+
+ useEffect(()=>{
+  const client=supabase;if(!client)return;
+  let active=true;
+  const refreshMembers=async()=>{
+   const {data}=await client.from('call_participants').select('*').eq('room_id',room.id).eq('status','approved');
+   if(active&&data)setMembers(data as Participant[]);
+  };
+  void refreshMembers();
+  const timer=window.setInterval(()=>void refreshMembers(),3000);
+  return()=>{active=false;window.clearInterval(timer)};
+ },[room.id]);
 
  const toggleMute=()=>{
   if(hostMuted)return;
