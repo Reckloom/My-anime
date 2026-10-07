@@ -23,7 +23,7 @@ export function useAuth(){return useContext(AuthContext)}
 export function AuthGate({children}:{children:ReactNode}){
  const {session,loading}=useAuth();
  if(!supabase)return <>{children}</>;
- if(loading)return <div className="auth-loading"><div className="auth-mark">F</div><span>Opening your library…</span></div>;
+ if(loading)return <div className="auth-loading"><div className="auth-mark"><img src="/frame-ultra-instinct.svg" alt="FRAME"/></div><span>Opening your library…</span></div>;
  return session?<>{children}</>:<AuthScreen/>;
 }
 
