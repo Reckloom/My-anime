@@ -39,7 +39,8 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
    });
   channelRef.current=channel;
   channel.subscribe((status:string,err?:any)=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setError(err?.message||'Live chat connection was interrupted; messages are still saved.');});
-  return()=>{active=false;void channel.unsubscribe();channelRef.current=null};
+  const fallback=window.setInterval(()=>void load(),5000);
+  return()=>{active=false;window.clearInterval(fallback);void channel.unsubscribe();channelRef.current=null};
  },[guest]);
 
  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'})},[messages.length]);
