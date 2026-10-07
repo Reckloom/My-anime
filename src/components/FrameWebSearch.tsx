@@ -16,12 +16,14 @@ export function FrameWebSearch(){
       if(!(data as any).results?.length)setMessage('Google returned no matching pages.');
       return;
     }
-    if((data as any)?.fallbackUrl) { setMessage('Google in-site results are not configured on the server yet. You can open the same Google search now.'); }
+    if((data as any)?.fallbackUrl) setMessage('In-site Google results are not configured, so FRAME will open the same search in Google.');
    }
-  }catch{}
+  }catch{
+   setMessage('In-site search could not connect, so FRAME will open Google directly.');
+  }
   window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank','noopener,noreferrer');
-  if(!message)setMessage('Opened the Google results in a new tab.');
-  setLoading(false);
+  setMessage('Google results opened in a new tab.');
+  }finally{setLoading(false)}
  };
  return <div className="page web-search-page">
   <div className="page-heading"><div><small>WEB DISCOVERY</small><h1>Google Search</h1><p>Search the wider web from inside FRAME. Media catalogue search remains available through the universal finder.</p></div></div>
