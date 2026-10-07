@@ -17,6 +17,23 @@ type DiscoveryResult={
 type SearchResponse={results?:AniListMedia[]};
 type ExternalResponse={results?:DiscoveryResult[]};
 
+const DISCOVERY_URL=((import.meta.env.VITE_SUPABASE_URL as string|undefined)?.trim()||'https://blwnhfhpckqbetwxamqr.supabase.co')+'/functions/v1/media-discovery';
+
+async function discoveryRequest(body:Record<string,unknown>){
+ const controller=new AbortController();
+ const timer=window.setTimeout(()=>controller.abort(),12000);
+ try{
+  const response=await fetch(DISCOVERY_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body),signal:controller.signal,cache:'no-store'});
+  const raw=await response.text();
+  let data:unknown;
+  try{data=JSON.parse(raw)}catch{throw new Error('FRAME discovery returned an invalid response.')}
+  if(!response.ok)throw new Error(String((data as {error?:unknown})?.error||('Discovery request failed (HTTP '+response.status+').')));
+  return data as Record<string,unknown>;
+ }catch(e){
+  if(e instanceof DOMException&&e.name==='AbortError')throw new Error('Discovery request timed out.');
+  throw e;
+ }finally{window.clearTimeout(timer)}
+}
 const tabs:{id:Tab;label:string;icon:typeof Tv;hint:string}[]=[
  {id:'anime',label:'Anime',icon:Tv,hint:'AniList'},
  {id:'manga',label:'Manga / Manhwa / LN',icon:BookOpen,hint:'AniList'},
@@ -133,27 +150,30 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
 }
 
 async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>){
- let secureError:unknown=null;
+ try{
+  const data=await discoveryRequest({action:'search',query:term,provider});
+  const found=Array.isArray(data.results)?data.results as DiscoveryResult[]:[];
+  if(found.length)return found;
+ }catch{}
  if(supabase){
   try{
    const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'search',query:term,provider}});
    const found=((data||{}) as ExternalResponse).results||[];
    if(!error&&found.length)return found;
-   secureError=error||((data as {error?:unknown})?.error);
-  }catch(e){secureError=e}
+  }catch{}
  }
- try{
-  const found=await directExternalSearch(term,provider);
-  if(found.length)return found;
-  throw new Error('No matches returned.');
- }catch(e){
-  const reason=e instanceof Error?e.message:'unavailable';
-  throw new Error(`${providerLabel(provider)} catalogue is unavailable right now (${reason}).`);
- }
+ const found=await directExternalSearch(term,provider);
+ if(found.length)return found;
+ throw new Error(providerLabel(provider)+' did not return any matches. Try another spelling or title.');
 }
 
 async function detailExternal(result:DiscoveryResult){
  const provider=result.provider as Exclude<Tab,'anime'|'manga'>;
+ try{
+  const providerName=result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
+  const data=await discoveryRequest({action:'detail',provider:providerName,externalId:result.externalId});
+  if(data.result)return data.result as DiscoveryResult;
+ }catch{}
  if(supabase){
   try{
    const providerName=result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
