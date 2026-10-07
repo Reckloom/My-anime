@@ -5,7 +5,7 @@ import type {MediaItem} from '../types';
 type Profile={id:string;username:string;display_name:string;avatar_url?:string|null;bio?:string;frame_logo?:string|null};
 export function FrameDataTools({items,profile,preferences,onImport}:{items:MediaItem[];profile:Profile|null;preferences:Record<string,unknown>;onImport:(items:MediaItem[])=>void}){
  const input=useRef<HTMLInputElement>(null);const[msg,setMsg]=useState('');
- const exportData=()=>{const payload={format:'FRAME backup',version:1,exportedAt:new Date().toISOString(),profile,preferences,library:items};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='frame-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(a.href);setMsg('Backup exported.')};
+ const exportData=()=>{const payload={format:'FRAME backup',version:1,exportedAt:new Date().toISOString(),profile,preferences,library:items};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='frame-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();window.setTimeout(()=>URL.revokeObjectURL(a.href),1000);setMsg('Backup exported.')};
  const importFile=async(file:File)=>{
   try{
    if(file.size>10*1024*1024)throw new Error('FRAME backups must be 10 MB or smaller.');
