@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {Check,Copy,Lock,Mic,MicOff,Phone,PhoneOff,Plus,Radio,ShieldCheck,UserMinus,Users,Volume2,VolumeX,X} from 'lucide-react';
 import {supabase} from '../lib/supabase';
+import {FrameMicMeter} from './FrameMicMeter';
 
 type Profile={id:string;username:string;display_name:string};
 type Room={id:string;room_code:string;host_id:string;title:string;visibility:'public'|'private';password_hash:string|null;approval_required:boolean;max_participants:number;active:boolean;created_at:string};
@@ -135,7 +136,7 @@ export function CallsPage({uid,profile,onCloseCall}:{uid:string;profile:Profile|
 }
 
 function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:{uid:string;room:Room;profile:Profile|null;host:boolean;onExit:()=>Promise<void>;pending:Participant[];profiles:Record<string,Profile>;approve:(p:Participant,status:'approved'|'rejected')=>Promise<void>}){
- const [muted,setMuted]=useState(false),[hostMuted,setHostMuted]=useState(false),[remotes,setRemotes]=useState<Remote[]>([]),[members,setMembers]=useState<Participant[]>([]),[copy,setCopy]=useState(false),[status,setStatus]=useState('Connecting microphone…'),[error,setError]=useState('');
+ const [muted,setMuted]=useState(false),[micStream,setMicStream]=useState<MediaStream|null>(null),[hostMuted,setHostMuted]=useState(false),[remotes,setRemotes]=useState<Remote[]>([]),[members,setMembers]=useState<Participant[]>([]),[copy,setCopy]=useState(false),[status,setStatus]=useState('Connecting microphone…'),[error,setError]=useState('');
  const local=useRef<MediaStream|null>(null),channel=useRef<any>(null),channelReady=useRef<Promise<void>|null>(null),peers=useRef<Map<string,RTCPeerConnection>>(new Map());
  const pendingIce=useRef<Map<string,any[]>>(new Map());
  const audioRefs=useRef<Record<string,HTMLAudioElement|null>>({});
@@ -173,7 +174,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
    try{
     const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true,channelCount:1}});
     if(!active){stream.getTracks().forEach(t=>t.stop());return}
-    local.current=stream;setStatus('Live · low-latency direct peer-to-peer audio');
+    local.current=stream;setMicStream(stream);setStatus('Live · low-latency direct peer-to-peer audio');
     const {data,error:participantError}=await client.from('call_participants').select('*').eq('room_id',room.id).eq('status','approved');
     if(participantError){setError(participantError.message);return}
     setMembers((data||[]) as Participant[]);
@@ -207,7 +208,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
    }
   };
   void start();
-  return()=>{active=false;local.current?.getTracks().forEach(t=>t.stop());peers.current.forEach(p=>p.close());peers.current.clear();pendingIce.current.clear();if(channel.current)void channel.current.unsubscribe();channel.current=null;channelReady.current=null};
+  return()=>{active=false;setMicStream(null);local.current?.getTracks().forEach(t=>t.stop());peers.current.forEach(p=>p.close());peers.current.clear();pendingIce.current.clear();if(channel.current)void channel.current.unsubscribe();channel.current=null;channelReady.current=null};
  },[room.id,roomChannel,uid]);
 
  useEffect(()=>{for(const x of remotes){const node=audioRefs.current[x.id];if(node)node.srcObject=x.stream}},[remotes]);
@@ -248,7 +249,7 @@ function GroupVoiceCall({uid,room,profile,host,onExit,pending,profiles,approve}:
 
  return <div className="group-call-overlay"><section className="group-call">
   <header className="group-call-head"><div><small>FRAME VOICE ROOM</small><h2>{room.title}</h2><small>Code {room.room_code} · {room.visibility==='public'?'Public':'Private'} · max {room.max_participants}</small></div><button className="close-btn" style={{position:'relative',right:'auto',top:'auto'}} onClick={()=>void onExit()}><PhoneOff size={17}/></button></header>
-  <div className="call-self"><b>{profile?.display_name||profile?.username||'You'}</b><span> · {status}{hostMuted?' · Host muted your microphone':''}</span></div>
+  <div className="call-self"><b>{profile?.display_name||profile?.username||'You'}</b><span> · {status}{hostMuted?' · Host muted your microphone':''}</span></div><FrameMicMeter stream={micStream} muted={muted||hostMuted}/>
   {error&&<div className="inline-error">{error}</div>}
   <div className="participant-list">
    <div className="participant-row"><span>You</span><span>{host?<><Users size={12}/> Host</>:hostMuted?'Muted by host':muted?'Muted':'Live'}</span></div>
