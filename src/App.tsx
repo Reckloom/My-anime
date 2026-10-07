@@ -170,7 +170,25 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
    return textMatch&&filterMatch;
   };
   const statusFilter=['watching','reading','playing','completed','planned','paused','dropped'].includes(filter);
-  const hasMatchingDescendant=(id:string):boolean=>items.some(child=>child.parentId===id&&(matches(child)||hasMatchingDescendant(child.id)));
+  const childrenByParent=new Map<string,MediaItem[]>();
+  for(const item of items){
+   if(!item.parentId)continue;
+   const bucket=childrenByParent.get(item.parentId)||[];
+   bucket.push(item);
+   childrenByParent.set(item.parentId,bucket);
+  }
+  const hasMatchingDescendant=(rootId:string)=>{
+   const visited=new Set<string>([rootId]);
+   const stack=[...(childrenByParent.get(rootId)||[])];
+   while(stack.length){
+    const child=stack.pop()!;
+    if(visited.has(child.id))continue;
+    visited.add(child.id);
+    if(matches(child))return true;
+    for(const nested of childrenByParent.get(child.id)||[])if(!visited.has(nested.id))stack.push(nested);
+   }
+   return false;
+  };
   return sortMedia(items,sortMode).filter(x=>{
    if(matches(x))return true;
    if(statusFilter)return !x.parentId&&hasMatchingDescendant(x.id);
