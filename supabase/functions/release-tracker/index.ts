@@ -169,14 +169,14 @@ Deno.serve(async req=>{
       }else{
         const secondsUntil=schedule.airingAt-now;
         if(secondsUntil>0&&secondsUntil<=24*3600){
-          const {error}=await admin.from('frame_notifications').upsert({
+          const {error}=await admin.from('frame_notifications').insert({
             user_id:item.user_id,
             type:'release',
             title:releaseTitle+' · Episode '+episode+' tomorrow',
             body:'Tracked episode scheduled for '+new Date(schedule.airingAt*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
             href:'radar',
             dedupe_key:'upcoming:'+schedule.mediaId+':'+episode+':24h'
-          },{onConflict:'user_id,dedupe_key'});
+          },{onConflict:'user_id,dedupe_key',ignoreDuplicates:true});
           if(!error)reminders++;
         }
       }
