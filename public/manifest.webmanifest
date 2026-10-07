@@ -8,6 +8,6 @@
   "background_color":"#070a0d",
   "theme_color":"#2398e8",
   "icons":[
-    {"src":"/frame-ultra-instinct.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {"src":"/frame-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]
 }
