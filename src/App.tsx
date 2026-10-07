@@ -10,7 +10,6 @@ import {FrameSocial} from './components/FrameSocial';
 import {CallsPage} from './components/FrameCalls';
 import {FrameDirectCall} from './components/FrameDirectCall';
 import {FrameWebSearch} from './components/FrameWebSearch';
-import {FrameQuickDock} from './components/FrameQuickDock';
 import {FramePopupHub} from './components/FramePopupHub';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
