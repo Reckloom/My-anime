@@ -22,10 +22,9 @@ export function useAuth(){return useContext(AuthContext)}
 
 export function AuthGate({children}:{children:ReactNode}){
  const {session,loading}=useAuth();
- const guest=localStorage.getItem('frame-guest')==='1';
  if(!supabase)return <>{children}</>;
  if(loading)return <div className="auth-loading"><div className="auth-mark">F</div><span>Opening your library…</span></div>;
- return session||guest?<>{children}</>:<AuthScreen/>;
+ return session?<>{children}</>:<AuthScreen/>;
 }
 
 function AuthScreen(){
