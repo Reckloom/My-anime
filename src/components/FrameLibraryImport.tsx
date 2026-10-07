@@ -1,11 +1,11 @@
 import {useState} from 'react';
 import {Download,RefreshCw} from 'lucide-react';
 import type {MediaItem,Status} from '../types';
-import {aniList,ANILIST_URL} from '../anilist';
+import {aniList} from '../anilist';
 
 type ImportedProps={onImport:(items:MediaItem[])=>void};
 const statusMap:Record<string,Status>={CURRENT:'watching',COMPLETED:'completed',PAUSED:'paused',DROPPED:'dropped',PLANNING:'planned',REPEATING:'watching'};
-const malStatusMap:Record<string,Status>={watching:'watching',completed:'completed',on_hold:'paused',dropped:'dropped',plan_to_watch:'planned',reading:'reading',on_hold:'paused',plan_to_read:'planned'};
+const malStatusMap:Record<string,Status>={watching:'watching',completed:'completed',on_hold:'paused',dropped:'dropped',plan_to_watch:'planned',reading:'reading',plan_to_read:'planned'};
 
 export function FrameLibraryImport({onImport}:ImportedProps){
  const[source,setSource]=useState<'anilist'|'mal'>('anilist'),[username,setUsername]=useState(''),[kind,setKind]=useState<'anime'|'manga'>('anime'),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
