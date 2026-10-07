@@ -9,7 +9,7 @@ export type AniListMedia = {
   startDate?:{year?:number|null;month?:number|null;day?:number|null}|null;
   endDate?:{year?:number|null;month?:number|null;day?:number|null}|null;
 };
-export const SEARCH_QUERY=`query ($search:String,$page:Int,$perPage:Int){Page(page:$page,perPage:$perPage){media(search:$search,sort:[SEARCH_MATCH]){id type format title{romaji english native userPreferred} coverImage{extraLarge} bannerImage genres season seasonYear averageScore}}}`;
+export const SEARCH_QUERY=`query ($search:String,$page:Int,$perPage:Int,$type:MediaType!){Page(page:$page,perPage:$perPage){media(search:$search,type:$type,sort:[SEARCH_MATCH]){id type format title{romaji english native userPreferred} coverImage{extraLarge} bannerImage genres season seasonYear averageScore}}}`;
 export const DETAIL_QUERY=`query ($id:Int!){Media(id:$id){id type format title{romaji english native userPreferred} synonyms description coverImage{extraLarge} bannerImage genres tags{name} season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day}}}`;
 export function titleOf(m:AniListMedia){return m.title.userPreferred||m.title.english||m.title.romaji||m.title.native||'Untitled'}
 export function cleanDescription(v?:string|null){return(v||'').replace(/<br\s*\/?>(\s*)/gi,' ').replace(/<[^>]+>/g,'').trim()}
