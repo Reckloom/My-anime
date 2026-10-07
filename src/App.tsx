@@ -140,7 +140,23 @@ export default function App(){
  useEffect(()=>{if(!supabase||!user?.id)return;void refreshRadar();const timer=window.setInterval(()=>void refreshRadar(),30*60*1000);return()=>window.clearInterval(timer)},[user?.id]);
  const persist=async(key:string,value:string)=>{const client=supabase;if(client&&user?.id)await client.from('user_preferences').upsert({user_id:user.id,[key]:value,updated_at:new Date().toISOString()},{onConflict:'user_id'})};
  const updateConnection=async(id:string)=>{const enabled=!connections[id];setConnections({...connections,[id]:enabled});const client=supabase;if(client&&user?.id)await client.from('connected_apps').upsert({user_id:user.id,provider:id,enabled,config:{}},{onConflict:'user_id,provider'})};
- const shown=useMemo(()=>sortMedia(items,sortMode).filter(x=>x.title.toLowerCase().includes(query.toLowerCase())&&(filter==='all'||x.status===filter||x.medium===filter)),[items,sortMode,query,filter]);
+ const shown=useMemo(()=>{
+  const normalized=query.trim().toLowerCase();
+  const matches=(x:MediaItem)=>{
+   const text=[x.title,...(x.alternativeTitles||[]),x.medium,x.status,x.description||'',...(x.genres||[])].join(' ').toLowerCase();
+   const textMatch=!normalized||text.includes(normalized);
+   const filterMatch=filter==='all'||x.status===filter||x.medium===filter;
+   return textMatch&&filterMatch;
+  };
+  return sortMedia(items,sortMode).filter(x=>{
+   if(matches(x))return true;
+   if(x.parentId){
+    const parent=items.find(y=>y.id===x.parentId);
+    return Boolean(parent&&matches(parent));
+   }
+   return items.some(child=>child.parentId===x.id&&matches(child));
+  });
+ },[items,sortMode,query,filter]);
  const go=(next:string)=>{setPage(next);setMenu(false);setSelected(null);if(next!=='friend-library')setFriendLibrary(null)};
 
  return <div className="frame-app">
