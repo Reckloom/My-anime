@@ -12,9 +12,9 @@ const foreground = `<vector xmlns:android="http://schemas.android.com/apk/res/an
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
   <path android:fillColor="#FFFFFFFF"
-      android:pathData="M30,22h48v12H43v12h30v12H43v28H30z"/>
+      android:pathData="M30,22h52v12H44v14h30v12H44v28H30z"/>
   <path android:fillColor="#FFFFFFFF"
-      android:pathData="M73,84a5,5 0,1 0,10,0a5,5 0,1 0,-10,0"/>
+      android:pathData="M22,34V22h12v5H27v7zM86,22h-8v5h3v7h5zM22,74h5v7h7v5H22zM86,74h-5v7h-7v5h12z"/>
 </vector>`;
 
 await write('drawable/frame_icon_foreground.xml', foreground);
