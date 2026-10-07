@@ -67,7 +67,7 @@ function sortMedia(items:MediaItem[],mode:string){
  });
 }
 
-function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?:boolean}){ const mode=logo&&logo!=='ultra-instinct'?logo:'frame-mark'; if(mode==='classic-f')return <span className={'frame-logo-mark classic-f '+(small?'small':'')}>F</span>; if(mode==='minimal-ring')return <span className={'frame-logo-mark minimal-ring '+(small?'small':'')}><i/></span>; return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src="/frame-logo.svg" alt="FRAME logo"/></span>;}export default function App(){
+function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?:boolean}){ const mode=logo&&logo!=='ultra-instinct'?logo:'frame-mark'; if(mode.startsWith('http'))return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src={mode} alt="Custom FRAME logo"/></span>; if(mode==='classic-f')return <span className={'frame-logo-mark classic-f '+(small?'small':'')}>F</span>; if(mode==='minimal-ring')return <span className={'frame-logo-mark minimal-ring '+(small?'small':'')}><i/></span>; return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src="/frame-logo.svg" alt="FRAME logo"/></span>;}export default function App(){
  const {user}=useAuth(),guest=localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
  const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
  const [items,setItems]=useState<MediaItem[]>(()=>{
