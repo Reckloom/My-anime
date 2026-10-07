@@ -220,9 +220,22 @@ function RadarPage({releases,busy,error,refresh}:{releases:Radar[];busy:boolean;
 
 function Connections({connections,toggle:_toggle}:{connections:Record<string,boolean>;toggle:(id:string)=>void}){
  const [linkMessage,setLinkMessage]=useState('');
- const [steamId,setSteamId]=useState(localStorage.getItem('frame-steam-id')||'');
+ const [steamId,setSteamId]=useState('');
  const [steamGames,setSteamGames]=useState<Array<{name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>>([]);
+ const [identityProviders,setIdentityProviders]=useState<string[]>([]);
  const {user}=useAuth();
+ useEffect(()=>{
+  setIdentityProviders((user?.identities||[]).map(x=>String(x.provider)));
+ },[user?.id,user?.identities?.length]);
+ useEffect(()=>{
+  if(!supabase||!user?.id)return;
+  void (async()=>{
+   const {data}=await supabase.from('connected_apps').select('config').eq('user_id',user.id).eq('provider','steam').maybeSingle();
+   const value=data?.config&&typeof data.config==='object' ? (data.config as {steamId?:unknown}).steamId : undefined;
+   if(typeof value==='string'&&value.trim()){setSteamId(value);localStorage.setItem('frame-steam-id',value)}
+   else setSteamId(localStorage.getItem('frame-steam-id')||'');
+  })();
+ },[user?.id]);
 
  const socialConnect=async(provider:'spotify'|'discord')=>{
   const client=supabase;if(!client||!user){setLinkMessage('Log in to connect external accounts.');return}
@@ -241,6 +254,7 @@ function Connections({connections,toggle:_toggle}:{connections:Record<string,boo
   if(error){setLinkMessage(error.message);return}
   const games=((data as {games?:Array<{name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>})?.games||[]);
   localStorage.setItem('frame-steam-id',steamId.trim());setSteamGames(games);setLinkMessage(games.length+' Steam games synced.');
+  await client.from('connected_apps').upsert({user_id:user.id,provider:'steam',enabled:true,config:{steamId:steamId.trim()}},{onConflict:'user_id,provider'});
  };
 
  const catalogueRows=[
@@ -267,8 +281,8 @@ function Connections({connections,toggle:_toggle}:{connections:Record<string,boo
   <section className="connections-section">
    <div className="connections-section-head"><div><small>ACCOUNT CONNECTIONS</small><h2>Optional services</h2></div><span>2 OAuth · 1 sync</span></div>
    <div className="connections-grid">
-    <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Spotify</b><p>Connect your account for future music-aware recommendations and identity features.</p><small>OAuth · not connected</small></div><button className="secondary" onClick={()=>void socialConnect('spotify')}>Connect</button></div>
-    <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Discord</b><p>Connect your account for future social identity and rich-presence features.</p><small>OAuth · not connected</small></div><button className="secondary" onClick={()=>void socialConnect('discord')}>Connect</button></div>
+    <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Spotify</b><p>Connect your account for future music-aware recommendations and identity features.</p><small>{identityProviders.includes('spotify')?'OAuth · connected':'OAuth · not connected'}</small></div><button className="secondary" onClick={()=>void socialConnect('spotify')}>{identityProviders.includes('spotify')?'Reconnect':'Connect'}</button></div>
+    <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Discord</b><p>Connect your account for future social identity and rich-presence features.</p><small>{identityProviders.includes('discord')?'OAuth · connected':'OAuth · not connected'}</small></div><button className="secondary" onClick={()=>void socialConnect('discord')}>{identityProviders.includes('discord')?'Reconnect':'Connect'}</button></div>
     <div className="connection-card"><div className="connection-icon"><Link2 size={19}/></div><div><b>Steam account</b><p>Sync games from a public Steam library through the secure server-side Steam integration.</p><small>{steamGames.length?'Synced':'Not synced'} · server side</small></div><div className="call-form"><input value={steamId} onChange={e=>setSteamId(e.target.value)} placeholder="SteamID64 / public profile ID"/><button className="secondary" onClick={()=>void syncSteam()}>Sync games</button></div></div>
    </div>
   </section>
