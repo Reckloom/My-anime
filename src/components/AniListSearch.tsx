@@ -229,7 +229,7 @@ function externalToMedia(r:DiscoveryResult):MediaItem{
  };
 }
 
-export function AniListSearch({close,onImported,onManual,initialQuery=''}:{close:()=>void;onImported:(item:MediaItem)=>void;onManual?:()=>void;initialQuery?:string}){
+export function AniListSearch({close,onImported,onManual,onAi,initialQuery=''}:{close:()=>void;onImported:(item:MediaItem)=>void;onManual?:()=>void;onAi?:()=>void;initialQuery?:string}){
  const[tab,setTab]=useState<Tab>('anime'),[query,setQuery]=useState(initialQuery),[results,setResults]=useState<(AniListMedia|DiscoveryResult)[]>([]),[selected,setSelected]=useState<AniListMedia|DiscoveryResult|null>(null);
  const[loading,setLoading]=useState(false),[detailLoading,setDetailLoading]=useState(false),[importing,setImporting]=useState(false),[error,setError]=useState('');
  const current=tabs.find(x=>x.id===tab)!;
