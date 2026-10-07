@@ -5,4 +5,5 @@ import {AuthGate, AuthProvider} from './auth/Auth';
 import './styles.css';
 import {registerFramePwa} from './pwa';
 
+registerFramePwa();
 createRoot(document.getElementById('root')!).render(<StrictMode><AuthProvider><AuthGate><App /></AuthGate></AuthProvider></StrictMode>);
