@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@^2';
 
 const ANILIST_URL = 'https://graphql.anilist.co';
 const WINDOW_DAYS = 45;
+
 const QUERY = `query ($ids:[Int!]!, $from:Int!, $to:Int!) {
   Page(page:1, perPage:50) {
     airingSchedules(mediaId_in:$ids, airingAt_greater:$from, airingAt_lesser:$to, sort:TIME) {
@@ -12,14 +13,31 @@ const QUERY = `query ($ids:[Int!]!, $from:Int!, $to:Int!) {
   }
 }`;
 
-type Schedule = { id:number; airingAt:number; episode:number; timeUntilAiring:number; mediaId:number; media?:{id:number; title:{userPreferred?:string|null;english?:string|null;romaji?:string|null;native?:string|null};format?:string|null;type?:string|null;status?:string|null} };
-function titleOf(m:NonNullable<Schedule['media']>){return m.title.userPreferred||m.title.english||m.title.romaji||m.title.native||'Untitled'}
+type Schedule = {
+  id:number;
+  airingAt:number;
+  episode:number;
+  timeUntilAiring:number;
+  mediaId:number;
+  media?:{id:number;title:{userPreferred?:string|null;english?:string|null;romaji?:string|null;native?:string|null};format?:string|null;type?:string|null;status?:string|null}
+};
+
+const json=(body:unknown,status=200)=>Response.json(body,{headers:{'Content-Type':'application/json'},status});
+
+function titleOf(m:NonNullable<Schedule['media']>){
+  return m.title.userPreferred||m.title.english||m.title.romaji||m.title.native||'Untitled';
+}
 
 async function aniList(ids:number[],from:number,to:number){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),20000);
   try{
-    const r=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:QUERY,variables:{ids,from,to}}),signal:controller.signal});
+    const r=await fetch(ANILIST_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json','User-Agent':'FRAME/1.0'},
+      body:JSON.stringify({query:QUERY,variables:{ids,from,to}}),
+      signal:controller.signal
+    });
     let j:any;
     try{j=await r.json()}catch{throw new Error('AniList returned an invalid response.')}
     if(!r.ok||j.errors?.length) throw new Error(j.errors?.[0]?.message||'AniList release lookup failed.');
@@ -30,34 +48,54 @@ async function aniList(ids:number[],from:number,to:number){
   }finally{clearTimeout(timer)}
 }
 
-Deno.serve(async (req)=>{
-  if(req.method!=='POST') return Response.json({error:'POST required'},{status:405});
-  const cronSecret=Deno.env.get('RELEASE_TRACKER_CRON_SECRET');
-  const supplied=req.headers.get('x-release-tracker-secret');
-  if(!cronSecret || supplied!==cronSecret) return Response.json({error:'Unauthorized'},{status:401});
+function secretKeyFromEnv(){
+  const raw=Deno.env.get('SUPABASE_SECRET_KEYS');
+  if(raw){
+    try{
+      const parsed=JSON.parse(raw);
+      if(typeof parsed?.default==='string'&&parsed.default)return parsed.default;
+    }catch{}
+  }
+  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
+}
 
+Deno.serve(async req=>{
+  if(req.method==='OPTIONS')return new Response('ok');
+  if(req.method!=='POST')return json({error:'POST required'},405);
+
+  const supplied=req.headers.get('x-frame-cron-key')||req.headers.get('x-release-tracker-secret')||'';
   const url=Deno.env.get('SUPABASE_URL');
-  const serviceKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if(!url||!serviceKey) return Response.json({error:'Server configuration incomplete'},{status:500});
+  const serviceKey=secretKeyFromEnv();
+  if(!url||!serviceKey)return json({error:'Server configuration incomplete.'},500);
 
   const admin=createClient(url,serviceKey,{auth:{autoRefreshToken:false,persistSession:false}});
-  const {data:tracked,error:trackedError}=await admin.from('media_metadata').select('id,anilist_id').not('anilist_id','is',null);
-  if(trackedError) return Response.json({error:trackedError.message},{status:500});
-  const ids=(tracked||[]).map(x=>Number(x.anilist_id)).filter(Number.isInteger);
-  if(!ids.length) return Response.json({ok:true,checked:0,upserted:0});
+  const {data:valid,error:validationError}=await admin.rpc('validate_frame_release_tracker_key',{p_key:supplied});
+  if(validationError||valid!==true)return json({error:'Unauthorized'},401);
+
+  const {data:tracked,error:trackedError}=await admin
+    .from('media_items')
+    .select('id,user_id,metadata_id,anilist_id,title,progress')
+    .not('anilist_id','is',null)
+    .not('metadata_id','is',null);
+  if(trackedError)return json({error:trackedError.message},500);
+
+  const items=(tracked||[]) as Array<{id:string;user_id:string;metadata_id:string;anilist_id:number;title:string;progress:number}>;
+  const ids=[...new Set(items.map(x=>Number(x.anilist_id)).filter(x=>Number.isInteger(x)&&x>0))];
+  if(!ids.length)return json({ok:true,checked:0,upserted:0,notifications:0,reminders:0});
 
   const now=Math.floor(Date.now()/1000);
   const to=now+WINDOW_DAYS*86400;
   let schedules:Schedule[]=[];
   try{
-    for(let i=0;i<ids.length;i+=50){
-      schedules.push(...await aniList(ids.slice(i,i+50),now-7*86400,to));
-    }
+    for(let i=0;i<ids.length;i+=50)schedules.push(...await aniList(ids.slice(i,i+50),now-7*86400,to));
   }catch(error){
-    return Response.json({error:error instanceof Error?error.message:'Release lookup failed.'},{status:502});
+    return json({error:error instanceof Error?error.message:'Release lookup failed.'},502);
   }
 
-  const metadataByAni=new Map((tracked||[]).map(x=>[Number(x.anilist_id),x.id]));
+  const metadataByAni=new Map<number,string>();
+  for(const item of items)if(!metadataByAni.has(Number(item.anilist_id)))metadataByAni.set(Number(item.anilist_id),item.metadata_id);
+
+  const nowIso=new Date().toISOString();
   const rows=schedules.map(s=>({
     media_metadata_id:metadataByAni.get(s.mediaId),
     anilist_id:s.mediaId,
@@ -70,31 +108,79 @@ Deno.serve(async (req)=>{
     source:'anilist',
     source_key:'airing:'+s.id,
     raw:s,
-    last_seen_at:new Date().toISOString()
+    last_seen_at:nowIso
   })).filter(x=>x.media_metadata_id);
 
   let upserted=0;
-  let notifications=0;
   if(rows.length){
-    const {error:e}=await admin.from('media_releases').upsert(rows,{onConflict:'source,source_key',ignoreDuplicates:false});
-    if(e) return Response.json({error:e.message},{status:500});
+    const {error}=await admin.from('media_releases').upsert(rows,{onConflict:'source,source_key',ignoreDuplicates:false});
+    if(error)return json({error:error.message},500);
     upserted=rows.length;
   }
 
-  // Reconcile scheduled rows before creating notifications so scheduled -> released
-  // transitions are eligible in the same tracker run.
-  await admin.from('media_releases').update({status:'released',last_seen_at:new Date().toISOString()}).eq('status','scheduled').lt('scheduled_at',new Date().toISOString());
+  // Reconcile any scheduled row that has now passed.
+  await admin.from('media_releases')
+    .update({status:'released',last_seen_at:nowIso})
+    .eq('status','scheduled')
+    .lt('scheduled_at',nowIso);
 
-  // Notification creation is idempotent and therefore safe to replay.
-  if(rows.length){
-    for (const row of rows) {
-      const { data: release } = await admin.from('media_releases').select('id').eq('source', row.source).eq('source_key', row.source_key).single();
-      if (release) {
-        const { data: created } = await admin.rpc('create_release_notifications', { p_release_id: release.id });
-        notifications += Number(created || 0);
+  // Keep each user's "next release" fields current.
+  for(const item of items){
+    const next=schedules
+      .filter(s=>s.mediaId===Number(item.anilist_id)&&s.airingAt>now)
+      .sort((a,b)=>a.airingAt-b.airingAt)[0];
+    await admin.from('media_items')
+      .update({
+        next_release:next?new Date(next.airingAt*1000).toISOString():null,
+        next_release_number:next?Number(next.episode):null,
+        updated_at:nowIso
+      })
+      .eq('id',item.id)
+      .eq('user_id',item.user_id);
+  }
+
+  let notifications=0;
+  let reminders=0;
+  const byAni=new Map<number,Array<typeof items[number]>>();
+  for(const item of items){
+    const list=byAni.get(Number(item.anilist_id))||[];
+    list.push(item);
+    byAni.set(Number(item.anilist_id),list);
+  }
+
+  for(const schedule of schedules){
+    const users=byAni.get(Number(schedule.mediaId))||[];
+    if(!users.length)continue;
+    const releaseTitle=schedule.media?.title?titleOf(schedule.media):users[0].title;
+    const releaseAt=new Date(schedule.airingAt*1000).toISOString();
+    for(const item of users){
+      const episode=Number(schedule.episode||0);
+      if(schedule.airingAt<=now && episode>Number(item.progress||0)){
+        const {error}=await admin.from('frame_notifications').upsert({
+          user_id:item.user_id,
+          type:'release',
+          title:releaseTitle+' · Episode '+episode,
+          body:'A new tracked episode is available now.',
+          href:'radar',
+          dedupe_key:'release:'+schedule.mediaId+':'+episode
+        },{onConflict:'user_id,dedupe_key'});
+        if(!error)notifications++;
+      }else{
+        const secondsUntil=schedule.airingAt-now;
+        if(secondsUntil>0&&secondsUntil<=24*3600){
+          const {error}=await admin.from('frame_notifications').upsert({
+            user_id:item.user_id,
+            type:'release',
+            title:releaseTitle+' · Episode '+episode+' tomorrow',
+            body:'Tracked episode scheduled for '+new Date(schedule.airingAt*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
+            href:'radar',
+            dedupe_key:'upcoming:'+schedule.mediaId+':'+episode+':24h'
+          },{onConflict:'user_id,dedupe_key'});
+          if(!error)reminders++;
+        }
       }
     }
   }
 
-  return Response.json({ok:true,checked:ids.length,upserted,notifications});
+  return json({ok:true,checked:ids.length,upserted,notifications,reminders});
 });
