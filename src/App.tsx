@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {Bot,CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Star,Users,X} from 'lucide-react';
 import {signOut,useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
@@ -90,7 +90,7 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
  const [directCall,setDirectCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null),[commandOpen,setCommandOpen]=useState(false);
  const [radar,setRadar]=useState<Radar[]>([]),[radarBusy,setRadarBusy]=useState(false),[radarError,setRadarError]=useState('');
  const [aiProvider,setAiProvider]=useState('frame'),[density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('sky'),[appearanceMode,setAppearanceMode]=useState<'light'|'dark'|'system'>('light');
- const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
+ const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});\n const saveQueue=useRef(Promise.resolve(true));
 
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
 
@@ -142,6 +142,7 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
   const next=list.map(normalise);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
   const client=supabase;
   if(!client||!user?.id)return true;
+  const operation=saveQueue.current.then(async()=>{
   try{
    if(next.length===0){const {error}=await client.from('media_items').delete().eq('user_id',user.id);if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}return true}
    const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});
@@ -156,6 +157,9 @@ function FrameLogoMark({logo='ultra-instinct',small=false}:{logo?:string|null;sm
    }
    return true;
   }catch(e){setAppMessage('Cloud save failed: '+(e instanceof Error?e.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),5000);return false}
+  });
+  saveQueue.current=operation.catch(()=>true);
+  return operation;
  };
  const importItem=(raw:MediaItem)=>{
   const item=normalise(raw);
