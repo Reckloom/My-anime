@@ -234,8 +234,8 @@ function Connections({connections,toggle:_toggle}:{connections:Record<string,boo
   void (async()=>{
    const {data}=await supabase.from('connected_apps').select('config').eq('user_id',user.id).eq('provider','steam').maybeSingle();
    const value=data?.config&&typeof data.config==='object' ? (data.config as {steamId?:unknown}).steamId : undefined;
-   if(typeof value==='string'&&value.trim()){setSteamId(value);localStorage.setItem('frame-steam-id',value)}
-   else setSteamId(localStorage.getItem('frame-steam-id')||'');
+   if(typeof value==='string'&&value.trim()){setSteamId(value);localStorage.setItem('frame-steam-id:'+user.id,value)}
+   else setSteamId(localStorage.getItem('frame-steam-id:'+user.id)||'');
   })();
  },[user?.id]);
 
@@ -255,7 +255,7 @@ function Connections({connections,toggle:_toggle}:{connections:Record<string,boo
   const {data,error}=await client.functions.invoke('steam-library',{body:{steamId:steamId.trim()}});
   if(error){setLinkMessage(error.message);return}
   const games=((data as {games?:Array<{name:string;playtimeMinutes:number;header?:string;storeUrl?:string}>})?.games||[]);
-  localStorage.setItem('frame-steam-id',steamId.trim());setSteamGames(games);setLinkMessage(games.length+' Steam games synced.');
+  localStorage.setItem('frame-steam-id:'+user.id,steamId.trim());setSteamGames(games);setLinkMessage(games.length+' Steam games synced.');
   await client.from('connected_apps').upsert({user_id:user.id,provider:'steam',enabled:true,config:{steamId:steamId.trim()}},{onConflict:'user_id,provider'});
  };
 
