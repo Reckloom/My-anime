@@ -12,7 +12,7 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
  const [draft,setDraft]=useState('');
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
- const endRef=useRef<HTMLDivElement|null>(null);
+ const endRef=useRef<HTMLDivElement|null>(null),channelRef=useRef<any>(null);
 
  useEffect(()=>{
   if(guest||!supabase)return;
@@ -37,8 +37,9 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
     void client.from('profiles').select('username,display_name,avatar_url').eq('id',row.user_id).maybeSingle()
       .then(({data})=>{if(active)setMessages(prev=>prev.some(x=>x.id===row.id)?prev:[...prev,{...row,profiles:data||null}].slice(-200));});
    });
+  channelRef.current=channel;
   channel.subscribe((status:string,err?:any)=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setError(err?.message||'Live chat connection was interrupted; messages are still saved.');});
-  return()=>{active=false;void channel.unsubscribe()};
+  return()=>{active=false;void channel.unsubscribe();channelRef.current=null};
  },[guest]);
 
  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'})},[messages.length]);
@@ -52,7 +53,7 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
    if(e||!row)throw e||new Error('Message could not be saved.');
    const {data:profile}=await supabase.from('profiles').select('username,display_name,avatar_url').eq('id',uid).maybeSingle();
    setMessages(prev=>prev.some(x=>x.id===row.id)?prev:[...prev,{...(row as GlobalMessage),profiles:profile||null}].slice(-200));
-   const result=await client.channel('frame-global-chat').send({type:'broadcast',event:'message',payload:{row}}).catch(()=>null);
+   const result=await channelRef.current?.send({type:'broadcast',event:'message',payload:{row}}).catch(()=>null);
    void result;
    setDraft('');
   }catch(e){setError(e instanceof Error?e.message:'Message could not be sent.')}
