@@ -89,7 +89,7 @@ function firstError(errors:unknown[]){
   return 'No provider returned usable results.';
 }
 
-/* ---------------- Games: IGDB -> RAWG ---------------- */
+/* ---------------- Games: IGDB -> RAWG -> Wikipedia fallback ---------------- */
 
 let igdbTokenCache:{token:string;expiresAt:number}|null=null;
 
@@ -206,16 +206,47 @@ async function detailRawg(id:string){
   return mapRawgGame(data);
 }
 
+
+async function searchWikipediaGames(query:string){
+  const search=cleanSearch(query)+' video game';
+  const url='https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(search)+'&gsrnamespace=0&gsrlimit=12&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*';
+  const data=await getJson(url);
+  return Object.values(data?.query?.pages||{}).map((x:any)=>({
+    provider:'wikipedia-game',externalId:String(x.pageid),title:String(x.title||'Untitled'),medium:'game',
+    poster:String(x.thumbnail?.source||''),backdrop:'',score:null,year:extractYear(x.extract),description:clean(x.extract),
+    genres:[],themes:[],source:'Wikipedia',sourceUrl:x.fullurl||'https://en.wikipedia.org/?curid='+x.pageid,
+    game:{isFree:false,platforms:[],releaseDate:undefined,gameModes:[],storeUrl:x.fullurl||('https://en.wikipedia.org/?curid='+x.pageid)}
+  })).slice(0,12);
+}
+
+async function detailWikipediaGame(id:string){
+  const data=await getJson('https://en.wikipedia.org/w/api.php?action=query&pageids='+encodeURIComponent(id)+'&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=900&format=json&origin=*');
+  const page=Object.values(data?.query?.pages||{})[0] as any;
+  if(!page)throw new Error('Game details were not available.');
+  const url=page.fullurl||('https://en.wikipedia.org/?curid='+page.pageid);
+  return{
+    provider:'wikipedia-game',externalId:String(page.pageid),title:String(page.title||'Untitled'),medium:'game',
+    poster:String(page.thumbnail?.source||''),backdrop:'',score:null,year:extractYear(page.extract),description:clean(page.extract),
+    genres:[],themes:[],source:'Wikipedia',sourceUrl:url,
+    game:{isFree:false,platforms:[],releaseDate:undefined,gameModes:[],storeUrl:url}
+  };
+}
+
 async function searchGames(query:string){
   const errors:unknown[]=[];
   try{const found=await searchIgdb(query);if(found.length)return found;}catch(e){errors.push(e)}
   try{const found=await searchRawg(query);if(found.length)return found;}catch(e){errors.push(e)}
-  throw new Error(firstError(errors).replace('No provider returned usable results.','IGDB and RAWG did not return usable game results.'));
+  try{const found=await searchWikipediaGames(query);if(found.length)return found;}catch(e){errors.push(e)}
+  if(errors.length){
+    return [];
+  }
+  return [];
 }
 
 async function detailGame(provider:string,id:string){
   if(provider==='igdb')return detailIgdb(id);
   if(provider==='rawg')return detailRawg(id);
+  if(provider==='wikipedia-game')return detailWikipediaGame(id);
   throw new Error('Unsupported game source.');
 }
 
@@ -470,7 +501,8 @@ Deno.serve(async(req:Request)=>{
       action:url.searchParams.get('action')||'search',
       provider:url.searchParams.get('provider')||'',
       query:url.searchParams.get('query')||'',
-      externalId:url.searchParams.get('externalId')||''
+      externalId:url.searchParams.get('externalId')||'',
+      source:url.searchParams.get('source')||''
     };
   }else if(req.method==='POST'){
     try{body=await req.json()}catch{return response({error:'Invalid JSON request.'},400)}
