@@ -9,7 +9,6 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
  const ask=async(q=input)=>{
   const text=q.trim();if(!text||busy)return;setBusy(true);setAnswer('');
   try{
-   if(provider!=='frame')throw new Error(provider==='openai'?'OpenAI connector is not configured on the server yet.':provider==='gemini'?'Gemini connector is not configured on the server yet.':'Claude connector is not configured on the server yet.');
    if(!supabase)throw new Error('Supabase is required for FRAME AI.');
    const {data,error}=await supabase.functions.invoke('frame-ai',{body:{message:text}});
    if(error)throw error;
@@ -26,7 +25,7 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
   r.onresult=(e:any)=>{const t=e.results?.[0]?.[0]?.transcript||'';setInput(t);void ask(t)};r.start();
  };
  return <div className="page ai-page"><div className="page-heading"><div><small>FRAME INTELLIGENCE</small><h1>AI Search</h1><p>Ask about your library, compare titles, discover what fits, or use your voice.</p></div></div>
-  <div className="ai-provider-bar"><span>Provider</span>{[['frame','FRAME AI'],['openai','OpenAI'],['gemini','Gemini'],['claude','Claude']].map(([id,label])=><button key={id} className={provider===id?'active':''} onClick={()=>setProvider(id)}>{label}{id!=='frame'&&<small>connector</small>}</button>)}</div>
+  <div className="ai-provider-bar"><span>Provider</span><button type="button" className="active">FRAME AI<small>ready</small></button><span>Other provider connectors stay hidden until they are configured.</span></div>
   <section className="ai-shell"><div className="ai-prompts">{['What should I watch next?','Find my best unfinished titles.','Recommend something like Steins;Gate.','Analyze my taste.'].map(x=><button key={x} onClick={()=>{setInput(x);void ask(x)}}>{x}</button>)}</div>
    <textarea value={input} onChange={e=>setInput(e.target.value)} placeholder="Describe exactly what you want…"/>
    <div className="ai-footer"><div><button className={voice?'voice-toggle active':'voice-toggle'} onClick={()=>setVoice(!voice)}>{voice?<Volume2 size={16}/>:<VolumeX size={16}/>}Voice answers</button><button className="secondary" onClick={talk} disabled={listening||busy}>{listening?<MicOff size={16}/>:<Mic size={16}/>} {listening?'Listening…':'Talk to AI'}</button></div><button className="primary" disabled={busy||!input.trim()} onClick={()=>void ask()}>{busy?'Thinking…':'Ask FRAME'}<Bot size={16}/></button></div>
