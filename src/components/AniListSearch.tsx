@@ -275,7 +275,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
    }catch(e){
     if(!cancelled){setResults([]);setError(e instanceof Error?e.message:'Search failed. Please try again.')}
    }finally{if(!cancelled)setLoading(false)}
-  },450);
+  },tab==='game'?950:450);
   return()=>{cancelled=true;window.clearTimeout(timer)};
  },[query,tab,isAni,catalogType]);
 
