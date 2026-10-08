@@ -14,7 +14,9 @@ type DiscoveryResult={
  game?:MediaItem['game']; meta?:Record<string,unknown>;
 };
 
+type AniListSearchResult=AniListMedia & {jikanId?:number;sourceProvider?:'anilist'|'jikan'};
 type SearchResponse={results?:AniListMedia[]};
+type JikanResponse={data?:any[]};
 type ExternalResponse={results?:DiscoveryResult[]};
 
 const SUPABASE_URL=((import.meta.env.VITE_SUPABASE_URL as string|undefined)?.trim()||'https://blwnhfhpckqbetwxamqr.supabase.co').replace(/\/+$/,'');
@@ -45,13 +47,13 @@ async function discoveryRequest(body:Record<string,unknown>){
  }finally{window.clearTimeout(timer)}
 }
 const tabs:{id:Tab;label:string;icon:typeof Tv;hint:string}[]=[
- {id:'anime',label:'Anime',icon:Tv,hint:'AniList'},
- {id:'manga',label:'Manga / Manhwa / LN',icon:BookOpen,hint:'AniList'},
+ {id:'anime',label:'Anime',icon:Tv,hint:'AniList + Jikan'},
+ {id:'manga',label:'Manga / Manhwa / LN',icon:BookOpen,hint:'AniList + Jikan'},
  {id:'visual-novel',label:'Visual Novels',icon:BookOpen,hint:'VNDB'},
- {id:'game',label:'Games',icon:Gamepad2,hint:'MobyGames'},
- {id:'series',label:'Series',icon:Tv,hint:'TVmaze'},
- {id:'movie',label:'Movies',icon:Film,hint:'Wikipedia'},
- {id:'book',label:'Books',icon:BookOpen,hint:'Open Library'}
+ {id:'game',label:'Games',icon:Gamepad2,hint:'IGDB + RAWG'},
+ {id:'series',label:'Series',icon:Tv,hint:'TMDB + TVmaze'},
+ {id:'movie',label:'Movies',icon:Film,hint:'TMDB + Wikipedia'},
+ {id:'book',label:'Books',icon:BookOpen,hint:'Open Library + Google Books'}
 ];
 
 function mangaMedium(media:AniListMedia):Medium{
@@ -59,11 +61,12 @@ function mangaMedium(media:AniListMedia):Medium{
  if(media.countryOfOrigin==='KR')return'manhwa';
  return'manga';
 }
-function localItem(media:AniListMedia):MediaItem{
+function localItem(media:AniListSearchResult):MediaItem{
+ const ext=media as AniListSearchResult;
  const title=titleOf(media);
  const alternatives=[media.title.english,media.title.romaji,media.title.native,...(media.synonyms||[])].filter((x):x is string=>Boolean(x&&x!==title));
  return{
-   id:crypto.randomUUID(),anilistId:media.id,sourceProvider:'anilist',externalId:String(media.id),title,
+   id:crypto.randomUUID(),anilistId:ext.sourceProvider==='jikan'?undefined:media.id,sourceProvider:ext.sourceProvider||'anilist',externalId:ext.sourceProvider==='jikan'?String(ext.jikanId||media.id):String(media.id),title,
    alternativeTitles:[...new Set(alternatives)],description:cleanDescription(media.description),
    poster:media.coverImage?.extraLarge||'',backdrop:media.bannerImage||'',
    medium:media.type==='MANGA'?mangaMedium(media):(media.format==='MOVIE'?'movie':'anime'),status:'planned',progress:0,
@@ -101,15 +104,38 @@ function anilistMediumLabel(media:AniListMedia){
  if(media.type==='MANGA')return mangaMedium(media)==='manhwa'?'MANHWA':media.format==='NOVEL'?'LIGHT NOVEL':'MANGA';
  return media.format==='MOVIE'?'MOVIE':'ANIME';
 }
+function mapJikanMedia(x:any,type:CatalogType):AniListSearchResult{
+ const isManga=type==='MANGA';
+ const rawType=String(x?.type||'');
+ const format=isManga?(rawType.toUpperCase()==='LIGHT NOVEL'?'NOVEL':rawType.toUpperCase()):rawType.toUpperCase();
+ const genres=Array.isArray(x?.genres)?x.genres.map((g:any)=>String(g?.name||'')).filter(Boolean):[];
+ const start=x?.aired?.from?new Date(x.aired.from):null;
+ const end=x?.aired?.to?new Date(x.aired.to):null;
+ return {id:Number(x?.mal_id||0),type:isManga?'MANGA':'ANIME',format,
+  title:{romaji:String(x?.title||''),english:x?.title_english?String(x.title_english):null,native:x?.title_japanese?String(x.title_japanese):null,userPreferred:String(x?.title||'')},
+  synonyms:Array.isArray(x?.title_synonyms)?x.title_synonyms.map(String):[],description:x?.synopsis?String(x.synopsis):null,
+  coverImage:{extraLarge:String(x?.images?.jpg?.large_image_url||x?.images?.jpg?.image_url||'')},bannerImage:null,genres,
+  tags:[],season:x?.season?String(x.season).toUpperCase():null,seasonYear:x?.year?Number(x.year):null,averageScore:x?.score==null?null:Number(x.score)*10,
+  studios:{nodes:[]},source:null,episodes:isManga?null:(x?.episodes==null?null:Number(x.episodes)),duration:null,
+  startDate:start?{year:start.getUTCFullYear(),month:start.getUTCMonth()+1,day:start.getUTCDate()}:null,
+  endDate:end?{year:end.getUTCFullYear(),month:end.getUTCMonth()+1,day:end.getUTCDate()}:null,
+  chapters:isManga?(x?.chapters==null?null:Number(x.chapters)):null,volumes:isManga?(x?.volumes==null?null:Number(x.volumes)):null,countryOfOrigin:null,
+  jikanId:Number(x?.mal_id||0),sourceProvider:'jikan'};
+}
 async function searchAni(term:string,type:CatalogType){
  if(supabase){
   try{
    const{data,error}=await supabase.functions.invoke('anilist-import',{body:{action:'search',query:term,mediaType:type}});
-   if(!error&&Array.isArray((data as SearchResponse|undefined)?.results)&&(data as SearchResponse).results!.length)return(data as SearchResponse).results!;
+   if(!error&&Array.isArray((data as SearchResponse|undefined)?.results)&&(data as SearchResponse).results!.length)return(data as SearchResponse).results! as AniListSearchResult[];
   }catch{}
  }
- const d=await aniList<{Page:{media:AniListMedia[]}}>(SEARCH_QUERY,{search:term,page:1,perPage:12,type});
- return d.Page.media||[];
+ try{
+  const d=await aniList<{Page:{media:AniListMedia[]}}>(SEARCH_QUERY,{search:term,page:1,perPage:12,type});
+  if(d.Page.media?.length)return d.Page.media as AniListSearchResult[];
+ }catch{}
+ const endpoint=type==='MANGA'?'manga':'anime';
+ const d=await fetchJsonWithTimeout('https://api.jikan.moe/v4/'+endpoint+'?q='+encodeURIComponent(term.trim())+'&limit=12') as JikanResponse;
+ return(Array.isArray(d.data)?d.data:[]).map(x=>mapJikanMedia(x,type));
 }
 async function fetchJsonWithTimeout(url:string,init?:RequestInit,timeoutMs=12000){
  const controller=new AbortController();
@@ -125,7 +151,7 @@ async function fetchJsonWithTimeout(url:string,init?:RequestInit,timeoutMs=12000
 }
 
 function providerLabel(provider:Exclude<Tab,'anime'|'manga'>){
- return provider==='game'?'MobyGames':provider==='series'?'TVmaze':provider==='movie'?'Wikipedia':provider==='book'?'Open Library':'VNDB';
+ return provider==='game'?'IGDB + RAWG':provider==='series'?'TMDB + TVmaze':provider==='movie'?'TMDB + Wikipedia':provider==='book'?'Open Library + Google Books':'VNDB';
 }
 
 async function enrichMovieArtwork(results:DiscoveryResult[]){
@@ -199,14 +225,14 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
 async function detailExternal(result:DiscoveryResult){
  const provider=result.provider as Exclude<Tab,'anime'|'manga'>;
  try{
-  const providerName=result.provider==='mobygames'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
-  const data=await discoveryRequest({action:'detail',provider:providerName,externalId:result.externalId});
+  const providerName=['igdb','rawg'].includes(result.provider)?'game':['tmdb-tv','tvmaze'].includes(result.provider)?'series':['tmdb-movie','wikipedia'].includes(result.provider)?'movie':['openlibrary','googlebooks'].includes(result.provider)?'book':'visual-novel';
+  const data=await discoveryRequest({action:'detail',provider:providerName,externalId:result.externalId,source:result.provider});
   if(data.result)return data.result as DiscoveryResult;
  }catch{}
  if(supabase){
   try{
    const providerName=result.provider==='mobygames'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
-   const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:providerName,externalId:result.externalId}});
+   const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:providerName,externalId:result.externalId,source:result.provider}});
    if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;
   }catch{}
  }
@@ -215,7 +241,6 @@ async function detailExternal(result:DiscoveryResult){
    const x=await fetchJsonWithTimeout('https://api.tvmaze.com/shows/'+encodeURIComponent(result.externalId)+'?embed=episodes') as any;
    return{...result,total:Array.isArray(x._embedded?.episodes)?x._embedded.episodes.length:result.total,description:x.summary||result.description,poster:x.image?.original||result.poster,backdrop:x.image?.original||result.backdrop,sourceUrl:x.officialSite||x.url};
   }
-  if(result.provider==='mobygames')return result;
   if(result.provider==='movie'){
    const data=await fetchJsonWithTimeout('https://en.wikipedia.org/w/api.php?action=query&pageids='+encodeURIComponent(result.externalId)+'&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*') as {query?:{pages?:Record<string,any>}};
    const page=Object.values(data.query?.pages||{})[0];
@@ -279,11 +304,19 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   return()=>{cancelled=true;window.clearTimeout(timer)};
  },[query,tab,isAni,catalogType]);
 
- const choose=async(raw:AniListMedia|DiscoveryResult)=>{
+ const choose=async(raw:AniListSearchResult|DiscoveryResult)=>{
   setSelected(raw);setDetailLoading(true);setError('');
   try{
    if(isAni){
-    const r=raw as AniListMedia;const d=await aniList<{Media:AniListMedia}>(DETAIL_QUERY,{id:r.id});setSelected(d.Media);
+    const r=raw as AniListSearchResult;
+    if(r.sourceProvider==='jikan'&&r.jikanId){
+     const endpoint=tab==='manga'?'manga':'anime';
+     const data=await fetchJsonWithTimeout('https://api.jikan.moe/v4/'+endpoint+'/'+r.jikanId) as {data?:any};
+     if(!data.data)throw new Error('Jikan details were not available.');
+     setSelected(mapJikanMedia(data.data,catalogType));
+    }else{
+     const d=await aniList<{Media:AniListMedia}>(DETAIL_QUERY,{id:r.id});setSelected(d.Media as AniListSearchResult);
+    }
    }else setSelected(await detailExternal(raw as DiscoveryResult));
   }catch(e){setError(e instanceof Error?e.message:'Could not load full metadata.')}
   finally{setDetailLoading(false)}
@@ -293,7 +326,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   setImporting(true);setError('');
   try{
    if(isAni){
-    const r=selected as AniListMedia;
+    const r=selected as AniListSearchResult;
     if(supabase){
      const{data,error:e}=await supabase.functions.invoke('anilist-import',{body:{action:'import',anilistId:r.id}});
      if(e)throw e;
@@ -305,12 +338,12 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   }catch(e){setError(e instanceof Error?e.message:'Could not import this title. Please try again.')}
   finally{setImporting(false)}
  };
- const selectedAni=isAni?(selected as AniListMedia|null):null;
+ const selectedAni=isAni?(selected as AniListSearchResult|null):null;
  const selectedExt=!isAni?(selected as DiscoveryResult|null):null;
- const resultKey=(x:AniListMedia|DiscoveryResult)=>isAni?String((x as AniListMedia).id):(x as DiscoveryResult).provider+':'+(x as DiscoveryResult).externalId;
- const resultInfo=(x:AniListMedia|DiscoveryResult)=>{
+ const resultKey=(x:AniListSearchResult|DiscoveryResult)=>isAni?String((x as AniListSearchResult).sourceProvider||'anilist')+':'+String((x as AniListSearchResult).id):(x as DiscoveryResult).provider+':'+(x as DiscoveryResult).externalId;
+ const resultInfo=(x:AniListSearchResult|DiscoveryResult)=>{
   if(isAni){const m=x as AniListMedia;return{title:titleOf(m),poster:m.coverImage?.extraLarge||'',meta:anilistMediumLabel(m)+' · '+(m.format||'Unknown format')+(m.seasonYear?' · '+m.seasonYear:''),tags:m.genres?.slice(0,3)||[]}}
-  const r=x as DiscoveryResult;return{title:r.title,poster:r.poster||'',meta:r.medium.toUpperCase()+' · '+r.provider+(r.year?' · '+r.year:''),tags:r.genres?.slice(0,3)||[]};
+  const r=x as DiscoveryResult;return{title:r.title,poster:r.poster||'',meta:r.medium.toUpperCase()+' · '+providerLabel(tab as Exclude<Tab,'anime'|'manga'>)+(r.year?' · '+r.year:''),tags:r.genres?.slice(0,3)||[]};
  };
  return <div className="modalwrap"><div className="modal search-modal">
   <div className="modalhead"><div><small>MEDIA DISCOVERY</small><h2>Find anything for FRAME</h2><p className="muted">Live catalogues for anime, manga, manhwa, games, series, movies and books.</p></div><button onClick={close} aria-label="Close"><X/></button></div>
@@ -329,7 +362,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
     selectedExt?<img src={selectedExt.poster||'/frame-logo.svg'} alt={selectedExt.title} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:null}
    <div>
     {isAni&&selectedAni?<><small>{anilistMediumLabel(selectedAni)} · AniList</small><h3>{titleOf(selectedAni)}</h3></>:
-     selectedExt?<><small>{selectedExt.medium.toUpperCase()} · {selectedExt.provider}</small><h3>{selectedExt.title}</h3></>:null}
+     selectedExt?<><small>{selectedExt.medium.toUpperCase()} · {selectedExt.source||providerLabel(tab as Exclude<Tab,'anime'|'manga'>)}</small><h3>{selectedExt.title}</h3></>:null}
     {detailLoading?<p><Loader2 className="spin"/> Loading metadata…</p>:<>
       <p>{cleanDescription(isAni&&selectedAni?selectedAni.description:selectedExt?.description)||'No description available.'}</p>
       <div className="tags">{((isAni && selectedAni?.genres) || selectedExt?.genres || []).map((x:string)=><span key={x}>{x}</span>)}</div>
