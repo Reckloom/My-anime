@@ -112,6 +112,13 @@ export default function App(){
   if(!client||!user?.id)return;
   let active=true;
   const load=async()=>{
+   const cleanStartKey=`frame-clean-start-2026-10-08:${user.id}`;
+   if(!localStorage.getItem(cleanStartKey)){
+    localStorage.removeItem('frame-library:guest');
+    localStorage.removeItem('frame-library');
+    localStorage.removeItem(`frame-library:${user.id}`);
+    try{localStorage.setItem(cleanStartKey,'1')}catch{}
+   }
    const guestRaw=localStorage.getItem('frame-library:guest');
    let guestItems:MediaItem[]=[];
    try{const parsed=guestRaw?JSON.parse(guestRaw):[];if(Array.isArray(parsed))guestItems=parsed.map(normalise)}catch{}
