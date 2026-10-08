@@ -173,31 +173,18 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
   return (data.results||[]).map(x=>({provider:'vndb',externalId:String(x.id),title:String(x.title||term),alternativeTitles:x.alttitle?[String(x.alttitle)]:[],medium:'visual-novel',poster:x.image?.url,description:x.description||'',year:x.released?Number(String(x.released).slice(0,4)):undefined,score:x.rating==null?null:Number(x.rating)/10,sourceUrl:'https://vndb.org/'+x.id,source:'vndb',genres:[]}));
  }
  if(provider==='game'){
-  const urls=[
-   'https://store.steampowered.com/search/results/?term='+q+'&start=0&count=12&sort_by=Relevance&category1=998&json=1&infinite=1&cc=US&l=english',
-   'https://store.steampowered.com/api/storesearch/?term='+q+'&l=english&cc=US'
-  ];
-  let rows:any[]=[];
-  for(const url of urls){
-   try{
-    const data=await fetchJsonWithTimeout(url) as {items?:any[];results?:any[]};
-    const candidate=Array.isArray(data.items)?data.items:Array.isArray(data.results)?data.results:[];
-    if(candidate.length){rows=candidate;break}
-   }catch{}
-  }
+  const data=await fetchJsonWithTimeout('https://www.gamelegend.com/api/v1/games?q='+q+'&limit=12') as {games?:any[]};
+  const rows=Array.isArray(data.games)?data.games:[];
   return rows
-   .map(x=>({
-    id:x.id??x.appid??x.appId??String(x.url||'').match(/\/app\/(\d+)/)?.[1],
-    name:x.name??x.title,
-    poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
-    price:x.price
-   }))
-   .filter(x=>x.id&&x.name&&(!x.type||x.type==='app'||x.type==='game'||x.type===1))
+   .filter(x=>x?.slug&&x?.title)
    .slice(0,12)
-   .map(x=>{
-    const finalPrice=Number(x.price?.final??0);
-    return{provider:'steam',externalId:String(x.id),title:String(x.name||term),medium:'game',poster:x.poster,score:null,sourceUrl:'https://store.steampowered.com/app/'+x.id+'/',source:'steam',genres:[],game:{isFree:false,priceText:finalPrice?('₹'+(finalPrice/100).toFixed(2)):undefined,storeUrl:'https://store.steampowered.com/app/'+x.id+'/'}};
-   });
+   .map(x=>({
+    provider:'gamelegend',externalId:String(x.slug),title:String(x.title),medium:'game',
+    poster:String(x.coverImageUrl||''),description:String(x.description||''),
+    year:extractYear(x.releaseDate),genres:[],themes:Array.isArray(x.platforms)?x.platforms.map(String):[],
+    score:null,source:'GameLegend',sourceUrl:String(x.url||('https://www.gamelegend.com/games/'+x.slug)),
+    game:{isFree:false,platforms:Array.isArray(x.platforms)?x.platforms.map(String):[],releaseDate:x.releaseDate,storeUrl:String(x.url||('https://www.gamelegend.com/games/'+x.slug))}
+   }));
  }
  return [];
 }
@@ -226,13 +213,13 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
 async function detailExternal(result:DiscoveryResult){
  const provider=result.provider as Exclude<Tab,'anime'|'manga'>;
  try{
-  const providerName=result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
+  const providerName=result.provider==='gamelegend'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
   const data=await discoveryRequest({action:'detail',provider:providerName,externalId:result.externalId});
   if(data.result)return data.result as DiscoveryResult;
  }catch{}
  if(supabase){
   try{
-   const providerName=result.provider==='steam'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
+   const providerName=result.provider==='gamelegend'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
    const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:providerName,externalId:result.externalId}});
    if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;
   }catch{}
