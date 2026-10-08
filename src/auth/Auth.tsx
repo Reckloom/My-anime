@@ -59,4 +59,10 @@ function AuthScreen(){
   </div><div className="gate-footer"><Shield size={14}/> Your library is private unless you choose to share it.</div></section>
  </main>;
 }
-export async function signOut(){if(supabase)await supabase.auth.signOut()}
+export async function signOut(){
+ localStorage.removeItem('frame-guest');
+ if(!supabase){window.location.reload();return}
+ const {error}=await supabase.auth.signOut({scope:'local'});
+ if(error)throw error;
+ window.location.reload();
+}
