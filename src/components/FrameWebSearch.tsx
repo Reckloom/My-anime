@@ -13,21 +13,21 @@ export function FrameWebSearch(){
   try{
    if(supabase){
     const {data,error}=await supabase.functions.invoke('web-search',{body:{query:q}});
-    const payload=data as {results?:WebResult[];fallbackUrl?:string;configured?:boolean}|null;
+    const payload=data as {results?:WebResult[];fallbackUrl?:string;provider?:string;error?:string}|null;
     if(!error&&Array.isArray(payload?.results)&&payload.results.length){
       setResults(payload.results.filter(x=>x?.title&&x?.link).slice(0,10));
       return;
     }
     if(payload?.fallbackUrl)setFallbackUrl(String(payload.fallbackUrl));
     else setFallbackUrl(googleUrl);
-    setMessage('Google is ready. Open the full results page to continue.');
+    setMessage(payload?.error||'No in-site results were found. You can open the full Google results page instead.');
     return;
    }
    setFallbackUrl(googleUrl);
-   setMessage('Google is ready. Open the full results page to continue.');
+   setMessage('No in-site results were found. You can open the full Google results page instead.');
   }catch{
    setFallbackUrl(googleUrl);
-   setMessage('Google could not be searched inside FRAME right now. Open the full results page instead.');
+   setMessage('In-site search is temporarily unavailable. Open the full Google results page instead.');
   }finally{
    setLoading(false);
   }
@@ -35,17 +35,17 @@ export function FrameWebSearch(){
  const hasQuery=query.trim().length>=2;
  return <div className="page web-search-page">
   <div className="page-heading">
-   <div><small>WEB DISCOVERY</small><h1>Google Search</h1><p>Search the web without mixing web results into your personal media library.</p></div>
+   <div><small>WEB DISCOVERY</small><h1>Web Search</h1><p>Search the web without mixing web results into your personal media library.</p></div>
   </div>
   <section className="web-search-panel">
    <form onSubmit={e=>{e.preventDefault();void run()}} className="web-search-bar">
-    <Globe size={19}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search Google for anything…"/>
+    <Globe size={19}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search the web for anything…"/>
     <button className="primary" disabled={loading||!hasQuery}>{loading?<Loader2 className="spin"/>:<Search size={16}/>}Search</button>
    </form>
-   {loading&&<div className="search-state"><Loader2 className="spin"/>Searching Google…</div>}
+   {loading&&<div className="search-state"><Loader2 className="spin"/>Searching the web…</div>}
    {!loading&&message&&<div className="web-search-empty">
     <div className="web-search-empty-icon"><Globe size={22}/></div>
-    <div><b>{message}</b><span>FRAME will keep your library separate from the web.</span></div>
+    <div><b>{message}</b><span>Your personal library stays separate from web results.</span></div>
     {fallbackUrl&&<a className="primary" href={fallbackUrl} target="_blank" rel="noreferrer"><ExternalLink size={14}/>Open Google results</a>}
    </div>}
    {!loading&&!results.length&&!message&&<div className="web-search-empty">
