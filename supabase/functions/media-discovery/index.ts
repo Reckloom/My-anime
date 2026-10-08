@@ -145,7 +145,7 @@ async function searchMovies(q:string){
     if(/\b(film|movie|cinema|feature film)\b/i.test(extract))relevance+=8;
     if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
     return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster:x.thumbnail?.source||'',backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
-  }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12).map(({_relevance,...x}:any)=>x);
+  }).sort((a:any,b:any)=>(Number(Boolean(b.poster))-Number(Boolean(a.poster)))||b._relevance-a._relevance).slice(0,12).map(({_relevance,...x}:any)=>x);
 }
 
 async function detailMovie(id:string){
