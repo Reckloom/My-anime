@@ -58,4 +58,5 @@ export function FrameLibraryImport({onImport}:ImportedProps){
     </div>
   </div>
   {message&&<div className={'import-message '+(message.toLowerCase().includes('imported')?'success':'error')} role="status">{message}</div>}
- </section>;\n}\n
+ </section>;
+}
