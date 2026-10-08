@@ -2620,3 +2620,35 @@ button,a{color:inherit}
   .finder-add-details-grid{grid-template-columns:1fr}
   .finder-add-details-wide{grid-column:auto}
 }
+
+/* FRAME hierarchy cards — keep every part visible without horizontal page scrolling */
+.hierarchy-box{overflow:hidden}
+.hierarchy-head{margin-bottom:12px}
+.hierarchy-parent-card,.hierarchy-part-card{width:100%;min-width:0;display:grid;align-items:center;text-align:left;color:var(--frame-text);background:var(--frame-surface-2);border:1px solid var(--frame-line);border-radius:18px;cursor:pointer}
+.hierarchy-parent-card{grid-template-columns:58px minmax(0,1fr) 18px;gap:12px;padding:10px 12px;margin-bottom:12px}
+.hierarchy-parent-card img{width:58px;height:82px;border-radius:10px;object-fit:cover;display:block}
+.hierarchy-parent-card div,.hierarchy-part-copy{min-width:0;display:grid;gap:4px}
+.hierarchy-parent-card small,.hierarchy-part-copy small{color:var(--frame-muted);font-size:10px}
+.hierarchy-parent-card b,.hierarchy-part-copy b{font-size:13px;overflow-wrap:anywhere}
+.hierarchy-parent-card span,.hierarchy-part-meta{font-size:10px;color:var(--frame-muted);white-space:normal}
+.hierarchy-parts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}
+.hierarchy-part-card{grid-template-columns:74px minmax(0,1fr) 18px;gap:12px;padding:10px;min-height:126px;transition:transform .16s ease,background .16s ease,border-color .16s ease}
+.hierarchy-part-card:hover{transform:translateY(-2px);background:var(--frame-surface-3);border-color:var(--frame-line-strong)}
+.hierarchy-part-card:active{transform:translateY(0) scale(.995)}
+.hierarchy-part-card>img{width:74px;height:104px;border-radius:10px;object-fit:cover;display:block;background:var(--frame-surface)}
+.hierarchy-part-copy p{margin:2px 0 0;color:var(--frame-muted);font-size:10px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hierarchy-part-bar{display:block;width:100%;height:4px;border-radius:999px;background:color-mix(in srgb,var(--frame-text) 8%,transparent);overflow:hidden;margin-top:2px}
+.hierarchy-part-bar em{display:block;height:100%;border-radius:inherit;background:var(--frame-accent)}
+.hierarchy-part-arrow{color:var(--frame-muted);justify-self:end}
+.hierarchy-parent-card:hover,.hierarchy-parent-card:focus-visible{border-color:var(--frame-line-strong);background:var(--frame-surface-3)}
+@media(max-width:760px){
+ .hierarchy-parts-grid{grid-template-columns:1fr}
+ .hierarchy-part-card{grid-template-columns:68px minmax(0,1fr) 16px}
+ .hierarchy-part-card>img{width:68px;height:96px}
+}
+@media(max-width:480px){
+ .hierarchy-parent-card{grid-template-columns:50px minmax(0,1fr) 16px}
+ .hierarchy-parent-card img{width:50px;height:72px}
+ .hierarchy-part-card{grid-template-columns:58px minmax(0,1fr) 14px;padding:8px}
+ .hierarchy-part-card>img{width:58px;height:84px;border-radius:8px}
+}
