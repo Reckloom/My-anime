@@ -12,4 +12,6 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
       - run: npm run build
