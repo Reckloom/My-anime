@@ -71,7 +71,7 @@ function mobyKey(){
 }
 async function searchGames(q:string){
   const key=mobyKey();
-  const data=await getJson(mobyGamesUrl('/games?'+new URLSearchParams({title:q.trim(),limit:'12',format:'normal'}).toString(),key));
+  const data=await getJson(mobyGamesUrl('/games?'+new URLSearchParams({title:q.trim().slice(0,128),limit:'12',format:'normal'}).toString(),key));
   const games=Array.isArray(data?.games)?data.games:[];
   return games.slice(0,12).map((game:any)=>{
     const platforms=Array.isArray(game?.platforms)?game.platforms.map((x:any)=>String(x?.platform_name||'')).filter(Boolean):[];
