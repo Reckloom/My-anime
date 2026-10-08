@@ -284,11 +284,30 @@ export default function App(){
   return mediaMatch&&statusMatch;
  };
  const hasStatusFilter=activeStatus.length>0;
- return sortMedia(items,sortMode).filter(x=>{
+ const sorted=sortMedia(items,sortMode);
+ if(!hasStatusFilter){
+  const roots=sorted.filter(x=>{
+   if(x.parentId)return false;
+   if(!textMatches(x)||!facetMatches(x))return false;
+   return true;
+  });
+  const result:MediaItem[]=[];
+  for(const root of roots){
+   result.push(root);
+   // Multi-part anime get a paired Season 1 card immediately beside the main
+   // aggregate entry. Keep single-season anime and One Piece unchanged.
+   if(root.medium==='anime' && root.title.trim().toLowerCase()!=='one piece'){
+    const children=items.filter(x=>x.parentId===root.id);
+    const season1=children.find(x=>/\\bseason\\s*1\\b/i.test(x.title));
+    if(children.length>1 && season1 && textMatches(season1) && facetMatches(season1)) result.push({...season1,poster:root.poster,backdrop:''});
+   }
+  }
+  return result;
+ }
+ return sorted.filter(x=>{
   if(!textMatches(x))return false;
   if(!facetMatches(x))return false;
   const isParent=items.some(y=>y.parentId===x.id);
-  if(!hasStatusFilter)return !x.parentId;
   return !isParent;
  });
 },[items,sortMode,query,filters]);
