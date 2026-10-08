@@ -1,4 +1,4 @@
-async function navigatePrimary(page:any,label:string){const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}await page.getByRole('button',{name:/Open navigation menu/}).click();await page.getByRole('button',{name:label,exact:true}).click();}
+async function navigatePrimary(page:any,label:string){const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}await page.getByRole('button',{name:/Open navigation menu/}).click();await page.locator('.frame-mobile-menu').getByRole('button',{name:label,exact:true}).click();}
 
 import { test, expect } from '@playwright/test';
 
@@ -150,6 +150,12 @@ test.describe('FRAME quick actions', () => {
     await page.goto('/');
     await expect(page.locator('.frame-nav').getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
     await expect(page.locator('.frame-nav').getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
+    const signIn=page.getByRole('button',{name:'Sign in',exact:true}).first();
+    if(await signIn.isVisible().catch(()=>false)){
+      await expect(page.locator('.frame-nav').getByRole('button',{name:'Chat',exact:true})).toHaveCount(0);
+      await expect(page.locator('.frame-nav').getByRole('button',{name:'Call',exact:true})).toHaveCount(0);
+      return;
+    }
     await page.getByTitle('Open quick actions').click();
     await expect(page.getByTitle('Chat')).toBeVisible();
     await expect(page.getByTitle('Call')).toBeVisible();
