@@ -17,13 +17,24 @@ type DiscoveryResult={
 type SearchResponse={results?:AniListMedia[]};
 type ExternalResponse={results?:DiscoveryResult[]};
 
-const DISCOVERY_URL=((import.meta.env.VITE_SUPABASE_URL as string|undefined)?.trim()||'https://blwnhfhpckqbetwxamqr.supabase.co')+'/functions/v1/media-discovery';
+const SUPABASE_URL=((import.meta.env.VITE_SUPABASE_URL as string|undefined)?.trim()||'https://blwnhfhpckqbetwxamqr.supabase.co').replace(/\\/+$/,'');
+const SUPABASE_KEY=(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string|undefined)?.trim()||'';
+const DISCOVERY_URL=SUPABASE_URL+'/functions/v1/media-discovery';
 
 async function discoveryRequest(body:Record<string,unknown>){
  const controller=new AbortController();
  const timer=window.setTimeout(()=>controller.abort(),12000);
  try{
-  const response=await fetch(DISCOVERY_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body),signal:controller.signal,cache:'no-store'});
+  const headers:Record<string,string>={'Content-Type':'application/json','Accept':'application/json'};
+  if(SUPABASE_KEY)headers.apikey=SUPABASE_KEY;
+  if(supabase){
+   try{
+    const{data}=await supabase.auth.getSession();
+    const token=data.session?.access_token;
+    if(token)headers.Authorization='Bearer '+token;
+   }catch{}
+  }
+  const response=await fetch(DISCOVERY_URL,{method:'POST',headers,body:JSON.stringify(body),signal:controller.signal,cache:'no-store'});
   const raw=await response.text();
   let data:unknown;
   try{data=JSON.parse(raw)}catch{throw new Error('FRAME discovery returned an invalid response.')}
@@ -193,21 +204,35 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
 }
 
 async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>){
+ let lastError='';
  try{
   const data=await discoveryRequest({action:'search',query:term,provider});
   const found=Array.isArray(data.results)?data.results as DiscoveryResult[]:[];
   if(found.length)return await enrichMovieArtwork(found);
- }catch{}
+  lastError=String((data as {error?:unknown})?.error||'The discovery service returned no matches.');
+ }catch(e){
+  lastError=e instanceof Error?e.message:'Discovery request failed.';
+ }
  if(supabase){
   try{
    const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'search',query:term,provider}});
-   const found=((data||{}) as ExternalResponse).results||[];
+   const payload=((data||{}) as ExternalResponse);
+   const found=Array.isArray(payload.results)?payload.results:[];
    if(!error&&found.length)return await enrichMovieArtwork(found);
-  }catch{}
+   if(error)lastError=error.message||lastError;
+  }catch(e){
+   lastError=e instanceof Error?e.message:lastError;
+  }
  }
- const found=await directExternalSearch(term,provider);
- if(found.length)return await enrichMovieArtwork(found);
- throw new Error(providerLabel(provider)+' did not return any matches. Try another spelling or title.');
+ // Browser-to-Steam requests are intentionally the last fallback because Steam's
+ // CORS behavior varies by browser/network. FRAME's own Supabase proxy is preferred.
+ try{
+  const found=await directExternalSearch(term,provider);
+  if(found.length)return await enrichMovieArtwork(found);
+ }catch(e){
+  lastError=e instanceof Error?e.message:lastError;
+ }
+ throw new Error(lastError||providerLabel(provider)+' did not return any matches. Try another spelling or title.');
 }
 
 async function detailExternal(result:DiscoveryResult){
