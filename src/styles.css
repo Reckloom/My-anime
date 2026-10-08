@@ -1824,3 +1824,137 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
   color:var(--frame-text);
   border-color:var(--frame-line-strong);
 }
+
+
+/* FINAL FRAME READABILITY + PRIVATE VOICE/CHAT POLISH */
+:root[data-frame-mode="light"]{
+  color-scheme:light;
+  --frame-text:#18212b;
+  --frame-muted:#4f5f6d;
+  --frame-dim:#667786;
+  --frame-line:#18212b1f;
+  --frame-line-strong:#18212b33;
+}
+:root[data-frame-mode="dark"]{
+  color-scheme:dark;
+  --frame-text:#f4f7fb;
+  --frame-muted:#b0bdc9;
+  --frame-dim:#82909c;
+  --frame-line:#ffffff18;
+  --frame-line-strong:#ffffff2c;
+}
+body,.frame-app,.frame-main{color:var(--frame-text)}
+.frame-app{background:var(--frame-bg)}
+.frame-topbar,.frame-nav button,.top-account,.top-icon,
+.home-intro,.home-overview,.home-tools,.social-panel,.chat-panel,
+.connection-card,.settings-panel,.global-chat-panel,.global-call-panel,
+.private-call-section,.search-modal,.detail-drawer,.calls-panel,.call-room,
+.feature-card,.radar-panel,.voice-card,.group-call,.quick-panel{
+  color:var(--frame-text);
+}
+.page-heading p,.home-intro-copy p,.home-tool-grid small,.home-overview span,
+.section-title>span,.muted,.state,.state p,.info-line,.private-call-option p,
+.private-call-note,.private-call-hero p,.private-call-cap,.global-call-visual p,
+.global-call-note,.call-waiting,.chat-messages small,.release-section .heading span,
+.releases section span,.releases section small,.notification section span,
+.notification section p,.notification section small,.connection-card p,
+.connection-card small,.feature-card p,.feature-card small,.settings-panel small,
+.settings-panel p{
+  color:var(--frame-muted)!important;
+}
+.frame-nav button.active,.frame-nav button:hover,
+.top-account:hover,.top-icon:hover,
+.home-tool-grid button,.secondary,.theme-choice,.private-call-option,
+.private-call-code,.private-call-participants>div,.friend-row,.chat-input input,
+.global-chat-input input,.friend-search input,.catalog-tabs-wide button,
+.search-big,.ani-result,.ani-detail,.global-chat-panel,.private-call-section{
+  border-color:var(--frame-line)!important;
+}
+input,select,textarea{
+  color:var(--frame-text);
+  background:var(--frame-surface-2);
+  border-color:var(--frame-line);
+}
+input::placeholder,textarea::placeholder{color:var(--frame-dim)!important;opacity:1}
+select option{background:var(--frame-surface);color:var(--frame-text)}
+button,a{color:inherit}
+.secondary{color:var(--frame-text)!important;background:var(--frame-surface-2)!important}
+.text-action,.breadcrumb,.notification-button,.icon-button{color:var(--frame-muted)}
+.text-action:hover,.breadcrumb:hover,.notification-button:hover{color:var(--frame-text)}
+.search-big,.search-big input{color:var(--frame-text)}
+.search-big input::placeholder{color:var(--frame-dim)!important}
+.ani-result b,.ani-detail h3,.home-intro-copy h1,.home-tools-head h2,
+.section-title h2,.page-heading h1,.global-call-visual h2,.global-chat-head b,
+.private-chat-panel header b,.private-call-hero h2,.private-call-option b{color:var(--frame-text)!important}
+.ani-result small,.ani-result em,.global-chat-head small,.global-chat-head>span,
+.global-bubble small,.friend-row small,.private-chat-kicker{color:var(--frame-muted)!important}
+.frame-popup-panel,.frame-popup-actions{color:var(--frame-text)}
+.frame-popup-panel p,.frame-popup-panel small{color:var(--frame-muted)}
+:root[data-frame-mode="light"] .home-intro,
+:root[data-frame-mode="light"] .home-tools,
+:root[data-frame-mode="light"] .home-overview,
+:root[data-frame-mode="light"] .social-panel,
+:root[data-frame-mode="light"] .chat-panel,
+:root[data-frame-mode="light"] .global-chat-panel,
+:root[data-frame-mode="light"] .global-call-panel,
+:root[data-frame-mode="light"] .private-call-section,
+:root[data-frame-mode="light"] .search-modal{
+  box-shadow:0 18px 55px rgba(34,70,98,.10);
+}
+:root[data-frame-mode="light"] .search-big{background:var(--frame-surface-2)!important}
+:root[data-frame-mode="dark"] .search-big,
+:root[data-frame-mode="dark"] .catalog-tabs-wide button,
+:root[data-frame-mode="dark"] .ani-result{
+  background:var(--frame-surface-2)!important;
+}
+.private-call-section{display:grid;gap:14px;padding:28px;border:1px solid var(--frame-line);border-radius:26px;background:var(--frame-surface);box-shadow:0 22px 70px #00000010}
+.private-call-hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.private-call-hero small{font-size:9px;letter-spacing:.16em;color:var(--frame-accent);font-weight:900}
+.private-call-hero h2{margin:6px 0 7px;font-size:26px;letter-spacing:-.035em}
+.private-call-cap{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--frame-line);background:var(--frame-surface-2);padding:8px 10px;border-radius:999px;font-size:9px;white-space:nowrap}
+.private-call-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.private-call-option{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:13px;align-items:center;padding:17px;border:1px solid var(--frame-line);border-radius:17px;background:var(--frame-surface-2)}
+.private-call-option-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--frame-accent) 12%,var(--frame-surface));color:var(--frame-accent)}
+.private-call-option p{margin:4px 0 0;font-size:10px;line-height:1.5}
+.private-call-join-form{display:flex;gap:7px;align-items:center}
+.private-call-join-form input{width:118px;min-height:44px;text-align:center;text-transform:uppercase;font-weight:800;letter-spacing:.18em}
+.private-call-live{display:grid;gap:14px}
+.private-call-code{display:flex;align-items:center;gap:12px;padding:16px 18px;border:1px solid var(--frame-line);border-radius:16px;background:var(--frame-surface-2)}
+.private-call-code small{color:var(--frame-muted);font-size:8px;letter-spacing:.13em}
+.private-call-code strong{font-size:28px;letter-spacing:.16em}
+.private-call-code button{margin-left:auto}
+.private-call-participants{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.private-call-participants>div{display:flex;align-items:center;gap:8px;padding:10px;border:1px solid var(--frame-line);border-radius:12px;background:var(--frame-surface-2)}
+.private-call-participants>div span{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--frame-surface-3);font-weight:800;font-size:10px}
+.private-call-participants>div b{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.private-call-note{font-size:9px;line-height:1.5}
+.private-call-copied{padding:10px 12px;border:1px solid var(--frame-line);border-radius:11px;background:color-mix(in srgb,var(--frame-accent) 8%,var(--frame-surface-2));color:var(--frame-text);font-size:9px}
+.call-mode-tabs{display:flex;gap:8px;margin:0 0 14px;padding:5px;border:1px solid var(--frame-line);border-radius:15px;background:var(--frame-surface-2);width:max-content;max-width:100%}
+.call-mode-tabs button{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;color:var(--frame-muted);font-size:10px;font-weight:800}
+.call-mode-tabs button.active{background:var(--frame-surface);color:var(--frame-text);box-shadow:0 3px 14px #00000010}
+.friend-row-chat{display:inline-flex;align-items:center;gap:4px;margin-left:auto;color:var(--frame-accent);font-style:normal}
+.friend-row-chat em{font-size:8px;font-style:normal;font-weight:800}
+.private-chat-panel header>div:first-child{display:grid;gap:2px}
+.private-chat-kicker{font-size:8px;letter-spacing:.15em;color:var(--frame-accent)!important;font-weight:900}
+@media(max-width:800px){
+ .private-call-options{grid-template-columns:1fr}
+ .private-call-participants{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .private-call-hero{display:grid}
+ .private-call-code{flex-wrap:wrap}.private-call-code button{margin-left:0}
+ .call-mode-tabs{width:100%}.call-mode-tabs button{flex:1;justify-content:center}
+}
+@media(max-width:520px){
+ .private-call-section{padding:18px;border-radius:20px}
+ .private-call-option{grid-template-columns:auto minmax(0,1fr)}
+ .private-call-option>button,.private-call-join-form{grid-column:1/-1;width:100%}
+ .private-call-join-form input{flex:1;width:auto}
+ .private-call-hero h2{font-size:22px}
+ .private-call-code strong{font-size:24px}
+ .private-call-participants{grid-template-columns:1fr 1fr}
+}
+
+/* Keep the public/global call surface in the same readable design language. */
+.global-call-panel,.global-call-panel *{color:inherit}
+.global-call-stats>div{background:var(--frame-surface-2);border-color:var(--frame-line)}
+.global-call-stats span{color:var(--frame-muted)!important}
+.global-call-visual p,.global-call-note{color:var(--frame-muted)!important}
