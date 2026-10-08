@@ -10,7 +10,7 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
   const text=q.trim();if(!text||busy)return;setBusy(true);setAnswer('');
   try{
    if(!supabase)throw new Error('Supabase is required for FRAME AI.');
-   const {data,error}=await supabase.functions.invoke('frame-ai',{body:{message:text}});
+   const {data,error}=await supabase.functions.invoke('frame-ai',{body:{message:text},responseType:'text'});
    if(error){
     let detail='';
     const ctx=(error as any).context;
@@ -28,9 +28,13 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
     }
     throw new Error(detail||error.message||'FRAME AI request failed.');
    }
-   const payload=data as {answer?:string;error?:string}|null;
+   let payload:{answer?:string;error?:string}|null=null;
+   if(typeof data==='string'){
+    try{payload=JSON.parse(data)}catch{throw new Error(data||'FRAME AI returned an unreadable response.')} 
+   }else payload=data as {answer?:string;error?:string}|null;
    if(payload?.error) throw new Error(payload.error);
-   const out=String(payload?.answer||'No answer returned.');
+   if(!payload?.answer) throw new Error('FRAME AI returned an empty response.');
+   const out=payload.answer;
    setAnswer(out);
    if(voice&&'speechSynthesis' in window){window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(out))}
   }catch(e){setAnswer(e instanceof Error?e.message:'FRAME AI is unavailable right now.')}finally{setBusy(false)}
