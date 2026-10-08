@@ -215,24 +215,7 @@ async function detailExternal(result:DiscoveryResult){
    const x=await fetchJsonWithTimeout('https://api.tvmaze.com/shows/'+encodeURIComponent(result.externalId)+'?embed=episodes') as any;
    return{...result,total:Array.isArray(x._embedded?.episodes)?x._embedded.episodes.length:result.total,description:x.summary||result.description,poster:x.image?.original||result.poster,backdrop:x.image?.original||result.backdrop,sourceUrl:x.officialSite||x.url};
   }
-  if(result.provider==='mobygames'){
-   const data=await fetchJsonWithTimeout('https://www.gamelegend.com/api/v1/games/'+encodeURIComponent(result.externalId)) as {game?:any};
-   const x=data.game;
-   if(x)return{
-    ...result,
-    title:String(x.title||result.title),
-    poster:String(x.coverImageUrl||result.poster||''),
-    description:clean(String(x.description||result.description||'')),
-    year:extractYear(x.releaseDate)||result.year,
-    sourceUrl:String(x.url||result.sourceUrl||''),
-    game:{
-     ...(result.game||{}),
-     platforms:Array.isArray(x.platforms)?x.platforms.map(String):result.game?.platforms,
-     releaseDate:x.releaseDate||result.game?.releaseDate,
-     storeUrl:String(x.url||result.game?.storeUrl||result.sourceUrl||'')
-    }
-   };
-  }
+  if(result.provider==='mobygames')return result;
   if(result.provider==='movie'){
    const data=await fetchJsonWithTimeout('https://en.wikipedia.org/w/api.php?action=query&pageids='+encodeURIComponent(result.externalId)+'&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*') as {query?:{pages?:Record<string,any>}};
    const page=Object.values(data.query?.pages||{})[0];
