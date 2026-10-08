@@ -57,6 +57,27 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
   };
  },[uid]);
 
+ useEffect(()=>{
+  if(!supabase||!uid)return;
+  let active=true;
+  const checkIncoming=async()=>{
+   if(!active||phaseRef.current!=='idle'||incoming)return;
+   const client=supabase;
+   const {data}=await client.from('direct_call_sessions').select('id,caller_id,status').eq('callee_id',uid).eq('status','ringing').order('created_at',{ascending:false}).limit(1).maybeSingle();
+   if(!active||!data)return;
+   const {data:caller}=await client.from('profiles').select('id,username,display_name,avatar_url').eq('id',data.caller_id).maybeSingle();
+   if(active&&caller){
+    callId.current=String(data.id);
+    setIncoming({callId:String(data.id),caller:caller as Profile});
+    setPhase('ringing');
+    setError('');
+   }
+  };
+  void checkIncoming();
+  const timer=window.setInterval(()=>void checkIncoming(),2500);
+  return()=>{active=false;window.clearInterval(timer)};
+ },[uid,incoming]);
+
  useEffect(()=>{setPeer(target)},[target?.id]);
 
  useEffect(()=>{
