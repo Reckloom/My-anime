@@ -1,31 +1,162 @@
-import {useEffect,useState} from 'react';
-import {Check,ExternalLink,Heart,RefreshCw,Star,X} from 'lucide-react';
-import type {MediaItem,Status} from '../types';
+import {useEffect,useMemo,useState} from 'react';
+import {Check,Edit3,ExternalLink,Heart,RefreshCw,Star,X} from 'lucide-react';
+import type {MediaAvailability,MediaItem,Status} from '../types';
 import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
 import {supabase} from '../lib/supabase';
 
 const labels:Record<Status,string>={watching:'Watching',reading:'Reading',playing:'Playing',completed:'Completed',planned:'Planned',paused:'Paused',dropped:'Dropped'};
 const units={anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as const;
 const types:Record<MediaItem['medium'],string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
+const statuses=Object.entries(labels) as [Status,string][];
 const links=(m:MediaItem)=>{const q=encodeURIComponent(m.title);return [
  m.anilistId?{label:'AniList',url:'https://anilist.co/'+(['manga','manhwa','light-novel'].includes(m.medium)?'manga':'anime')+'/'+m.anilistId}:null,
- m.game?.storeUrl?{label:'Steam',url:m.game.storeUrl}:null,
+ m.game?.storeUrl?{label:'Store',url:m.game.storeUrl}:null,
  {label:'IMDb',url:'https://www.imdb.com/find/?q='+q},{label:'JustWatch',url:'https://www.justwatch.com/in/search?q='+q},{label:'Google',url:'https://www.google.com/search?q='+q+' official watch buy'}
  ].filter(Boolean) as {label:string;url:string}[]};
 
+function listValue(value?:string[]){return(value||[]).join(', ')}
+function parseList(value:string){return [...new Set(value.split(/[,\n]/).map(x=>x.trim()).filter(Boolean))]}
+function numberOrUndefined(value:string){return value.trim()===''?undefined:Number(value)}
+function normaliseAvailability(value?:MediaAvailability):MediaAvailability|undefined{
+ if(!value)return undefined;
+ const next:MediaAvailability={};
+ for(const key of ['watch','buy','read','play'] as const){
+  const items=value[key];
+  if(items?.length)next[key]=items;
+ }
+ return Object.keys(next).length?next:undefined;
+}
+
 export function FrameDetail({item,library,close,save,onRefreshMetadata,onDelete}:{item:MediaItem;library:MediaItem[];close:()=>void;save:(x:MediaItem)=>void|Promise<boolean>;onRefreshMetadata?: (item:MediaItem)=>Promise<MediaItem>;onDelete?: (id:string)=>Promise<void>}){
- const [d,setD]=useState(item),[note,setNote]=useState(item.notes||''),[refreshing,setRefreshing]=useState(false),[refreshMessage,setRefreshMessage]=useState('');
- const game=d.medium==='game',movie=d.medium==='movie',max=game?100:movie?1:(d.total||500),pct=game||movie?d.progress:(d.progress/(d.total||1)*100);
- const canUseAsParent=(candidate:MediaItem)=>{if(candidate.id===d.id)return false;let cursor:MediaItem|undefined=candidate;let hops=0;while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=library.find(x=>x.id===cursor?.parentId);hops++}return true};
- const [artworkBusy,setArtworkBusy]=useState(false),[artworkMessage,setArtworkMessage]=useState('');
+ const[d,setD]=useState(item),[note,setNote]=useState(item.notes||''),[refreshing,setRefreshing]=useState(false),[refreshMessage,setRefreshMessage]=useState('');
+ const[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[saveMessage,setSaveMessage]=useState('');
+ const[artworkBusy,setArtworkBusy]=useState(false),[artworkMessage,setArtworkMessage]=useState('');
+ const game=d.medium==='game',movie=d.medium==='movie';
+ const max=game?100:movie?1:(d.total||500);
+ const pct=game||movie?d.progress:(d.progress/(d.total||1)*100);
+ const canUseAsParent=(candidate:MediaItem)=>{
+  if(candidate.id===d.id)return false;
+  let cursor:MediaItem|undefined=candidate,hops=0;
+  while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=library.find(x=>x.id===cursor?.parentId);hops++}
+  return true;
+ };
+ useEffect(()=>{setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('')},[item.id]);
  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[]);
  const progress=(n:number)=>setD(game?{...d,progress:n,game:d.game?{...d.game,storyProgress:n}:undefined}:{...d,progress:Math.max(0,Math.min(max,n))});
  const setTotal=(value:number)=>{const n=Math.max(1,Math.min(2000,value||1));setD({...d,total:n,customTotal:n,progress:Math.min(d.progress,n)})};
- return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><aside className="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title"><button className="close-btn" aria-label="Close details" onClick={close}><X/></button><div className="detail-cover"><img src={d.backdrop||d.poster||'/frame-logo.svg'} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><div/></div><div className="detail-body"><img className="detail-poster" src={d.poster||'/frame-logo.svg'} alt={d.title} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><div className="detail-main"><small>{types[d.medium]} · {labels[d.status]}</small><h2 id="frame-detail-title">{d.title}</h2><div className="detail-rating"><span><Star size={13} fill="currentColor"/> Source {d.score==null?'—':d.score.toFixed(1)}</span><span>Your {d.personalRating==null?'—':d.personalRating.toFixed(1)}</span></div><div className="detail-refresh-row">{(d.anilistId||d.sourceProvider==='anilist')&&<button className="secondary" disabled={refreshing} onClick={async()=>{if(!onRefreshMetadata)return;setRefreshing(true);setRefreshMessage('Refreshing metadata…');try{const next=await onRefreshMetadata(d);setD({...next,progress:d.progress,total:d.customTotal??next.total,status:d.status,personalRating:d.personalRating,favorite:d.favorite,notes:d.notes,parentId:d.parentId});setRefreshMessage('Metadata refreshed. Save changes to keep it.')}catch{setRefreshMessage('Metadata refresh failed.')}finally{setRefreshing(false)}}}>{refreshing?<RefreshCw size={13} className="spin"/>:<RefreshCw size={13}/>}Refresh metadata</button>}{refreshMessage&&<small>{refreshMessage}</small>}</div><p>{d.description||'No description available.'}</p><div className="tags">{d.genres.slice(0,8).map(x=><span key={x}>{x}</span>)}</div></div></div>
- <section className="detail-section"><div className="detail-section-head"><h3>Progress</h3><span>{Math.round(pct)}%</span></div><input className="progress-slider" type="range" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value))}/><div className="progress-edit"><input type="number" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value)||0)}/><span>{d.progressUnit||units[d.medium]}</span><span>/</span><input type="number" min="1" max="2000" value={d.total|| (movie?1:500)} onChange={e=>setTotal(Number(e.target.value))}/><span>{movie?'watched state':'total'}</span></div><small className="hint">External totals are defaults, not rules. Change the total for different editions or inaccurate source data.</small></section>
- <section className="detail-section two-col"><label>Status<select value={d.status} onChange={e=>setD({...d,status:e.target.value as Status})}>{Object.entries(labels).map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={d.personalRating??''} onChange={e=>setD({...d,personalRating:e.target.value===''?undefined:Number(e.target.value)})}/></label><label>Parent entry<select value={d.parentId||''} onChange={e=>setD({...d,parentId:e.target.value||undefined})}><option value="">None</option>{library.filter(canUseAsParent).map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label></section>
- {(d.parentId||library.some(x=>x.parentId===d.id))&&<section className="detail-section hierarchy-box"><h3>Hierarchy</h3>{d.parentId&&<div><span>Parent</span><b>{library.find(x=>x.id===d.parentId)?.title||'Parent entry'}</b></div>}{library.filter(x=>x.parentId===d.id).length>0&&<div><span>Parts / children</span><b>{library.filter(x=>x.parentId===d.id).map(x=>x.title).join(' · ')}</b></div>}</section>}{d.game&&<section className="detail-section game-box"><h3>Game information</h3><div><span>Developer</span><b>{d.game.developer||'—'}</b></div><div><span>Publisher</span><b>{d.game.publisher||'—'}</b></div><div><span>Platforms</span><b>{d.game.platforms?.join(', ')||'—'}</b></div><div><span>Availability</span><b>{d.game.isFree?'Free':d.game.priceText||'Check store'}</b></div></section>}
- <section className="detail-section artwork-section"><div className="detail-section-head"><h3>Artwork</h3><span>Stored under your account</span></div><div className="artwork-row">{d.poster&&<img src={d.poster} alt={'Current poster for '+d.title} className="artwork-preview" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>}<div><label>Poster image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={artworkBusy} onChange={async e=>{const file=e.target.files?.[0];e.currentTarget.value='';if(!file||!supabase)return;if(!['image/png','image/jpeg','image/webp','image/gif'].includes(file.type)){setArtworkMessage('Unsupported image type. Use PNG, JPEG, WebP, or GIF.');return}if(file.size>5*1024*1024){setArtworkMessage('Image must be 5 MB or smaller.');return}setArtworkBusy(true);setArtworkMessage('Uploading artwork…');try{const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Your FRAME session has expired. Sign in again.');const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=user.id+'/'+crypto.randomUUID()+'-'+Date.now()+'.'+ext;const {error}=await supabase.storage.from('frame-media-art').upload(path,file,{upsert:true,contentType:file.type,cacheControl:'3600'});if(error)throw error;const {data}=supabase.storage.from('frame-media-art').getPublicUrl(path);setD({...d,poster:data.publicUrl,backdrop:data.publicUrl});setArtworkMessage('Artwork uploaded. Save changes to keep it on this entry.')}catch(err){setArtworkMessage(err instanceof Error?err.message:'Artwork upload failed.')}finally{setArtworkBusy(false)}}}/></label><small>Upload from this page; the image is stored under your account.</small>{artworkMessage&&<small className="data-tools-message">{artworkMessage}</small>}</div></div></section><section className="detail-section"><h3>Where to find it</h3><div className="source-links">{links(d).map(x=><a key={x.url} href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={13}/>{x.label}</a>)}</div></section>
- <section className="detail-section"><label>Private notes<textarea value={note} onChange={e=>{setNote(e.target.value);setD({...d,notes:e.target.value})}} placeholder="Your notes…"/></label></section>
- <div className="detail-actions"><button className="primary" onClick={()=>save({...d,notes:note})}><Check size={16}/>Save changes</button><button className="secondary active" onClick={()=>setD({...d,favorite:!d.favorite})}><Heart size={16} fill={d.favorite?'currentColor':'none'}/>{d.favorite?'Favorited':'Favorite'}</button>{onDelete&&<button className="danger" type="button" onClick={()=>{const hasChildren=library.some(x=>x.parentId===d.id);const message=hasChildren?'Delete this entry? Its child entries will be kept but detached.':'Delete this entry? This cannot be undone.';if(window.confirm(message))void onDelete(d.id)}}>Delete</button>}</div></aside></div>;
+ const update=(key:keyof MediaItem,value:unknown)=>setD({...d,[key]:value});
+ const saveEdits=async()=>{setSaving(true);setSaveMessage('Saving changes…');try{const ok=await save({...d,notes:note});if(ok){setSaveMessage('Saved.');setEditing(false)}else setSaveMessage('Could not save these changes. Your existing entry was kept.')}catch(e){setSaveMessage(e instanceof Error?e.message:'Could not save these changes.')}finally{setSaving(false)}};
+ const refresh=async()=>{if(!onRefreshMetadata)return;setRefreshing(true);setRefreshMessage('Refreshing metadata…');try{const next=await onRefreshMetadata(d);setD({...next,progress:d.progress,total:d.customTotal??next.total,status:d.status,personalRating:d.personalRating,favorite:d.favorite,notes:d.notes,parentId:d.parentId});setRefreshMessage('Metadata refreshed. Save changes to keep it.')}catch{setRefreshMessage('Metadata refresh failed.')}finally{setRefreshing(false)}};
+ const gameData=d.game||{};
+ const complexity=gameData.complexity||{};
+ const availability=d.availability||{};
+ const gamePlatforms=listValue(gameData.platforms);
+ const gameModes=listValue(gameData.gameModes);
+ const gameDlc=listValue(gameData.dlc);
+ const altTitles=listValue(d.alternativeTitles);
+ const genres=listValue(d.genres);
+ const themes=listValue(d.themes);
+ const parentCandidates=useMemo(()=>library.filter(canUseAsParent),[library,d.id,d.parentId]);
+
+ return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+  <aside className="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
+   <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
+   <div className="detail-cover"><img src={d.backdrop||d.poster||'/frame-logo.svg'} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><div/></div>
+   <div className="detail-body">
+    <img className="detail-poster" src={d.poster||'/frame-logo.svg'} alt={d.title} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
+    <div className="detail-main">
+     <small>{types[d.medium]} · {labels[d.status]}</small>
+     <h2 id="frame-detail-title">{d.title}</h2>
+     <div className="detail-rating"><span><Star size={13} fill="currentColor"/> Source {d.score==null?'—':d.score.toFixed(1)}</span><span>Your {d.personalRating==null?'—':d.personalRating.toFixed(1)}</span></div>
+     <div className="detail-refresh-row">
+      {(d.anilistId||d.sourceProvider==='anilist')&&<button className="secondary" disabled={refreshing} onClick={()=>void refresh()}>{refreshing?<RefreshCw size={13} className="spin"/>:<RefreshCw size={13}/>}Refresh metadata</button>}
+      {refreshMessage&&<small>{refreshMessage}</small>}
+     </div>
+     <p>{d.description||'No description available.'}</p>
+     <div className="tags">{d.genres.slice(0,8).map(x=><span key={x}>{x}</span>)}</div>
+     <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
+    </div>
+   </div>
+
+   <section className="detail-section"><div className="detail-section-head"><h3>Progress</h3><span>{Math.round(pct)}%</span></div><input className="progress-slider" type="range" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value))}/><div className="progress-edit"><input type="number" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value)||0)}/><span>{d.progressUnit||units[d.medium]}</span><span>/</span><input type="number" min="1" max="2000" value={d.total|| (movie?1:500)} onChange={e=>setTotal(Number(e.target.value))}/><span>{movie?'watched state':'total'}</span></div><small className="hint">Change the total when an edition or source count is different.</small></section>
+
+   <section className="detail-section two-col"><label>Status<select value={d.status} onChange={e=>update('status',e.target.value as Status)}>{statuses.map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={d.personalRating??''} onChange={e=>update('personalRating',numberOrUndefined(e.target.value))}/></label><label>Parent entry<select value={d.parentId||''} onChange={e=>update('parentId',e.target.value||undefined)}><option value="">None</option>{parentCandidates.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label><label>Favorite<select value={d.favorite?'yes':'no'} onChange={e=>update('favorite',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label></section>
+
+   {(d.parentId||library.some(x=>x.parentId===d.id))&&<section className="detail-section hierarchy-box"><h3>Hierarchy</h3>{d.parentId&&<div><span>Parent</span><b>{library.find(x=>x.id===d.parentId)?.title||'Parent entry'}</b></div>}{library.filter(x=>x.parentId===d.id).length>0&&<div><span>Parts / children</span><b>{library.filter(x=>x.parentId===d.id).map(x=>x.title).join(' · ')}</b></div>}</section>}
+
+   {editing&&<section className="detail-section detail-editor">
+    <div className="detail-section-head"><div><small>FULL CONTROL</small><h3>Edit every detail</h3></div><span>Local + account save</span></div>
+    <div className="detail-editor-grid">
+      <label>Title<input value={d.title} onChange={e=>update('title',e.target.value)}/></label>
+      <label>Media type<select value={d.medium} onChange={e=>{const medium=e.target.value as MediaItem['medium'];const nextUnit=units[medium];setD({...d,medium,progressUnit:nextUnit,total:medium==='movie'?1:(d.total||undefined),progress:Math.min(d.progress,medium==='movie'?1:(d.total||2000))})}}>{Object.entries(types).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>
+      <label>Source provider<input value={d.sourceProvider||''} onChange={e=>update('sourceProvider',e.target.value||undefined)} placeholder="anilist, igdb, wikipedia-game…"/></label>
+      <label>External ID<input value={d.externalId||''} onChange={e=>update('externalId',e.target.value||undefined)}/></label>
+      <label>AniList ID<input type="number" value={d.anilistId??''} onChange={e=>update('anilistId',e.target.value===''?undefined:Number(e.target.value))}/></label>
+      <label>Metadata ID<input value={d.metadataId||''} onChange={e=>update('metadataId',e.target.value||undefined)}/></label>
+      <label>Year<input type="number" min="1800" max="3000" value={d.year??''} onChange={e=>update('year',e.target.value===''?undefined:Number(e.target.value))}/></label>
+      <label>Source score<input type="number" min="0" max="10" step=".1" value={d.score??''} onChange={e=>update('score',e.target.value===''?undefined:Number(e.target.value))}/></label>
+      <label>Studio / author / publisher<input value={d.studio||''} onChange={e=>update('studio',e.target.value||undefined)}/></label>
+      <label>Season<input value={d.season||''} onChange={e=>update('season',e.target.value||undefined)}/></label>
+      <label>Duration (minutes)<input type="number" min="0" value={d.duration??''} onChange={e=>update('duration',e.target.value===''?undefined:Number(e.target.value))}/></label>
+      <label>Progress unit<input value={d.progressUnit||units[d.medium]} onChange={e=>update('progressUnit',e.target.value||undefined)}/></label>
+      <label>Custom total<input type="number" min="1" max="2000" value={d.customTotal??''} onChange={e=>update('customTotal',e.target.value===''?undefined:Number(e.target.value))}/></label>
+      <label>Air / release start<input type="text" value={d.airStart||''} onChange={e=>update('airStart',e.target.value||undefined)} placeholder="YYYY-MM-DD"/></label>
+      <label>Air / release end<input type="text" value={d.airEnd||''} onChange={e=>update('airEnd',e.target.value||undefined)} placeholder="YYYY-MM-DD"/></label>
+      <label>Next release<input value={d.nextRelease||''} onChange={e=>update('nextRelease',e.target.value||undefined)} placeholder="Optional"/></label>
+      <label>Next release number<input type="number" min="0" value={d.nextReleaseNumber??''} onChange={e=>update('nextReleaseNumber',e.target.value===''?undefined:Number(e.target.value))}/></label>
+      <label>Poster URL<input value={d.poster} onChange={e=>update('poster',e.target.value)}/></label>
+      <label>Backdrop URL<input value={d.backdrop} onChange={e=>update('backdrop',e.target.value)}/></label>
+      <label className="detail-editor-wide">Alternative titles<input value={altTitles} onChange={e=>update('alternativeTitles',parseList(e.target.value))} placeholder="Comma-separated"/></label>
+      <label className="detail-editor-wide">Genres<input value={genres} onChange={e=>update('genres',parseList(e.target.value))} placeholder="Comma-separated"/></label>
+      <label className="detail-editor-wide">Themes / tags<input value={themes} onChange={e=>update('themes',parseList(e.target.value))} placeholder="Comma-separated"/></label>
+      <label className="detail-editor-wide">Description<textarea value={d.description} onChange={e=>update('description',e.target.value)} rows={5}/></label>
+    </div>
+
+    <div className="detail-sub-editor">
+      <div className="detail-section-head"><div><small>AVAILABILITY</small><h4>Where it can be found</h4></div></div>
+      <div className="detail-editor-grid">
+       <label>Watch links<textarea value={listValue(availability.watch)} onChange={e=>update('availability',normaliseAvailability({...availability,watch:parseList(e.target.value)}))}/></label>
+       <label>Buy links<textarea value={listValue(availability.buy)} onChange={e=>update('availability',normaliseAvailability({...availability,buy:parseList(e.target.value)}))}/></label>
+       <label>Read links<textarea value={listValue(availability.read)} onChange={e=>update('availability',normaliseAvailability({...availability,read:parseList(e.target.value)}))}/></label>
+       <label>Play links<textarea value={listValue(availability.play)} onChange={e=>update('availability',normaliseAvailability({...availability,play:parseList(e.target.value)}))}/></label>
+      </div>
+    </div>
+
+    {game&&<div className="detail-sub-editor">
+      <div className="detail-section-head"><div><small>GAME METADATA</small><h4>Game details</h4></div></div>
+      <div className="detail-editor-grid">
+       <label>Developer<input value={gameData.developer||''} onChange={e=>setD({...d,game:{...gameData,developer:e.target.value||undefined}})}/></label>
+       <label>Publisher<input value={gameData.publisher||''} onChange={e=>setD({...d,game:{...gameData,publisher:e.target.value||undefined}})}/></label>
+       <label>Release date<input value={gameData.releaseDate||''} onChange={e=>setD({...d,game:{...gameData,releaseDate:e.target.value||undefined}})} placeholder="YYYY-MM-DD"/></label>
+       <label>Platforms<input value={gamePlatforms} onChange={e=>setD({...d,game:{...gameData,platforms:parseList(e.target.value)}})}/></label>
+       <label>Game modes<input value={gameModes} onChange={e=>setD({...d,game:{...gameData,gameModes:parseList(e.target.value)}})}/></label>
+       <label>Playtime (hours)<input type="number" min="0" value={gameData.playtimeHours??''} onChange={e=>setD({...d,game:{...gameData,playtimeHours:e.target.value===''?undefined:Number(e.target.value)}})}/></label>
+       <label>Story progress %<input type="number" min="0" max="100" value={gameData.storyProgress??''} onChange={e=>setD({...d,game:{...gameData,storyProgress:e.target.value===''?undefined:Number(e.target.value),completionProgress:gameData.completionProgress}})}/></label>
+       <label>Completion %<input type="number" min="0" max="100" value={gameData.completionProgress??''} onChange={e=>setD({...d,game:{...gameData,completionProgress:e.target.value===''?undefined:Number(e.target.value)}})}/></label>
+       <label>Difficulty<input value={gameData.difficulty||''} onChange={e=>setD({...d,game:{...gameData,difficulty:e.target.value||undefined}})}/></label>
+       <label>Franchise<input value={gameData.franchise||''} onChange={e=>setD({...d,game:{...gameData,franchise:e.target.value||undefined}})}/></label>
+       <label>Edition<input value={gameData.edition||''} onChange={e=>setD({...d,game:{...gameData,edition:e.target.value||undefined}})}/></label>
+       <label>Free to play<select value={gameData.isFree?'yes':'no'} onChange={e=>setD({...d,game:{...gameData,isFree:e.target.value==='yes'}})}><option value="no">No</option><option value="yes">Yes</option></select></label>
+       <label>Price text<input value={gameData.priceText||''} onChange={e=>setD({...d,game:{...gameData,priceText:e.target.value||undefined}})}/></label>
+       <label>Store URL<input value={gameData.storeUrl||''} onChange={e=>setD({...d,game:{...gameData,storeUrl:e.target.value||undefined}})}/></label>
+       <label className="detail-editor-wide">DLC<input value={gameDlc} onChange={e=>setD({...d,game:{...gameData,dlc:parseList(e.target.value)}})}/></label>
+       <label>Story complexity<input type="number" min="0" max="10" step=".1" value={complexity.story??''} onChange={e=>setD({...d,game:{...gameData,complexity:{...complexity,story:e.target.value===''?undefined:Number(e.target.value)}}})}/></label>
+       <label>Gameplay complexity<input type="number" min="0" max="10" step=".1" value={complexity.gameplay??''} onChange={e=>setD({...d,game:{...gameData,complexity:{...complexity,gameplay:e.target.value===''?undefined:Number(e.target.value)}}})}/></label>
+       <label>Systems complexity<input type="number" min="0" max="10" step=".1" value={complexity.systems??''} onChange={e=>setD({...d,game:{...gameData,complexity:{...complexity,systems:e.target.value===''?undefined:Number(e.target.value)}}})}/></label>
+       <label>Exploration complexity<input type="number" min="0" max="10" step=".1" value={complexity.exploration??''} onChange={e=>setD({...d,game:{...gameData,complexity:{...complexity,exploration:e.target.value===''?undefined:Number(e.target.value)}}})}/></label>
+      </div>
+    </div>}
+    <div className="detail-editor-save"><button className="primary" type="button" disabled={saving||!d.title.trim()} onClick={()=>void saveEdits()}>{saving?<RefreshCw className="spin"/>:<Check/>}{saving?'Saving…':'Save all details'}</button>{saveMessage&&<small>{saveMessage}</small>}</div>
+   </section>}
+
+   {d.game&&<section className="detail-section game-box"><h3>Game information</h3><div><span>Developer</span><b>{d.game.developer||'—'}</b></div><div><span>Publisher</span><b>{d.game.publisher||'—'}</b></div><div><span>Platforms</span><b>{d.game.platforms?.join(', ')||'—'}</b></div><div><span>Availability</span><b>{d.game.isFree?'Free':d.game.priceText||'Check store'}</b></div></section>}
+
+   <section className="detail-section artwork-section"><div className="detail-section-head"><h3>Artwork</h3><span>Stored under your account</span></div><div className="artwork-row">{d.poster&&<img src={d.poster} alt={'Current poster for '+d.title} className="artwork-preview" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><div><label>Poster image<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={artworkBusy} onChange={async e=>{const file=e.target.files?.[0];e.currentTarget.value='';if(!file||!supabase)return;if(!['image/png','image/jpeg','image/webp','image/gif'].includes(file.type)){setArtworkMessage('Unsupported image type. Use PNG, JPEG, WebP, or GIF.');return}if(file.size>5*1024*1024){setArtworkMessage('Image must be 5 MB or smaller.');return}setArtworkBusy(true);setArtworkMessage('Uploading artwork…');try{const {data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Your FRAME session has expired. Sign in again.');const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=user.id+'/'+crypto.randomUUID()+'-'+Date.now()+'.'+ext;const {error}=await supabase.storage.from('frame-media-art').upload(path,file,{upsert:true,contentType:file.type,cacheControl:'3600'});if(error)throw error;const {data}=supabase.storage.from('frame-media-art').getPublicUrl(path);setD({...d,poster:data.publicUrl,backdrop:d.backdrop||data.publicUrl});setArtworkMessage('Artwork uploaded. Save changes to keep it on this entry.')}catch(err){setArtworkMessage(err instanceof Error?err.message:'Artwork upload failed.')}finally{setArtworkBusy(false)}}}/></label><small>Upload from this page; the image is stored under your account.</small>{artworkMessage&&<small className="data-tools-message">{artworkMessage}</small>}</div></div></section>
+
+   <section className="detail-section"><h3>Where to find it</h3><div className="source-links">{links(d).map(x=><a key={x.url} href={x.url} target="_blank" rel="noreferrer"><ExternalLink size={13}/>{x.label}</a>)}</div></section>
+   <section className="detail-section"><label>Private notes<textarea value={note} onChange={e=>{setNote(e.target.value);setD({...d,notes:e.target.value})}} placeholder="Your notes…"/></label></section>
+
+   <div className="detail-actions"><button className="primary" disabled={saving} onClick={()=>void saveEdits()}><Check size={16}/>Save changes</button><button className="secondary active" onClick={()=>setD({...d,favorite:!d.favorite})}><Heart size={16} fill={d.favorite?'currentColor':'none'}/>{d.favorite?'Favorited':'Favorite'}</button>{onDelete&&<button className="danger" type="button" onClick={()=>{const hasChildren=library.some(x=>x.parentId===d.id);const message=hasChildren?'Delete this entry? Its child entries will be kept but detached.':'Delete this entry? This cannot be undone.';if(window.confirm(message))void onDelete(d.id)}}>Delete</button>}</div>
+  </aside>
+ </div>;
 }
