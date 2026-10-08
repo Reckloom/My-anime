@@ -25,16 +25,16 @@ async function discoveryRequest(body:Record<string,unknown>){
  const controller=new AbortController();
  const timer=window.setTimeout(()=>controller.abort(),12000);
  try{
-  const headers:Record<string,string>={'Content-Type':'application/json','Accept':'application/json'};
-  if(SUPABASE_KEY)headers.apikey=SUPABASE_KEY;
-  if(supabase){
-   try{
-    const{data}=await supabase.auth.getSession();
-    const token=data.session?.access_token;
-    if(token)headers.Authorization='Bearer '+token;
-   }catch{}
+  const params=new URLSearchParams();
+  for(const[key,value] of Object.entries(body)){
+   if(value!==undefined&&value!==null)params.set(key,String(value));
   }
-  const response=await fetch(DISCOVERY_URL,{method:'POST',headers,body:JSON.stringify(body),signal:controller.signal,cache:'no-store'});
+  const response=await fetch(DISCOVERY_URL+'?'+params.toString(),{
+   method:'GET',
+   headers:{Accept:'application/json'},
+   signal:controller.signal,
+   cache:'no-store'
+  });
   const raw=await response.text();
   let data:unknown;
   try{data=JSON.parse(raw)}catch{throw new Error('FRAME discovery returned an invalid response.')}
