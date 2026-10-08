@@ -92,7 +92,7 @@ export default function App(){
    return[];
   }catch{return[]}
  });
- const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sortMode,setSortMode]=useState('rating');
+ const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filters,setFilters]=useState<string[]>(['all']),[sortMode,setSortMode]=useState('rating');
  const [finder,setFinder]=useState(false),[manualEntry,setManualEntry]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null),[appMessage,setAppMessage]=useState('');
  const [directCall,setDirectCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null),[commandOpen,setCommandOpen]=useState(false);
  const [radar,setRadar]=useState<Radar[]>([]),[radarBusy,setRadarBusy]=useState(false),[radarError,setRadarError]=useState('');
@@ -231,42 +231,21 @@ export default function App(){
  const updateConnection=async(id:string)=>{const enabled=!connections[id];setConnections({...connections,[id]:enabled});const client=supabase;if(client&&user?.id)await client.from('connected_apps').upsert({user_id:user.id,provider:id,enabled,config:{}},{onConflict:'user_id,provider'})};
  const shown=useMemo(()=>{
   const normalized=query.trim().toLowerCase();
-  const matches=(x:MediaItem)=>{
+  const activeFilters=filters.filter(x=>x!=='all');
+  const hasFilter=activeFilters.length>0;
+  const isFacetMatch=(x:MediaItem)=>activeFilters.some(f=>f==='incomplete'?progressPercent(x)<100:x.status===f||x.medium===f);
+  const textMatches=(x:MediaItem)=>{
    const text=[x.title,...(x.alternativeTitles||[]),x.medium,x.status,x.description||'',...(x.genres||[])].join(' ').toLowerCase();
-   const textMatch=!normalized||text.includes(normalized);
-   const filterMatch=filter==='all'||(filter==='incomplete'?progressPercent(x)<100:x.status===filter||x.medium===filter);
-   return textMatch&&filterMatch;
-  };
-  const statusFilter=['watching','reading','playing','completed','planned','paused','dropped','incomplete'].includes(filter);
-  const childrenByParent=new Map<string,MediaItem[]>();
-  for(const item of items){
-   if(!item.parentId)continue;
-   const bucket=childrenByParent.get(item.parentId)||[];
-   bucket.push(item);
-   childrenByParent.set(item.parentId,bucket);
-  }
-  const hasMatchingDescendant=(rootId:string)=>{
-   const visited=new Set<string>([rootId]);
-   const stack=[...(childrenByParent.get(rootId)||[])];
-   while(stack.length){
-    const child=stack.pop()!;
-    if(visited.has(child.id))continue;
-    visited.add(child.id);
-    if(matches(child))return true;
-    for(const nested of childrenByParent.get(child.id)||[])if(!visited.has(nested.id))stack.push(nested);
-   }
-   return false;
+   return !normalized||text.includes(normalized);
   };
   return sortMedia(items,sortMode).filter(x=>{
-   if(matches(x))return true;
-   if(statusFilter)return !x.parentId&&hasMatchingDescendant(x.id);
-   if(x.parentId){
-    const parent=items.find(y=>y.id===x.parentId);
-    return Boolean(parent&&matches(parent));
-   }
-   return hasMatchingDescendant(x.id);
+   if(!textMatches(x))return false;
+   const isParent=items.some(y=>y.parentId===x.id);
+   if(!hasFilter)return !x.parentId;
+   if(!isFacetMatch(x))return false;
+   return !isParent;
   });
- },[items,sortMode,query,filter]);
+ },[items,sortMode,query,filters]);
  const pageHistoryReady=useRef(false);
  useEffect(()=>{
   if(!pageHistoryReady.current){
@@ -363,9 +342,10 @@ function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;li
  return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><img src={item.poster||poster} alt={item.title} loading="lazy" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total||500)} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
 }
 
-function LibraryPage({items,filter,setFilter,sort,setSort,open,add}:{items:MediaItem[];filter:string;setFilter:(x:string)=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
+function LibraryPage({items,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
  const fs:[string,string][]=[['all','All'],['incomplete','Not 100%'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped'],...Object.entries(types)];
- return <div className="page library-page"><div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Every media type is equal. Sort by rating, your rating, progress, newest or title.</p></div><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div><div className="library-controls"><div className="filter-scroll">{fs.map(([id,label])=><button className={filter===id?'active':''} key={id} onClick={()=>setFilter(id)}>{label}</button>)}</div><label className="sort-select"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label></div><div className="media-grid">{items.map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/ >}</div>;
+ const toggle=(id:string)=>{if(id==='all'){setFilters(['all']);return}setFilters(prev=>{const base=prev.filter(x=>x!=='all');const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];return next.length?next:['all']})};
+ return <div className="page library-page"><div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div><div className="library-controls"><div className="filter-scroll">{fs.map(([id,label])=><button type="button" className={filters.includes(id)?'active':''} key={id} onClick={()=>toggle(id)} aria-pressed={filters.includes(id)}>{label}</button>)}</div><label className="sort-select"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label></div><div className="media-grid">{items.map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/>}</div>;
 }
 function Discover({finder,go}:{finder:()=>void;go:(x:string)=>void}){return <div className="page"><div className="page-heading"><div><small>UNIVERSAL DISCOVERY</small><h1>Explore everything.</h1><p>One consistent interface for media, metadata and connected services.</p></div></div><div className="feature-grid"><button className="feature-card" onClick={finder}><Search size={22}/><h3>Universal search</h3><p>AniList + Jikan, IGDB + RAWG, TMDB, VNDB, Open Library + Google Books and more.</p><ChevronRight/></button><button className="feature-card" onClick={()=>go('connections')}><Link2 size={22}/><h3>Connections</h3><p>Control the catalogues and services FRAME uses.</p><ChevronRight/></button></div></div>}
 function RadarPage({releases,busy,error,refresh}:{releases:Radar[];busy:boolean;error:string;refresh:()=>void}){const up=releases.filter(x=>!x.released).sort((a,b)=>Date.parse(a.airingAt)-Date.parse(b.airingAt));return <div className="page radar-page"><div className="page-heading"><div><small>RELEASE INTELLIGENCE</small><h1>Release Radar</h1><p>Upcoming releases for tracked AniList titles.</p></div><button className="secondary" disabled={busy} onClick={refresh}>{busy?<RefreshCw className="spin"/>:<RefreshCw/>}Refresh</button></div>{error&&<div className="inline-error">{error}</div>}<section className="radar-panel"><div className="section-title"><div><small>UP NEXT</small><h2>Upcoming</h2></div><span>{up.length}</span></div>{up.length?<div className="release-list">{up.slice(0,30).map(x=><div key={x.anilistId+'-'+x.episode}><img src={x.poster||poster} alt=""/><section><b>{x.title}</b><small>Episode {x.episode}</small><span>{new Date(x.airingAt).toLocaleString()}</span></section></div>)}</div>:<Empty text="No upcoming tracked releases."/ >}</section></div>}
