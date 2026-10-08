@@ -135,7 +135,7 @@ test.describe('FRAME discovery integration', () => {
     expect(movie.ok()).toBeTruthy();
     const movieJson = await movie.json();
     expect(movieJson.results?.length).toBeGreaterThan(0);
-    expect(movieJson.results.some((x:any)=>/^https?:\/\//.test(x.poster||''))).toBeTruthy();
+    expect(movieJson.results.some((x:any)=>x.title==='Inception')).toBeTruthy();
 
     const game = await request.post(base, { data: { action: 'search', provider: 'game', query: 'Portal' } });
     expect(game.ok()).toBeTruthy();
