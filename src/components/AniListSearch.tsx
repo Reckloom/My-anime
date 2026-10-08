@@ -17,7 +17,7 @@ type DiscoveryResult={
 type SearchResponse={results?:AniListMedia[]};
 type ExternalResponse={results?:DiscoveryResult[]};
 
-const SUPABASE_URL=((import.meta.env.VITE_SUPABASE_URL as string|undefined)?.trim()||'https://blwnhfhpckqbetwxamqr.supabase.co').replace(/\\/+$/,'');
+const SUPABASE_URL=((import.meta.env.VITE_SUPABASE_URL as string|undefined)?.trim()||'https://blwnhfhpckqbetwxamqr.supabase.co').replace(/\/+$/,'');
 const SUPABASE_KEY=(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string|undefined)?.trim()||'';
 const DISCOVERY_URL=SUPABASE_URL+'/functions/v1/media-discovery';
 
