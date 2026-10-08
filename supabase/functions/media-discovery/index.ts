@@ -82,7 +82,7 @@ async function searchGames(q:string){
       poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
       type:x.type
     }))
-    .filter((x:any)=>x.id&&x.name&&(!x.type||x.type==='app'||x.type===1))
+    .filter((x:any)=>x.id&&x.name&&(!x.type||x.type==='app'||x.type==='game'||x.type===1))
     .slice(0,12)
     .map((x:any)=>({
       provider:'steam',externalId:String(x.id),title:String(x.name),medium:'game',
