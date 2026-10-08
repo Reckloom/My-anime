@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {LogOut,Mic,MicOff,Phone,Radio,Users,Volume2} from 'lucide-react';
 import {supabase} from '../lib/supabase';
+import {PrivateCallRoom} from './FramePrivateCallRoom';
 
 type Profile={id:string;username:string;display_name:string;avatar_url?:string|null};
 type Remote={id:string;stream:MediaStream};
@@ -19,6 +20,7 @@ function guestId(){
 
 export function CallsPage({uid,profile,onCloseCall:_onCloseCall}:{uid:string;profile:Profile|null;onCloseCall:()=>void}){
   const client=supabase;
+  const [mode,setMode]=useState<'global'|'private'>('global');
   const [joined,setJoined]=useState(false);
   const [joining,setJoining]=useState(false);
   const [muted,setMuted]=useState(false);
@@ -197,18 +199,24 @@ export function CallsPage({uid,profile,onCloseCall:_onCloseCall}:{uid:string;pro
     }
   },[remotes]);
 
+  const switchMode=(next:'global'|'private')=>{if(next===mode)return;if(joined)void leave();setMode(next);setError('')};
+
   return <div className="page global-call-page">
     <div className="page-heading">
-      <div><small>FRAME VOICE</small><h1>Global Call</h1><p>One public voice room for FRAME. Anyone using the site can join, including guests.</p></div>
-      {joined?<span className="call-live-badge"><i/>LIVE · {participants} {participants===1?'person':'people'}</span>:null}
+      <div><small>FRAME VOICE</small><h1>{mode==='global'?'Global Call':'Private Rooms'}</h1><p>{mode==='global'?'One public voice room for FRAME. Anyone using the site can join, including guests.':'Create a private voice room and share its code with friends, or join a room they created.'}</p></div>
+      {mode==='global'&&joined?<span className="call-live-badge"><i/>LIVE · {participants} {participants===1?'person':'people'}</span>:null}
     </div>
-    <section className="global-call-panel">
+    <div className="call-mode-tabs" role="tablist" aria-label="Call room type">
+      <button role="tab" aria-selected={mode==='global'} className={mode==='global'?'active':''} onClick={()=>switchMode('global')}><Radio size={15}/>Global Call</button>
+      <button role="tab" aria-selected={mode==='private'} className={mode==='private'?'active':''} onClick={()=>switchMode('private')}><Users size={15}/>Private Rooms</button>
+    </div>
+    {mode==='private'?<PrivateCallRoom uid={uid} profile={profile}/>:<section className="global-call-panel">
       <div className="global-call-visual"><div className="global-call-orbit"><Radio size={38}/></div><small>PUBLIC ROOM</small><h2>{joined?'You are in the FRAME global call.':'The room is ready.'}</h2><p>{joined?'Your microphone is active until you leave. Mute is instant and leaving immediately closes your connections.':'No room setup, passwords or invitations. Press one button to enter the shared voice room.'}</p></div>
       <div className="global-call-stats"><div><Users size={17}/><b>{participants}</b><span>Connected</span></div><div><Volume2 size={17}/><b>{remotes.length}</b><span>Audio peers</span></div><div><Radio size={17}/><b>Public</b><span>Room type</span></div></div>
       {error&&<div className="inline-error">{error}</div>}
       {joined?<div className="global-call-actions"><button className="secondary call-control" onClick={toggleMute}>{muted?<MicOff size={18}/>:<Mic size={18}/>} {muted?'Unmute':'Mute'}</button><button className="danger call-control" onClick={()=>void leave()}><LogOut size={18}/>Leave call</button></div>:<button className="primary global-call-join" disabled={joining} onClick={()=>void join()}><Phone size={18}/>{joining?'Joining…':'Join global call'}</button>}
       <div className="global-call-note">Public global calls are separate from private one-to-one calls. This browser-to-browser room supports up to {MAX_PEERS} participants. Your microphone permission is requested only when you join.</div>
       {remotes.map(remote=><audio key={remote.id} ref={el=>{if(el)audioRefs.current.set(remote.id,el);else audioRefs.current.delete(remote.id)}} autoPlay playsInline/> )}
-    </section>
+    </section>}
   </div>;
 }
