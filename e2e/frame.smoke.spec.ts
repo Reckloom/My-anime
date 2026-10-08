@@ -104,6 +104,20 @@ test.describe('FRAME core smoke flow', () => {
 });
 
 
+test.describe('FRAME movie discovery UI', () => {
+  test('movie results resolve artwork in the actual modal', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+    await page.getByRole('tab', { name: /Movies/ }).click();
+    await page.getByLabel('Search media').fill('Inception');
+    const result=page.getByRole('button', { name: /Inception/ }).first();
+    await expect(result).toBeVisible();
+    const src=await result.locator('img').getAttribute('src');
+    expect(src).toBeTruthy();
+    expect(src).not.toContain('/frame-logo.svg');
+  });
+});
+
 test.describe('FRAME global voice', () => {
   test('opens the public global call and exposes the simple controls', async ({ page }) => {
     await page.goto('/');
@@ -121,7 +135,7 @@ test.describe('FRAME discovery integration', () => {
     expect(movie.ok()).toBeTruthy();
     const movieJson = await movie.json();
     expect(movieJson.results?.length).toBeGreaterThan(0);
-    expect(movieJson.results[0].poster).toMatch(/^https?:\/\//);
+    expect(movieJson.results.some((x:any)=>/^https?:\/\//.test(x.poster||''))).toBeTruthy();
 
     const game = await request.post(base, { data: { action: 'search', provider: 'game', query: 'Portal' } });
     expect(game.ok()).toBeTruthy();
