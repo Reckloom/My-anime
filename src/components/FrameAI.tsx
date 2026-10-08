@@ -11,7 +11,14 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
   try{
    if(!supabase)throw new Error('Supabase is required for FRAME AI.');
    const {data,error}=await supabase.functions.invoke('frame-ai',{body:{message:text}});
-   if(error)throw error;
+   if(error){
+    let detail='';
+    const ctx=(error as any).context;
+    if(ctx?.json) {
+      try { const body=await ctx.json(); detail=typeof body?.error==='string'?body.error:''; } catch {}
+    }
+    throw new Error(detail||error.message||'FRAME AI request failed.');
+   }
    const out=String((data as {answer?:string}|null)?.answer||'No answer returned.');
    setAnswer(out);
    if(voice&&'speechSynthesis' in window){window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(out))}
