@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Bot,CalendarDays,Compass,Globe,Library,MessageCircle,Phone,Search,Settings,Users,X} from 'lucide-react';
+import {CalendarDays,Compass,Globe,Library,MessageCircle,Phone,Search,Settings,Users,X} from 'lucide-react';
 
 type Command={id:string;label:string;sub:string;icon:any;run:()=>void};
 
@@ -10,7 +10,6 @@ export function FrameCommandPalette({onGo,onFind,onClose}:{onGo:(page:string)=>v
   {id:'discover',label:'Discover',sub:'Find something new',icon:Compass,run:()=>onGo('discover')},
   {id:'search',label:'Universal search',sub:'Search every supported catalogue',icon:Search,run:onFind},
   {id:'radar',label:'Release Radar',sub:'Upcoming tracked releases',icon:CalendarDays,run:()=>onGo('radar')},
-  {id:'ai',label:'FRAME AI',sub:'Ask for recommendations or identification',icon:Bot,run:()=>onGo('ai')},
   {id:'friends',label:'Friends',sub:'Social connections and shared libraries',icon:Users,run:()=>onGo('friends')},
   {id:'chat',label:'Global Chat',sub:'Open the live community chat',icon:MessageCircle,run:()=>onGo('chat')},
   {id:'calls',label:'Calls',sub:'Voice rooms and direct calls',icon:Phone,run:()=>onGo('calls')},
