@@ -17,6 +17,42 @@ const links=(m:MediaItem)=>{const q=encodeURIComponent(m.title);return [
 function listValue(value?:string[]){return(value||[]).join(', ')}
 function parseList(value:string){return [...new Set(value.split(/[,\n]/).map(x=>x.trim()).filter(Boolean))]}
 function numberOrUndefined(value:string){return value.trim()===''?undefined:Number(value)}
+function hierarchyPartOrder(item:MediaItem){
+ const t=item.title.trim().toLowerCase();
+ const exact:Record<string,number>={
+  'steins;gate':10,
+  'steins;gate: kyoukaimenjou no missing link - divide by zero':20,
+  'steins;gate 0':30,
+  'steins;gate: fuka ryouiki no déjà vu':40,
+  'steins;gate: oukoubakko no poriomania':50,
+  'steins;gate 0: kesshou takei no valentine - bittersweet day':60,
+  'attack on titan season 1':10,
+  'attack on titan season 2':20,
+  'attack on titan season 3':30,
+  'attack on titan season 3 part 2':40,
+  'attack on titan final season':50,
+  'attack on titan final season part 2':60,
+  'attack on titan final chapters: special 1':70,
+  'attack on titan final chapters: special 2':80,
+  'vinland saga season 1':10,
+  'vinland saga season 2':20,
+  'chainsaw man season 1':10,
+  'chainsaw man: reze arc':20,
+ };
+ if(exact[t]!=null)return exact[t];
+ const season=t.match(/season\\s+(\\d+)/i);
+ const part=t.match(/part\\s+(\\d+)/i);
+ const cour=t.match(/cour\\s+(\\d+)/i);
+ return (season?Number(season[1])*100:10000)+(part?Number(part[1])*10:0)+(cour?Number(cour[1]):0);
+}
+function compareHierarchyParts(a:MediaItem,b:MediaItem){
+ const ao=hierarchyPartOrder(a),bo=hierarchyPartOrder(b);
+ if(ao!==bo)return ao-bo;
+ const ay=a.year??9999,by=b.year??9999;
+ if(ay!==by)return ay-by;
+ return a.title.localeCompare(b.title,undefined,{numeric:true,sensitivity:'base'});
+}
+
 function normaliseAvailability(value?:MediaAvailability):MediaAvailability|undefined{
  if(!value)return undefined;
  const next:MediaAvailability={};
@@ -95,7 +131,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
 
    <section className="detail-section two-col"><label>Status<select value={d.status} onChange={e=>update('status',e.target.value as Status)}>{statuses.map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={d.personalRating??''} onChange={e=>update('personalRating',numberOrUndefined(e.target.value))}/></label><label>Parent entry<select value={d.parentId||''} onChange={e=>update('parentId',e.target.value||undefined)}><option value="">None</option>{parentCandidates.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label><label>Favorite<select value={d.favorite?'yes':'no'} onChange={e=>update('favorite',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label></section>
 
-   {(()=>{const parentItem=d.parentId?library.find(x=>x.id===d.parentId):undefined;const childParts=library.filter(x=>x.parentId===d.id);const pctFor=(x:MediaItem)=>x.medium==='movie'?(x.progress>=1?100:0):(x.total?Math.max(0,Math.min(100,(x.progress/x.total)*100)):(x.status==='completed'?100:0));return (parentItem||childParts.length>0)&&<section className="detail-section hierarchy-box"><div className="detail-section-head hierarchy-head"><div><small>MEDIA HIERARCHY</small><h3>{childParts.length>0?'Parts & editions':'Parent entry'}</h3></div><span>{childParts.length>0?childParts.length+' part'+(childParts.length===1?'':'s'):'Attached'}</span></div>{parentItem&&<button className="hierarchy-parent-card" type="button" onClick={()=>navigate?.(parentItem)}><img src={parentItem.poster||'/frame-logo.svg'} alt="" /><div><small>Parent</small><b>{parentItem.title}</b><span>{types[parentItem.medium]} · {parentItem.status==='completed'?'Completed':parentItem.progress+' / '+(parentItem.total||'—')}</span></div><ChevronLeft size={17}/></button>}{childParts.length>0&&<div className="hierarchy-parts-grid">{childParts.map(x=>{const pct=pctFor(x);return <button className="hierarchy-part-card" type="button" key={x.id} onClick={()=>navigate?.(x)}><img src={x.poster||'/frame-logo.svg'} alt="" loading="lazy" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><span className="hierarchy-part-copy"><b>{x.title}</b><small>{types[x.medium]} · {x.status==='completed'?'Completed':x.progress+' / '+(x.total||'—')+(x.progressUnit?' '+x.progressUnit:'')}</small><span className="hierarchy-part-meta">{x.year||'—'} · {x.score==null?'No score':x.score.toFixed(1)}</span><i className="hierarchy-part-bar"><em style={{width:pct+'%'}} /></i><p>{x.description||'Open this part to edit its metadata, artwork, rating, notes and progress.'}</p></span><ChevronRight size={17} className="hierarchy-part-arrow"/></button>})}</div>}</section>})()}
+   {(()=>{const parentItem=d.parentId?library.find(x=>x.id===d.parentId):undefined;const childParts=library.filter(x=>x.parentId===d.id).sort(compareHierarchyParts);const pctFor=(x:MediaItem)=>x.medium==='movie'?(x.progress>=1?100:0):(x.total?Math.max(0,Math.min(100,(x.progress/x.total)*100)):(x.status==='completed'?100:0));return (parentItem||childParts.length>0)&&<section className="detail-section hierarchy-box"><div className="detail-section-head hierarchy-head"><div><small>MEDIA HIERARCHY</small><h3>{childParts.length>0?'Parts & editions':'Parent entry'}</h3></div><span>{childParts.length>0?childParts.length+' part'+(childParts.length===1?'':'s'):'Attached'}</span></div>{parentItem&&<button className="hierarchy-parent-card" type="button" onClick={()=>navigate?.(parentItem)}><img src={parentItem.poster||'/frame-logo.svg'} alt="" /><div><small>Parent</small><b>{parentItem.title}</b><span>{types[parentItem.medium]} · {parentItem.status==='completed'?'Completed':parentItem.progress+' / '+(parentItem.total||'—')}</span></div><ChevronLeft size={17}/></button>}{childParts.length>0&&<div className="hierarchy-parts-grid">{childParts.map(x=>{const pct=pctFor(x);return <button className="hierarchy-part-card" type="button" key={x.id} onClick={()=>navigate?.(x)}><img src={x.poster||'/frame-logo.svg'} alt="" loading="lazy" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><span className="hierarchy-part-copy"><b>{x.title}</b><small>{types[x.medium]} · {x.status==='completed'?'Completed':x.progress+' / '+(x.total||'—')+(x.progressUnit?' '+x.progressUnit:'')}</small><span className="hierarchy-part-meta">{x.year||'—'} · {x.score==null?'No score':x.score.toFixed(1)}</span><i className="hierarchy-part-bar"><em style={{width:pct+'%'}} /></i><p>{x.description||'Open this part to edit its metadata, artwork, rating, notes and progress.'}</p></span><ChevronRight size={17} className="hierarchy-part-arrow"/></button>})}</div>}</section>})()}
 
    {editing&&<section className="detail-section detail-editor">
     <div className="detail-section-head"><div><small>FULL CONTROL</small><h3>Edit every detail</h3></div><span>Local + account save</span></div>
