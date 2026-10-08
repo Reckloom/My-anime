@@ -77,7 +77,7 @@ async function searchGames(q:string){
   if(!items.length)throw new Error(lastError);
   return items
     .map((x:any)=>({
-      id:x.id??x.appid??x.appId??String(x.url||'').match(/\\/app\\/(\\d+)/)?.[1],
+      id:x.id??x.appid??x.appId??String(x.url||'').match(/\/app\/(\d+)/)?.[1],
       name:x.name??x.title,
       poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
       type:x.type
