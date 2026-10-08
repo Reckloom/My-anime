@@ -1181,7 +1181,7 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
 .home-page .library-section{margin-top:30px}
 
 .library-page .page-heading{padding-bottom:18px;border-bottom:1px solid var(--frame-line)}
-.library-page .library-controls{position:sticky;top:76px;z-index:50;padding:10px;margin-bottom:18px;border:1px solid var(--frame-line);border-radius:16px;background:color-mix(in srgb,var(--frame-surface) 94%,transparent);backdrop-filter:blur(18px)}
+.library-page .library-controls{position:static;padding:10px;margin-bottom:18px;border:1px solid var(--frame-line);border-radius:16px;background:color-mix(in srgb,var(--frame-surface) 94%,transparent);backdrop-filter:blur(18px)}
 .library-page .filter-scroll{padding-bottom:0}
 .library-page .media-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:15px}
 .library-page .media-card{border-radius:17px}
