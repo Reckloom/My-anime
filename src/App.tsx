@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,RefreshCw,Search,Star,Users,X,Settings} from 'lucide-react';
+import {CalendarDays,ChevronRight,CirclePlus,Compass,ExternalLink,Gamepad2,Globe,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Phone,Radio,RefreshCw,Search,Star,Users,X,Settings} from 'lucide-react';
 import {useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
@@ -254,26 +254,24 @@ export default function App(){
  return <div className="frame-app">
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
   <header className="frame-topbar">
-   <div className="frame-brand" aria-label="FRAME"><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></div>
+   <button className="frame-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
    <nav className="frame-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['web','Web'],Globe],[['radar','Radar'],CalendarDays],[['friends','Friends'],Users],[['chat','Chat'],MessageCircle],[['calls','Calls'],Phone]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
+    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass],[['web','Web'],Globe],[['radar','Radar'],CalendarDays],[['friends','Friends'],Users],[['chat','Chat'],MessageCircle]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
    </nav>
    <div className="frame-actions">
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
     <button className="primary top-find" onClick={()=>setFinder(true)}><Search size={16}/>Search</button>
-    <button className="top-icon" title="Open calls" aria-label="Open calls" onClick={()=>go('calls')}><Phone size={18}/></button>
-    <button className="top-icon" title="Open chat" aria-label="Open chat" onClick={()=>go('chat')}><MessageCircle size={18}/></button>
     <button className="top-icon" title="Connections" aria-label="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
     <FrameNotifications uid={uid} onNavigate={href=>href&&go(href)}/>
     {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
-    <button className="top-account" type="button" title="Settings" aria-label="Settings" onClick={()=>go('settings')}>
-      <span className="top-avatar">{(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
+    <button className="top-account" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
+      <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt="" onError={e=>{e.currentTarget.style.display='none'}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
       <span className="top-account-name">{profile?.display_name||user?.email?.split('@')[0]||'Account'}</span>
     </button>
     <button className="top-icon mobile-only" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['web','Web Search'],['radar','Release Radar'],['friends','Friends'],['chat','Global Chat'],['calls','Calls'],['connections','Connections']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['web','Web Search'],['radar','Release Radar'],['friends','Friends'],['chat','Global Chat'],['connections','Connections']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
    {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name}/>}
    {page==='library'&&<LibraryPage items={shown} filter={filter} setFilter={setFilter} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)}/>}
@@ -314,7 +312,7 @@ function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;
   <section className="home-overview" aria-label="Library overview"><div><b>{total}</b><span>Library</span></div><div><b>{active.length}</b><span>In progress</span></div><div><b>{items.filter(x=>x.status==='completed').length}</b><span>Completed</span></div><div><b>{favorites.length}</b><span>Favorites</span></div></section>
   {active.length>0&&<section className="home-shelf home-continue"><div className="section-title"><div><small>KEEP GOING</small><h2>Continue</h2></div><button className="text-action" onClick={()=>go('library')}>View library <ChevronRight size={14}/></button></div><div className="media-grid">{active.slice(0,5).map(x=><Card key={x.id} item={x} open={open}/>)}</div></section>}
   {favorites.length>0&&<section className="home-shelf home-favorites"><div className="section-title"><div><small>PINNED</small><h2>Favorites</h2></div><span>{favorites.length}</span></div><div className="media-grid">{favorites.slice(0,5).map(x=><Card key={x.id} item={x} open={open}/>)}</div></section>}
-  <section className="home-tools"><div className="home-tools-head"><small>SHORTCUTS</small><h2>Go somewhere</h2></div><div className="home-tool-grid"><button onClick={finder}><Search size={19}/><span><b>Find media</b><small>Search every connected catalogue</small></span><ChevronRight size={15}/></button><button onClick={()=>go('discover')}><Compass size={19}/><span><b>Discover</b><small>Explore new titles and sources</small></span><ChevronRight size={15}/></button><button onClick={()=>go('radar')}><CalendarDays size={19}/><span><b>Release Radar</b><small>See tracked releases</small></span><ChevronRight size={15}/></button></div></section>
+  <section className="home-tools"><div className="home-tools-head"><small>SHORTCUTS</small><h2>Go somewhere</h2></div><div className="home-tool-grid"><button onClick={finder}><Search size={19}/><span><b>Find media</b><small>Search every connected catalogue</small></span><ChevronRight size={15}/></button><button onClick={()=>go('discover')}><Compass size={19}/><span><b>Discover</b><small>Explore new titles and sources</small></span><ChevronRight size={15}/></button><button onClick={()=>go('radar')}><CalendarDays size={19}/><span><b>Release Radar</b><small>See tracked releases</small></span><ChevronRight size={15}/></button><button onClick={()=>go('calls')}><Radio size={19}/><span><b>Global Call</b><small>Join or start the public FRAME voice room</small></span><ChevronRight size={15}/></button></div></section>
   {total>0&&<section className="home-shelf home-top-rated"><div className="section-title"><div><small>YOUR SCORES</small><h2>Top rated</h2></div><span>{topRated.length}</span></div><div className="media-grid">{topRated.slice(0,6).map(x=><Card key={x.id} item={x} open={open}/>)}</div></section>}
   {!total&&<section className="home-empty"><div className="home-empty-mark"><img src="/frame-logo.svg" alt=""/></div><div><small>NO TITLES YET</small><h2>Start with something you already watch, read or play.</h2><p>Use the finder to pull in metadata, then set the status and progress you want.</p><button className="primary" onClick={finder}><Search size={15}/>Find your first title</button></div></section>}
  </div>;
