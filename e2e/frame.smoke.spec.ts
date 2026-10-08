@@ -32,7 +32,8 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByRole('heading', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
 
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Library', exact: true }).first().click();
+    await expect(page.getByText('FRAME Guest Persistence Test', { exact: true })).toBeVisible();
   });
 
   test('persists guest appearance changes and exposes sign-in', async ({ page }) => {
