@@ -229,12 +229,24 @@ async function detailExternal(result:DiscoveryResult){
    const x=await fetchJsonWithTimeout('https://api.tvmaze.com/shows/'+encodeURIComponent(result.externalId)+'?embed=episodes') as any;
    return{...result,total:Array.isArray(x._embedded?.episodes)?x._embedded.episodes.length:result.total,description:x.summary||result.description,poster:x.image?.original||result.poster,backdrop:x.image?.original||result.backdrop,sourceUrl:x.officialSite||x.url};
   }
-  if(result.provider==='steam'){
-   const raw=await fetchJsonWithTimeout('https://store.steampowered.com/api/appdetails?appids='+encodeURIComponent(result.externalId)+'&cc=IN&l=english') as Record<string,{success:boolean;data?:any}>;
-   const x=raw[result.externalId];
-   if(x?.success&&x.data){
-    const finalPrice=Number(x.data.price_overview?.final??0);
-    return{...result,description:x.data.short_description||x.data.detailed_description||result.description,poster:x.data.header_image||result.poster,backdrop:x.data.background||result.backdrop,year:x.data.release_date?.date?Number(String(x.data.release_date.date).match(/(19|20)\d{2}/)?.[0]):result.year,game:{...(result.game||{}),developer:x.data.developers?.join(', '),publisher:x.data.publishers?.join(', '),releaseDate:x.data.release_date?.date,isFree:Boolean(x.data.is_free),priceText:finalPrice?('₹'+(finalPrice/100).toFixed(2)):undefined,platforms:x.data.platforms?Object.entries(x.data.platforms).filter(([,v])=>Boolean(v)).map(([k])=>k):[],gameModes:Array.isArray(x.data.categories)?x.data.categories.map((v:any)=>String(v.description)):[],storeUrl:'https://store.steampowered.com/app/'+result.externalId+'/'}};
+  if(result.provider==='gamelegend'){
+   const data=await fetchJsonWithTimeout('https://www.gamelegend.com/api/v1/games/'+encodeURIComponent(result.externalId)) as {game?:any};
+   const x=data.game;
+   if(x)return{
+    ...result,
+    title:String(x.title||result.title),
+    poster:String(x.coverImageUrl||result.poster||''),
+    description:clean(String(x.description||result.description||'')),
+    year:extractYear(x.releaseDate)||result.year,
+    sourceUrl:String(x.url||result.sourceUrl||''),
+    game:{
+     ...(result.game||{}),
+     platforms:Array.isArray(x.platforms)?x.platforms.map(String):result.game?.platforms,
+     releaseDate:x.releaseDate||result.game?.releaseDate,
+     storeUrl:String(x.url||result.game?.storeUrl||result.sourceUrl||'')
+    }
+   };
+  }
    }
   }
   if(result.provider==='movie'){
