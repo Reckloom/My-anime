@@ -180,7 +180,7 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
  try{
   const data=await discoveryRequest({action:'search',query:term,provider});
   const found=Array.isArray(data.results)?data.results as DiscoveryResult[]:[];
-  if(found.length)return found;
+  if(found.length)return await enrichMovieArtwork(found);
  }catch{}
  if(supabase){
   try{
@@ -190,7 +190,7 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
   }catch{}
  }
  const found=await directExternalSearch(term,provider);
- if(found.length)return found;
+ if(found.length)return await enrichMovieArtwork(found);
  throw new Error(providerLabel(provider)+' did not return any matches. Try another spelling or title.');
 }
 
