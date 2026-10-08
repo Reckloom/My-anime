@@ -9,16 +9,16 @@ function response(body:Record<string,unknown>,status=200){
 }
 
 function clean(value?:string|null){
-  return (value||'').replace(/<br\\s*\\/?>(\\s*)/gi,' ').replace(/<[^>]+>/g,'').trim();
+  return (value||'').replace(/<br\s*\/?>(\s*)/gi,' ').replace(/<[^>]+>/g,'').trim();
 }
 
 function extractYear(value?:string|null){
-  const m=String(value||'').match(/(?:18|19|20)\\d{2}/);
+  const m=String(value||'').match(/(?:18|19|20)\d{2}/);
   return m?Number(m[0]):undefined;
 }
 
 function cleanSearch(value:string,max=160){
-  return value.trim().replace(/[\\r\\n]+/g,' ').slice(0,max);
+  return value.trim().replace(/[\r\n]+/g,' ').slice(0,max);
 }
 
 async function getJson(url:string,headers:Record<string,string>={}){
@@ -152,7 +152,7 @@ function mapIgdbGame(game:any){
 }
 
 async function searchIgdb(query:string){
-  const term=cleanSearch(query).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+  const term=cleanSearch(query).replace(/\/g,'\\').replace(/"/g,'\"');
   const data=await igdbQuery(
     'search "'+term+'"; fields id,name,slug,summary,cover.image_id,artworks.image_id,first_release_date,genres.name,platforms.name,alternative_names.name,rating,aggregated_rating,url,game_modes.name; limit 12;'
   );
