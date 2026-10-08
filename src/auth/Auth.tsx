@@ -11,8 +11,13 @@ export function AuthProvider({children}:{children:ReactNode}){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(Boolean(supabase));
  const signOutCurrent=async()=>{
   localStorage.removeItem('frame-guest');
-  if(supabase){
-   void supabase.auth.signOut({scope:'local'}).catch(error=>console.warn('[FRAME logout]',error));
+  try{
+   if(supabase){
+    const {error}=await supabase.auth.signOut({scope:'local'});
+    if(error)console.warn('[FRAME logout]',error);
+   }
+  }catch(error){
+   console.warn('[FRAME logout]',error);
   }
   try{
    for(const storage of [window.localStorage,window.sessionStorage]){
@@ -22,7 +27,8 @@ export function AuthProvider({children}:{children:ReactNode}){
    }
   }catch{}
   setSession(null);
-  window.location.replace(window.location.origin+window.location.pathname);
+  setLoading(false);
+  window.location.assign(window.location.origin+window.location.pathname);
  };
  useEffect(()=>{
   if(!supabase){setLoading(false);return}
