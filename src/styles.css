@@ -2671,7 +2671,7 @@ button,a{color:inherit}
 
 
 /* DETAIL HEADER POSTER REMOVAL — permanent */
-/* The detail modal contains no poster/backdrop artwork. */
-.detail-modal .detail-body{margin-top:0!important;grid-template-columns:minmax(0,1fr)!important}
-.detail-modal .detail-poster{display:none!important}
-@media(max-width:760px){.detail-modal .detail-body{margin-top:0!important;grid-template-columns:minmax(0,1fr)!important}.detail-modal .detail-poster{display:none!important}}
+/* Keep the compact poster beside the title; only the oversized header artwork is removed. */
+.detail-modal .detail-body{margin-top:0!important;grid-template-columns:110px minmax(0,1fr)!important}
+.detail-modal .detail-poster{display:block!important}
+@media(max-width:760px){.detail-modal .detail-body{margin-top:0!important;grid-template-columns:90px minmax(0,1fr)!important}.detail-modal .detail-poster{display:block!important;width:90px;height:135px}}
