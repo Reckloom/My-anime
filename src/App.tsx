@@ -230,22 +230,30 @@ export default function App(){
  const removeOwnedArtwork=async(url?:string)=>{const client=supabase;if(!client||!user?.id||!url)return;try{const parsed=new URL(url);const prefix='/storage/v1/object/public/frame-media-art/';if(!parsed.pathname.startsWith(prefix))return;const path=decodeURIComponent(parsed.pathname.slice(prefix.length));if(path.startsWith(user.id+'/'))await client.storage.from('frame-media-art').remove([path]);}catch{}};
  const updateConnection=async(id:string)=>{const enabled=!connections[id];setConnections({...connections,[id]:enabled});const client=supabase;if(client&&user?.id)await client.from('connected_apps').upsert({user_id:user.id,provider:id,enabled,config:{}},{onConflict:'user_id,provider'})};
  const shown=useMemo(()=>{
-  const normalized=query.trim().toLowerCase();
-  const activeFilters=filters.filter(x=>x!=='all');
-  const hasFilter=activeFilters.length>0;
-  const isFacetMatch=(x:MediaItem)=>activeFilters.some(f=>f==='incomplete'?progressPercent(x)<100:x.status===f||x.medium===f);
-  const textMatches=(x:MediaItem)=>{
-   const text=[x.title,...(x.alternativeTitles||[]),x.medium,x.status,x.description||'',...(x.genres||[])].join(' ').toLowerCase();
-   return !normalized||text.includes(normalized);
-  };
-  return sortMedia(items,sortMode).filter(x=>{
-   if(!textMatches(x))return false;
-   const isParent=items.some(y=>y.parentId===x.id);
-   if(!hasFilter)return !x.parentId;
-   if(!isFacetMatch(x))return false;
-   return !isParent;
-  });
- },[items,sortMode,query,filters]);
+ const normalized=query.trim().toLowerCase();
+ const activeFilters=filters.filter(x=>x!=='all');
+ const mediaFilterIds=Object.keys(types);
+ const statusFilterIds=['incomplete','watching','reading','playing','completed','planned','paused','dropped'];
+ const activeMedia=activeFilters.filter(x=>mediaFilterIds.includes(x));
+ const activeStatus=activeFilters.filter(x=>statusFilterIds.includes(x));
+ const textMatches=(x:MediaItem)=>{
+  const text=[x.title,...(x.alternativeTitles||[]),x.medium,x.status,x.description||'',...(x.genres||[])].join(' ').toLowerCase();
+  return !normalized||text.includes(normalized);
+ };
+ const facetMatches=(x:MediaItem)=>{
+  const mediaMatch=!activeMedia.length||activeMedia.includes(x.medium);
+  const statusMatch=!activeStatus.length||activeStatus.some(f=>f==='incomplete'?progressPercent(x)<100:x.status===f);
+  return mediaMatch&&statusMatch;
+ };
+ const hasFilter=activeFilters.length>0;
+ return sortMedia(items,sortMode).filter(x=>{
+  if(!textMatches(x))return false;
+  const isParent=items.some(y=>y.parentId===x.id);
+  if(!hasFilter)return !x.parentId;
+  if(!facetMatches(x))return false;
+  return !isParent;
+ });
+},[items,sortMode,query,filters]);
  const pageHistoryReady=useRef(false);
  useEffect(()=>{
   if(!pageHistoryReady.current){
@@ -343,9 +351,42 @@ function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;li
 }
 
 function LibraryPage({items,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
- const fs:[string,string][]=[['all','All'],['incomplete','Not 100%'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped'],...Object.entries(types)];
- const toggle=(id:string)=>{if(id==='all'){setFilters(['all']);return}const base=filters.filter(x=>x!=='all');const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];setFilters(next.length?next:['all']);};
- return <div className="page library-page"><div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div><div className="library-controls"><div className="filter-scroll">{fs.map(([id,label])=><button type="button" className={filters.includes(id)?'active':''} key={id} onClick={()=>toggle(id)} aria-pressed={filters.includes(id)}>{label}</button>)}</div><label className="sort-select"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label></div><div className="media-grid">{items.map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/>}</div>;
+ const statusFilters:[string,string][]=[['incomplete','Not 100%'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
+ const mediaFilters:[string,string][]=[['all','All Media'],...Object.entries(types)];
+ const toggleMedia=(id:string)=>{
+  const mediaIds=mediaFilters.slice(1).map(([key])=>key);
+  const statusOnly=filters.filter(x=>x!=='all'&&!mediaIds.includes(x));
+  if(id==='all'){setFilters(statusOnly.length?['all',...statusOnly]:['all']);return}
+  const base=filters.filter(x=>x!=='all');
+  const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];
+  const nextHasMedia=next.some(x=>mediaIds.includes(x));
+  setFilters(nextHasMedia?next:['all',...statusOnly]);
+ };
+ const toggleStatus=(id:string)=>{
+  const mediaIds=mediaFilters.slice(1).map(([key])=>key);
+  const base=filters.filter(x=>x!=='all');
+  const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];
+  const hasMedia=next.some(x=>mediaIds.includes(x));
+  setFilters(next.length?(hasMedia?next:['all',...next]):['all']);
+ };
+ const allMediaActive=!mediaFilters.slice(1).some(([key])=>filters.includes(key));
+ return <div className="page library-page">
+  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div>
+  <div className="library-controls">
+   <div className="filter-groups">
+    <div className="filter-group">
+     <span className="filter-group-label">Media</span>
+     <div className="filter-scroll media-filter-scroll">{mediaFilters.map(([id,label])=><button type="button" className={(id==='all'?allMediaActive:filters.includes(id))?'active':''} key={id} onClick={()=>toggleMedia(id)} aria-pressed={id==='all'?allMediaActive:filters.includes(id)}>{label}</button>)}</div>
+    </div>
+    <div className="filter-group">
+     <span className="filter-group-label">Status</span>
+     <div className="filter-scroll status-filter-scroll">{statusFilters.map(([id,label])=><button type="button" className={filters.includes(id)?'active':''} key={id} onClick={()=>toggleStatus(id)} aria-pressed={filters.includes(id)}>{label}</button>)}</div>
+    </div>
+   </div>
+   <label className="sort-select"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label>
+  </div>
+  <div className="media-grid">{items.map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/>}
+ </div>;
 }
 function Discover({finder,go}:{finder:()=>void;go:(x:string)=>void}){return <div className="page"><div className="page-heading"><div><small>UNIVERSAL DISCOVERY</small><h1>Explore everything.</h1><p>One consistent interface for media, metadata and connected services.</p></div></div><div className="feature-grid"><button className="feature-card" onClick={finder}><Search size={22}/><h3>Universal search</h3><p>AniList + Jikan, IGDB + RAWG, TMDB, VNDB, Open Library + Google Books and more.</p><ChevronRight/></button><button className="feature-card" onClick={()=>go('connections')}><Link2 size={22}/><h3>Connections</h3><p>Control the catalogues and services FRAME uses.</p><ChevronRight/></button></div></div>}
 function RadarPage({releases,busy,error,refresh}:{releases:Radar[];busy:boolean;error:string;refresh:()=>void}){const up=releases.filter(x=>!x.released).sort((a,b)=>Date.parse(a.airingAt)-Date.parse(b.airingAt));return <div className="page radar-page"><div className="page-heading"><div><small>RELEASE INTELLIGENCE</small><h1>Release Radar</h1><p>Upcoming releases for tracked AniList titles.</p></div><button className="secondary" disabled={busy} onClick={refresh}>{busy?<RefreshCw className="spin"/>:<RefreshCw/>}Refresh</button></div>{error&&<div className="inline-error">{error}</div>}<section className="radar-panel"><div className="section-title"><div><small>UP NEXT</small><h2>Upcoming</h2></div><span>{up.length}</span></div>{up.length?<div className="release-list">{up.slice(0,30).map(x=><div key={x.anilistId+'-'+x.episode}><img src={x.poster||poster} alt=""/><section><b>{x.title}</b><small>Episode {x.episode}</small><span>{new Date(x.airingAt).toLocaleString()}</span></section></div>)}</div>:<Empty text="No upcoming tracked releases."/ >}</section></div>}
