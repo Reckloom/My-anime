@@ -290,7 +290,7 @@ export default function App(){
 
  return <div className="frame-app">
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
-  <header className="frame-topbar">
+  <header className="frame-topbar" role="banner">
    <button className="frame-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
    <nav className="frame-nav">
     {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
