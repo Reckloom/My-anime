@@ -186,7 +186,7 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
   try{
    const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'search',query:term,provider}});
    const found=((data||{}) as ExternalResponse).results||[];
-   if(!error&&found.length)return found;
+   if(!error&&found.length)return await enrichMovieArtwork(found);
   }catch{}
  }
  const found=await directExternalSearch(term,provider);
