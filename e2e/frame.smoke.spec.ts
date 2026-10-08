@@ -4,7 +4,7 @@ test.describe('FRAME core smoke flow', () => {
   test('loads the app and exposes the main navigation', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('banner')).toBeVisible();
-    for (const label of ['Home', 'Library', 'Discover', 'Web', 'Radar', 'Friends', 'Chat']) {
+    for (const label of ['Home', 'Library', 'Discover']) {
       await expect(page.getByRole('button', { name: label, exact: true }).first()).toBeVisible();
     }
   });
@@ -53,14 +53,22 @@ test.describe('FRAME core smoke flow', () => {
 
   test('makes Discover shortcuts useful', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
-    await page.getByRole('heading', { name: 'Where to find it', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Web Search', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Find media' }).click();
+    await expect(page.getByText('Find anything for FRAME')).toBeVisible();
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
     await page.getByRole('heading', { name: 'Connections', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Connections', exact: true })).toBeVisible();
   });
 
+
+  test('logo returns Home and account bubble opens Settings', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Go to FRAME home', exact: true }).click();
+    await expect(page.locator('h1').filter({ hasText: /Welcome back/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
+    await expect(page.locator('h1').filter({ hasText: /^Settings$/ })).toBeVisible();
+  });
 
   test('opens Settings and switches appearance controls', async ({ page }) => {
     await page.goto('/');
@@ -79,10 +87,7 @@ test.describe('FRAME core smoke flow', () => {
     const targets: Array<[string, RegExp]> = [
       ['Library', /^Library$/],
       ['Discover', /Explore everything\./],
-      ['Web', /Web Search/],
       ['Radar', /Release Radar/],
-      ['Friends', /^Friends$/],
-      ['Chat', /Global Chat/],
     ];
 
     for (const [button, heading] of targets) {
