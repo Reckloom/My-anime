@@ -19,5 +19,43 @@ export function FrameLibraryImport({onImport}:ImportedProps){
   window.clearTimeout(timer);
   const j=await r.json().catch(()=>({}));
   if(r.status===429)throw new Error('MyAnimeList is rate-limiting this import. Wait a moment and try again.');
-  if(!r.ok)throw new Error(j?.message||`MyAnimeList import failed (HTTP ${r.status}).`);const list:MediaItem[]=(j.data||[]).map((row:any)=>{const m=row.node||{};const s=String(row.status||'plan_to_watch');const medium=kind==='anime'?'anime':'manga';const total=medium==='anime'?Number(m.episodes||0):Number(m.chapters||0);return {id:crypto.randomUUID(),sourceProvider:'myanimelist',externalId:String(m.mal_id||''),title:String(m.title||'Untitled'),alternativeTitles:[],description:'Imported from MyAnimeList.',poster:m.images?.jpg?.large_image_url||m.images?.jpg?.image_url||'',backdrop:'',medium,status:malStatusMap[s]||'planned',progress:Number(row.progress||0),total,year:undefined,score:m.score==null?undefined:Number(m.score)/10,personalRating:row.score?Number(row.score)/10:undefined,genres:[],themes:[],favorite:false}});onImport(list);setMessage('Imported '+list.length+' '+kind+' entries from MyAnimeList.');  }catch(e){setMessage(e instanceof DOMException&&e.name==='AbortError'?'MyAnimeList import timed out.':e instanceof Error?e.message:'MyAnimeList import failed.')}finally{setBusy(false)}}; return <section className="connections-section import-section"><div className="connections-section-head"><div><small>LIBRARY MIGRATION</small><h2>Import an existing library</h2></div><span>Non-destructive merge</span></div><div className="import-grid"><div><label>Source<select value={source} onChange={e=>setSource(e.target.value as 'anilist'|'mal')}><option value="anilist">AniList</option><option value="mal">MyAnimeList</option></select></label><label>{source==='anilist'?'AniList':'MyAnimeList'} username<input value={username} onChange={e=>setUsername(e.target.value)} placeholder="username"/></label><label>Media type<select value={kind} onChange={e=>setKind(e.target.value as 'anime'|'manga')}><option value="anime">Anime</option><option value="manga">Manga</option></select></label><button className="primary" disabled={busy} onClick={()=>void (source==='anilist'?importAniList():importMal())}>{busy?<><RefreshCw className="spin"/>Importing…</>:<><Download size={15}/>Import library</>}</button><small className="import-note">Imports preserve your current FRAME data when a matching entry already exists.</small></div><div className="import-benefits"><b>What gets brought over</b><span>Title, poster, source score, status and progress</span><span>Existing FRAME ratings and notes stay yours</span><span>Duplicates are merged instead of blindly added</span></div></div>{message&&<div className="inline-error" style={{marginTop:12}}>{message}</div>}</section>;
-}
+  if(!r.ok)throw new Error(j?.message||`MyAnimeList import failed (HTTP ${r.status}).`);const list:MediaItem[]=(j.data||[]).map((row:any)=>{const m=row.node||{};const s=String(row.status||'plan_to_watch');const medium=kind==='anime'?'anime':'manga';const total=medium==='anime'?Number(m.episodes||0):Number(m.chapters||0);return {id:crypto.randomUUID(),sourceProvider:'myanimelist',externalId:String(m.mal_id||''),title:String(m.title||'Untitled'),alternativeTitles:[],description:'Imported from MyAnimeList.',poster:m.images?.jpg?.large_image_url||m.images?.jpg?.image_url||'',backdrop:'',medium,status:malStatusMap[s]||'planned',progress:Number(row.progress||0),total,year:undefined,score:m.score==null?undefined:Number(m.score)/10,personalRating:row.score?Number(row.score)/10:undefined,genres:[],themes:[],favorite:false}});onImport(list);setMessage('Imported '+list.length+' '+kind+' entries from MyAnimeList.');  }catch(e){setMessage(e instanceof DOMException&&e.name==='AbortError'?'MyAnimeList import timed out.':e instanceof Error?e.message:'MyAnimeList import failed.')}finally{setBusy(false)}}; return <section className="connections-section import-section">
+  <div className="connections-section-head">
+    <div><small>LIBRARY MIGRATION</small><h2>Import an existing library</h2></div>
+    <span>Non-destructive merge</span>
+  </div>
+  <div className="import-grid">
+    <div className="import-form-grid">
+      <label>
+        <span>Source</span>
+        <select value={source} onChange={e=>{setSource(e.target.value as 'anilist'|'mal');setMessage('')}}>
+          <option value="anilist">AniList</option>
+          <option value="mal">MyAnimeList</option>
+        </select>
+      </label>
+      <label>
+        <span>{source==='anilist'?'AniList username':'MyAnimeList username'}</span>
+        <input value={username} onChange={e=>{setUsername(e.target.value);setMessage('')}} placeholder="Enter username" autoComplete="off"/>
+      </label>
+      <label>
+        <span>Media type</span>
+        <select value={kind} onChange={e=>{setKind(e.target.value as 'anime'|'manga');setMessage('')}}>
+          <option value="anime">Anime</option>
+          <option value="manga">Manga</option>
+        </select>
+      </label>
+      <button className="primary import-submit" disabled={busy} onClick={()=>void (source==='anilist'?importAniList():importMal())}>
+        {busy?<><RefreshCw className="spin"/>Importing…</>:<><Download size={15}/>Import library</>}
+      </button>
+      <p className="import-note">Your existing FRAME ratings, notes, progress and favorites stay in place when a matching title is found.</p>
+    </div>
+    <div className="import-benefits">
+      <div className="import-benefits-head"><Download size={15}/><b>What FRAME imports</b></div>
+      <span>Title, poster and source metadata</span>
+      <span>Watching / completed / planned status</span>
+      <span>Your external progress and ratings</span>
+      <span>Duplicates merged instead of copied twice</span>
+    </div>
+  </div>
+  {message&&<div className={'import-message '+(message.toLowerCase().includes('imported')?'success':'error')} role="status">{message}</div>}
+ </section>;
