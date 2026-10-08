@@ -14,8 +14,17 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
    if(error){
     let detail='';
     const ctx=(error as any).context;
-    if(ctx?.json) {
-      try { const body=await ctx.json(); detail=typeof body?.error==='string'?body.error:''; } catch {}
+    if(ctx){
+     try{
+      const cloned=typeof ctx.clone==='function'?ctx.clone():ctx;
+      const body=await cloned.json();
+      detail=typeof body?.error==='string'?body.error:'';
+     }catch{
+      try{
+       const cloned=typeof ctx.clone==='function'?ctx.clone():ctx;
+       detail=await cloned.text();
+      }catch{}
+     }
     }
     throw new Error(detail||error.message||'FRAME AI request failed.');
    }
