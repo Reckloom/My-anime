@@ -70,8 +70,9 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    <aside className="detail-drawer detail-modal" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
     <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
    <div className={d.backdrop?'detail-cover has-backdrop':'detail-cover poster-backdrop'}>
-    <img className="detail-cover-bg" src={d.backdrop||d.poster||'/frame-logo.svg'} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
-    {!d.backdrop&&<img className="detail-cover-art" src={d.poster||'/frame-logo.svg'} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>}
+    {d.backdrop
+      ? <img className="detail-cover-bg" src={d.backdrop} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
+      : <img className="detail-cover-art" src={d.poster||'/frame-logo.svg'} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>}
     <div/>
    </div>
    <div className="detail-body">
