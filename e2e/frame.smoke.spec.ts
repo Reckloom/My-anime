@@ -83,13 +83,14 @@ test.describe('FRAME core smoke flow', () => {
       ['Radar', /Release Radar/],
       ['Friends', /^Friends$/],
       ['Chat', /Global Chat/],
-      ['Settings', /^Settings$/],
     ];
 
     for (const [button, heading] of targets) {
       await page.getByRole('button', { name: button, exact: true }).first().click();
       await expect(page.locator('h1').filter({ hasText: heading })).toBeVisible();
     }
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
+    await expect(page.locator('h1').filter({ hasText: /^Settings$/ })).toBeVisible();
   });
 });
 
