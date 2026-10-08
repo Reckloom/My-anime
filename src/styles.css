@@ -2514,3 +2514,7 @@ button,a{color:inherit}
   .finder-detail-actions{display:grid!important}
   .finder-detail-actions button,.finder-detail-actions a{width:100%!important;justify-content:center!important}
 }
+
+
+/* Account switching controls */
+.account-access-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}.account-access-actions button{display:inline-flex;align-items:center;justify-content:center;gap:8px}.settings-security-panel>.muted{max-width:760px;margin-top:12px;line-height:1.5}@media(max-width:560px){.account-access-actions{display:grid;grid-template-columns:1fr}.account-access-actions button{width:100%}}
