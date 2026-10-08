@@ -177,7 +177,7 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
   }
   return rows
    .map(x=>({
-    id:x.id??x.appid??x.appId??String(x.url||'').match(/\\/app\\/(\\d+)/)?.[1],
+    id:x.id??x.appid??x.appId??String(x.url||'').match(/\/app\/(\d+)/)?.[1],
     name:x.name??x.title,
     poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
     price:x.price
