@@ -234,7 +234,7 @@ export default function App(){
   const matches=(x:MediaItem)=>{
    const text=[x.title,...(x.alternativeTitles||[]),x.medium,x.status,x.description||'',...(x.genres||[])].join(' ').toLowerCase();
    const textMatch=!normalized||text.includes(normalized);
-   const filterMatch=filter==='all'||filter==='incomplete'?progressPercent(x)<100:x.status===filter||x.medium===filter;
+   const filterMatch=filter==='all'||(filter==='incomplete'?progressPercent(x)<100:x.status===filter||x.medium===filter);
    return textMatch&&filterMatch;
   };
   const statusFilter=['watching','reading','playing','completed','planned','paused','dropped','incomplete'].includes(filter);
