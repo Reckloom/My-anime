@@ -129,8 +129,8 @@ test.describe('FRAME discovery integration', () => {
 test.describe('FRAME quick actions', () => {
   test('keeps Chat and Call in the floating action hub, not primary nav', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
+    await expect(page.locator('.frame-nav').getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
+    await expect(page.locator('.frame-nav').getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
     await page.getByTitle('Open quick actions').click();
     await expect(page.getByTitle('Chat')).toBeVisible();
     await expect(page.getByTitle('Call')).toBeVisible();
