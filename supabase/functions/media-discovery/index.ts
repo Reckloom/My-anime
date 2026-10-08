@@ -4,263 +4,510 @@ const HEADERS = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-type Provider = 'game'|'series'|'movie'|'book';
-
-function response(body:Record<string,unknown>, status=200){
+function response(body:Record<string,unknown>,status=200){
   return Response.json(body,{status,headers:HEADERS});
 }
 
 function clean(value?:string|null){
-  return (value||'').replace(/<br\s*\/?>(\s*)/gi,' ').replace(/<[^>]+>/g,'').trim();
+  return (value||'').replace(/<br\\s*\\/?>(\\s*)/gi,' ').replace(/<[^>]+>/g,'').trim();
 }
 
-async function getJson(url:string){
+function extractYear(value?:string|null){
+  const m=String(value||'').match(/(?:18|19|20)\\d{2}/);
+  return m?Number(m[0]):undefined;
+}
+
+function cleanSearch(value:string,max=160){
+  return value.trim().replace(/[\\r\\n]+/g,' ').slice(0,max);
+}
+
+async function getJson(url:string,headers:Record<string,string>={}){
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
+  const timer=setTimeout(()=>controller.abort(),15000);
   try{
     const r=await fetch(url,{
-      headers:{Accept:'application/json','User-Agent':'FRAME/1.0'},
+      headers:{Accept:'application/json',...headers},
       signal:controller.signal
     });
     const text=await r.text();
     let json:any;
     try{json=JSON.parse(text)}catch{throw new Error('Source returned an invalid response.')}
-    if(!r.ok) throw new Error(`Source request failed (HTTP ${r.status}).`);
+    if(!r.ok)throw new Error('Source request failed (HTTP '+r.status+').');
     return json;
   }catch(e){
-    if(e instanceof DOMException&&e.name==='AbortError') throw new Error('Source request timed out.');
+    if(e instanceof DOMException&&e.name==='AbortError')throw new Error('Source request timed out.');
     throw e;
-  }finally{clearTimeout(timer);}
+  }finally{clearTimeout(timer)}
 }
 
-async function postJson(url:string,body:unknown){
+async function postJson(url:string,body:unknown,headers:Record<string,string>={}){
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
+  const timer=setTimeout(()=>controller.abort(),15000);
   try{
     const r=await fetch(url,{
       method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'application/json','User-Agent':'FRAME/1.0'},
+      headers:{'Content-Type':'application/json',Accept:'application/json',...headers},
       body:JSON.stringify(body),
       signal:controller.signal
     });
     const text=await r.text();
     let json:any;
     try{json=JSON.parse(text)}catch{throw new Error('Source returned an invalid response.')}
-    if(!r.ok) throw new Error(`Source request failed (HTTP ${r.status}).`);
+    if(!r.ok)throw new Error('Source request failed (HTTP '+r.status+').');
     return json;
   }catch(e){
-    if(e instanceof DOMException&&e.name==='AbortError') throw new Error('Source request timed out.');
+    if(e instanceof DOMException&&e.name==='AbortError')throw new Error('Source request timed out.');
     throw e;
-  }finally{clearTimeout(timer);}
+  }finally{clearTimeout(timer)}
 }
 
-
-function mobyGamesUrl(path:string,key:string){
-  const url=new URL('https://api.mobygames.com/v1'+path);
-  url.searchParams.set('api_key',key);
-  return url.toString();
+async function postForm(url:string,params:Record<string,string>){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),15000);
+  try{
+    const r=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded',Accept:'application/json'},
+      body:new URLSearchParams(params).toString(),
+      signal:controller.signal
+    });
+    const text=await r.text();
+    let json:any;
+    try{json=JSON.parse(text)}catch{throw new Error('Source returned an invalid response.')}
+    if(!r.ok)throw new Error('Source request failed (HTTP '+r.status+').');
+    return json;
+  }catch(e){
+    if(e instanceof DOMException&&e.name==='AbortError')throw new Error('Source request timed out.');
+    throw e;
+  }finally{clearTimeout(timer)}
 }
-function mobyImage(value:unknown){
+
+function firstError(errors:unknown[]){
+  for(const error of errors){
+    if(error instanceof Error&&error.message)return error.message;
+  }
+  return 'No provider returned usable results.';
+}
+
+/* ---------------- Games: IGDB -> RAWG ---------------- */
+
+let igdbTokenCache:{token:string;expiresAt:number}|null=null;
+
+async function getIgdbToken(){
+  const clientId=Deno.env.get('IGDB_CLIENT_ID')?.trim();
+  const clientSecret=Deno.env.get('IGDB_CLIENT_SECRET')?.trim();
+  if(!clientId||!clientSecret)throw new Error('IGDB credentials are not configured for FRAME.');
+  if(igdbTokenCache&&igdbTokenCache.expiresAt>Date.now()+60000)return{clientId,token:igdbTokenCache.token};
+  const data=await postForm('https://id.twitch.tv/oauth2/token',{
+    client_id:clientId,client_secret:clientSecret,grant_type:'client_credentials'
+  });
+  const token=String(data?.access_token||'');
+  if(!token)throw new Error('IGDB authentication returned no access token.');
+  igdbTokenCache={token,expiresAt:Date.now()+Math.max(60,Number(data?.expires_in||3600)-60)*1000};
+  return{clientId,token};
+}
+
+function igdbImage(imageId:unknown,size='t_cover_big'){
+  const id=String(imageId||'').trim();
+  return id?'https://images.igdb.com/igdb/image/upload/'+size+'/'+id+'.jpg':'';
+}
+
+async function igdbQuery(query:string){
+  const {clientId,token}=await getIgdbToken();
+  const r=await fetch('https://api.igdb.com/v4/games',{
+    method:'POST',
+    headers:{
+      Accept:'application/json',
+      'Client-ID':clientId,
+      Authorization:'Bearer '+token,
+      'Content-Type':'text/plain'
+    },
+    body:query
+  });
+  const text=await r.text();
+  let json:any;
+  try{json=JSON.parse(text)}catch{throw new Error('IGDB returned an invalid response.')}
+  if(!r.ok)throw new Error('IGDB request failed (HTTP '+r.status+').');
+  return json;
+}
+
+function mapIgdbGame(game:any){
+  const platforms=Array.isArray(game?.platforms)?game.platforms.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
+  const genres=Array.isArray(game?.genres)?game.genres.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
+  const alternatives=Array.isArray(game?.alternative_names)?game.alternative_names.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
+  const url=String(game?.url||'https://www.igdb.com/games/'+String(game?.slug||game?.id||''));
+  return{
+    provider:'igdb',externalId:String(game?.id),title:String(game?.name||'Untitled'),medium:'game',
+    poster:igdbImage(game?.cover?.image_id),backdrop:igdbImage(game?.artworks?.[0]?.image_id,'t_1080p'),
+    score:game?.aggregated_rating==null?(game?.rating==null?null:Number(game.rating)):Number(game.aggregated_rating),
+    year:game?.first_release_date?new Date(Number(game.first_release_date)*1000).getUTCFullYear():undefined,
+    description:clean(game?.summary||''),genres,themes:[...platforms],
+    alternativeTitles:[...new Set(alternatives)],source:'IGDB',sourceUrl:url,
+    game:{
+      isFree:false,platforms,releaseDate:game?.first_release_date?new Date(Number(game.first_release_date)*1000).toISOString():undefined,
+      gameModes:Array.isArray(game?.game_modes)?game.game_modes.map((x:any)=>String(x?.name||'')).filter(Boolean):[],
+      storeUrl:url
+    }
+  };
+}
+
+async function searchIgdb(query:string){
+  const term=cleanSearch(query).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+  const data=await igdbQuery(
+    'search "'+term+'"; fields id,name,slug,summary,cover.image_id,artworks.image_id,first_release_date,genres.name,platforms.name,alternative_names.name,rating,aggregated_rating,url,game_modes.name; limit 12;'
+  );
+  return(Array.isArray(data)?data:[]).slice(0,12).map(mapIgdbGame);
+}
+
+async function detailIgdb(id:string){
+  const numeric=Number(id);
+  if(!Number.isInteger(numeric)||numeric<1)throw new Error('A valid IGDB game ID is required.');
+  const data=await igdbQuery(
+    'where id = '+numeric+'; fields id,name,slug,summary,cover.image_id,artworks.image_id,first_release_date,genres.name,platforms.name,alternative_names.name,rating,aggregated_rating,url,game_modes.name; limit 1;'
+  );
+  const game=Array.isArray(data)?data[0]:null;
+  if(!game)throw new Error('IGDB game details were not found.');
+  return mapIgdbGame(game);
+}
+
+function rawgImage(value:unknown){
   const url=String(value||'').trim();
   return url?url.replace(/^http:/,'https:'):'';
 }
-function mobyKey(){
-  const key=Deno.env.get('MOBYGAMES_API_KEY')?.trim();
-  if(!key)throw new Error('MobyGames API key is not configured for FRAME.');
-  return key;
-}
-async function searchGames(q:string){
-  const key=mobyKey();
-  const data=await getJson(mobyGamesUrl('/games?'+new URLSearchParams({title:q.trim().slice(0,128),limit:'12',format:'normal'}).toString(),key));
-  const games=Array.isArray(data?.games)?data.games:[];
-  return games.slice(0,12).map((game:any)=>{
-    const platforms=Array.isArray(game?.platforms)?game.platforms.map((x:any)=>String(x?.platform_name||'')).filter(Boolean):[];
-    const genres=Array.isArray(game?.genres)?game.genres.map((x:any)=>String(x?.genre_name||'')).filter(Boolean):[];
-    const alternatives=Array.isArray(game?.alternate_titles)?game.alternate_titles.map((x:any)=>String(x?.title||'')).filter(Boolean):[];
-    const url=mobyImage(game?.moby_url)||('https://www.mobygames.com/game/'+String(game?.game_id||''));
-    const poster=mobyImage(game?.sample_cover?.image||game?.sample_cover?.thumbnail_image);
-    const year=extractYear(game?.platforms?.[0]?.first_release_date);
-    return {
-      provider:'mobygames',externalId:String(game?.game_id),title:String(game?.title||'Untitled'),medium:'game',
-      poster,backdrop:'',score:game?.moby_score==null?null:Number(game.moby_score),year,
-      description:clean(game?.description),genres,themes:platforms,alternativeTitles:[...new Set(alternatives)],
-      source:'MobyGames',sourceUrl:url,
-      game:{isFree:false,platforms,releaseDate:game?.platforms?.[0]?.first_release_date,gameModes:[],storeUrl:url}
-    };
-  });
-}
 
-async function detailGame(id:string){
-  const key=mobyKey();
-  const gameData=await getJson(mobyGamesUrl('/games/'+encodeURIComponent(id)+'?format=normal',key));
-  const game=Array.isArray(gameData?.games)?gameData.games[0]:gameData?.game;
-  if(!game) throw new Error('Game details were not available.');
-  const platforms=Array.isArray(game?.platforms)?game.platforms.map((x:any)=>String(x?.platform_name||'')).filter(Boolean):[];
-  const genres=Array.isArray(game?.genres)?game.genres.map((x:any)=>String(x?.genre_name||'')).filter(Boolean):[];
-  const alternatives=Array.isArray(game?.alternate_titles)?game.alternate_titles.map((x:any)=>String(x?.title||'')).filter(Boolean):[];
-  const url=mobyImage(game?.moby_url)||('https://www.mobygames.com/game/'+encodeURIComponent(id));
-  return {
-    provider:'mobygames',externalId:String(game?.game_id||id),title:String(game?.title||'Untitled'),medium:'game',
-    poster:mobyImage(game?.sample_cover?.image||game?.sample_cover?.thumbnail_image),backdrop:'',
-    score:game?.moby_score==null?null:Number(game.moby_score),year:extractYear(game?.platforms?.[0]?.first_release_date),
-    description:clean(game?.description),genres,themes:platforms,alternativeTitles:[...new Set(alternatives)],
-    source:'MobyGames',sourceUrl:url,
-    game:{isFree:false,platforms,releaseDate:game?.platforms?.[0]?.first_release_date,gameModes:[],storeUrl:url}
+function mapRawgGame(game:any){
+  const platforms=Array.isArray(game?.platforms)?game.platforms.map((x:any)=>String(x?.platform?.name||'')).filter(Boolean):[];
+  const genres=Array.isArray(game?.genres)?game.genres.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
+  const url=String(game?.website||('https://rawg.io/games/'+String(game?.slug||game?.id||'')));
+  return{
+    provider:'rawg',externalId:String(game?.id),title:String(game?.name||'Untitled'),medium:'game',
+    poster:rawgImage(game?.background_image||game?.background_image_additional),backdrop:rawgImage(game?.background_image_additional||game?.background_image),
+    score:game?.rating==null?null:Number(game.rating),year:extractYear(game?.released),
+    description:clean(game?.description_raw||game?.description||''),genres,themes:platforms,source:'RAWG',sourceUrl:url,
+    game:{isFree:false,platforms,releaseDate:game?.released,gameModes:Array.isArray(game?.game_modes)?game.game_modes.map(String):[],storeUrl:url}
   };
 }
 
-async function searchSeries(q:string){
-  const data=await getJson(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(q)}`);
-  return (Array.isArray(data)?data:[]).slice(0,12).map((x:any)=>({
+async function searchRawg(query:string){
+  const key=Deno.env.get('RAWG_API_KEY')?.trim();
+  if(!key)throw new Error('RAWG credentials are not configured for FRAME.');
+  const url=new URL('https://api.rawg.io/api/games');
+  url.searchParams.set('key',key);
+  url.searchParams.set('search',cleanSearch(query));
+  url.searchParams.set('page_size','12');
+  const data=await getJson(url.toString());
+  return(Array.isArray(data?.results)?data.results:[]).slice(0,12).map(mapRawgGame);
+}
+
+async function detailRawg(id:string){
+  const key=Deno.env.get('RAWG_API_KEY')?.trim();
+  if(!key)throw new Error('RAWG credentials are not configured for FRAME.');
+  const data=await getJson('https://api.rawg.io/api/games/'+encodeURIComponent(id)+'?key='+encodeURIComponent(key));
+  return mapRawgGame(data);
+}
+
+async function searchGames(query:string){
+  const errors:unknown[]=[];
+  try{const found=await searchIgdb(query);if(found.length)return found;}catch(e){errors.push(e)}
+  try{const found=await searchRawg(query);if(found.length)return found;}catch(e){errors.push(e)}
+  throw new Error(firstError(errors).replace('No provider returned usable results.','IGDB and RAWG did not return usable game results.'));
+}
+
+async function detailGame(provider:string,id:string){
+  if(provider==='igdb')return detailIgdb(id);
+  if(provider==='rawg')return detailRawg(id);
+  throw new Error('Unsupported game source.');
+}
+
+/* ---------------- Movies / Series: TMDB -> Wikipedia / TVMaze ---------------- */
+
+function tmdbImage(path:unknown,size='w500'){
+  const p=String(path||'').trim();
+  return p?'https://image.tmdb.org/t/p/'+size+p:'';
+}
+
+function tmdbHeaders(){
+  const token=Deno.env.get('TMDB_API_TOKEN')?.trim();
+  if(!token)throw new Error('TMDB credentials are not configured for FRAME.');
+  return{Authorization:'Bearer '+token};
+}
+
+async function searchTmdbMovies(query:string){
+  const url=new URL('https://api.themoviedb.org/3/search/movie');
+  url.searchParams.set('query',cleanSearch(query));
+  url.searchParams.set('include_adult','false');
+  url.searchParams.set('language','en-US');
+  url.searchParams.set('page','1');
+  const data=await getJson(url.toString(),tmdbHeaders());
+  return(Array.isArray(data?.results)?data.results:[]).slice(0,12).map((x:any)=>({
+    provider:'tmdb-movie',externalId:String(x.id),title:String(x.title||x.original_title||'Untitled'),medium:'movie',
+    poster:tmdbImage(x.poster_path),backdrop:tmdbImage(x.backdrop_path,'w1280'),score:x.vote_average==null?null:Number(x.vote_average),
+    year:extractYear(x.release_date),description:clean(x.overview),genres:[],themes:[],
+    source:'TMDB',sourceUrl:'https://www.themoviedb.org/movie/'+x.id
+  }));
+}
+
+async function detailTmdbMovie(id:string){
+  const data=await getJson('https://api.themoviedb.org/3/movie/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
+  return{
+    provider:'tmdb-movie',externalId:String(data.id),title:String(data.title||data.original_title||'Untitled'),medium:'movie',
+    poster:tmdbImage(data.poster_path),backdrop:tmdbImage(data.backdrop_path,'w1280'),score:data.vote_average==null?null:Number(data.vote_average),
+    year:extractYear(data.release_date),description:clean(data.overview),genres:Array.isArray(data.genres)?data.genres.map((x:any)=>String(x.name||'')).filter(Boolean):[],themes:[],
+    source:'TMDB',sourceUrl:'https://www.themoviedb.org/movie/'+data.id
+  };
+}
+
+async function searchTmdbSeries(query:string){
+  const url=new URL('https://api.themoviedb.org/3/search/tv');
+  url.searchParams.set('query',cleanSearch(query));
+  url.searchParams.set('include_adult','false');
+  url.searchParams.set('language','en-US');
+  url.searchParams.set('page','1');
+  const data=await getJson(url.toString(),tmdbHeaders());
+  return(Array.isArray(data?.results)?data.results:[]).slice(0,12).map((x:any)=>({
+    provider:'tmdb-tv',externalId:String(x.id),title:String(x.name||x.original_name||'Untitled'),medium:'series',
+    poster:tmdbImage(x.poster_path),backdrop:tmdbImage(x.backdrop_path,'w1280'),score:x.vote_average==null?null:Number(x.vote_average),
+    year:extractYear(x.first_air_date),description:clean(x.overview),genres:[],themes:[],
+    source:'TMDB',sourceUrl:'https://www.themoviedb.org/tv/'+x.id
+  }));
+}
+
+async function detailTmdbSeries(id:string){
+  const data=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
+  const seasons=Array.isArray(data?.seasons)?data.seasons.reduce((n:number,x:any)=>n+Number(x?.episode_count||0),0):undefined;
+  return{
+    provider:'tmdb-tv',externalId:String(data.id),title:String(data.name||data.original_name||'Untitled'),medium:'series',
+    poster:tmdbImage(data.poster_path),backdrop:tmdbImage(data.backdrop_path,'w1280'),score:data.vote_average==null?null:Number(data.vote_average),
+    year:extractYear(data.first_air_date),description:clean(data.overview),genres:Array.isArray(data.genres)?data.genres.map((x:any)=>String(x.name||'')).filter(Boolean):[],themes:[],
+    source:'TMDB',sourceUrl:'https://www.themoviedb.org/tv/'+data.id,total:seasons
+  };
+}
+
+async function searchWikipediaMovies(query:string){
+  const url='https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(cleanSearch(query)+' film')+'&gsrnamespace=0&gsrlimit=12&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=500&format=json&origin=*';
+  const data=await getJson(url);
+  return Object.values(data?.query?.pages||{}).map((x:any)=>({
+    provider:'wikipedia',externalId:String(x.pageid),title:String(x.title||'Untitled'),medium:'movie',
+    poster:String(x.thumbnail?.source||''),backdrop:'',score:null,year:extractYear(x.extract),description:clean(x.extract),
+    genres:[],themes:[],source:'Wikipedia',sourceUrl:x.fullurl||'https://en.wikipedia.org/?curid='+x.pageid
+  })).slice(0,12);
+}
+
+async function searchTvmaze(query:string){
+  const data=await getJson('https://api.tvmaze.com/search/shows?q='+encodeURIComponent(cleanSearch(query)));
+  return(Array.isArray(data)?data:[]).slice(0,12).map((x:any)=>({
     provider:'tvmaze',externalId:String(x.show?.id),title:String(x.show?.name||'Untitled'),medium:'series',
     poster:x.show?.image?.original||x.show?.image?.medium||'',backdrop:'',score:x.show?.rating?.average??null,
-    year:x.show?.premiered?Number(String(x.show.premiered).slice(0,4)):null,
-    description:clean(x.show?.summary),genres:x.show?.genres||[],themes:[],
-    status:x.show?.status,sourceUrl:x.show?.url||`https://www.tvmaze.com/shows/${x.show?.id}`
+    year:extractYear(x.show?.premiered),description:clean(x.show?.summary),genres:Array.isArray(x.show?.genres)?x.show.genres:[],themes:[],
+    source:'TVmaze',sourceUrl:x.show?.officialSite||x.show?.url||('https://www.tvmaze.com/shows/'+x.show?.id)
   }));
 }
 
-async function detailSeries(id:string){
-  const data=await getJson(`https://api.tvmaze.com/shows/${encodeURIComponent(id)}?embed=episodes`);
-  return {
-    provider:'tvmaze',externalId:String(data.id),title:String(data.name||'Untitled'),medium:'series',
-    poster:data.image?.original||data.image?.medium||'',backdrop:data.image?.original||'',
-    description:clean(data.summary),genres:data.genres||[],themes:[],year:data.premiered?Number(String(data.premiered).slice(0,4)):undefined,
-    score:data.rating?.average??undefined,source:data.network?.name||data.webChannel?.name||'TVmaze',
-    sourceUrl:data.url,airStart:data.premiered||undefined,airEnd:data.ended||undefined,total:Array.isArray(data?._embedded?.episodes)?data._embedded.episodes.length:undefined
-  };
+async function searchSeries(query:string){
+  try{const found=await searchTmdbSeries(query);if(found.length)return found;}catch{}
+  return searchTvmaze(query);
 }
 
-async function searchMovies(q:string){
-  const url=`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q+' film')}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
-  const data=await getJson(url);
-  const pages=Object.values(data?.query?.pages||{}) as any[];
-  const summaries=await Promise.all(pages.slice(0,8).map(async(page:any)=>{
-    const title=String(page?.title||'').replace(/#/g,'%23');
-    try{return await getJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g,'_'))}`)}catch{return null}
-  }));
-  const posterById=new Map<string,string>();
-  summaries.forEach((summary:any)=>{
-    if(summary?.pageid&&summary?.thumbnail?.source)posterById.set(String(summary.pageid),String(summary.thumbnail.source));
-  });
-  const ranked=pages.map((x:any)=>{
-    const title=String(x.title||'Untitled');
-    const hay=title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-    const needle=q.trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-    const tokens=needle.split(/\s+/).filter(Boolean);
-    let relevance=0;
-    if(hay===needle)relevance+=100;
-    if(hay.includes(needle))relevance+=45;
-    relevance+=tokens.filter((t:string)=>hay.includes(t)).length*7;
-    const extract=clean(x.extract);
-    if(/\b(film|movie|cinema|feature film)\b/i.test(extract))relevance+=8;
-    if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
-    const poster=x.thumbnail?.source||posterById.get(String(x.pageid))||'';
-    return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster,backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
-  }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12);
-  return ranked.map(({_relevance,...x}:any)=>x);
+async function detailSeries(provider:string,id:string){
+  if(provider==='tmdb-tv')return detailTmdbSeries(id);
+  if(provider==='tvmaze'){
+    const x=await getJson('https://api.tvmaze.com/shows/'+encodeURIComponent(id)+'?embed=episodes');
+    return{
+      provider:'tvmaze',externalId:String(x.id),title:String(x.name||'Untitled'),medium:'series',
+      poster:x.image?.original||x.image?.medium||'',backdrop:x.image?.original||'',score:x.rating?.average??null,
+      year:extractYear(x.premiered),description:clean(x.summary),genres:x.genres||[],themes:[],source:'TVmaze',
+      sourceUrl:x.url,total:Array.isArray(x._embedded?.episodes)?x._embedded.episodes.length:undefined
+    };
+  }
+  throw new Error('Unsupported series source.');
 }
 
-async function detailMovie(id:string){
-  const data=await getJson(`https://en.wikipedia.org/w/api.php?action=query&pageids=${encodeURIComponent(id)}&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*`);
+async function detailWikipediaMovie(id:string){
+  const data=await getJson('https://en.wikipedia.org/w/api.php?action=query&pageids='+encodeURIComponent(id)+'&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*');
   const page=Object.values(data?.query?.pages||{})[0] as any;
-  if(!page) throw new Error('Movie details were not available.');
-  return {
-    provider:'wikipedia',externalId:String(page.pageid),title:String(page.title||'Untitled'),medium:'movie',
-    poster:page.thumbnail?.source||'',backdrop:'',score:undefined,year:extractYear(page.extract),
-    description:clean(page.extract),genres:[],themes:[],source:'Wikipedia',
-    sourceUrl:page.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(String(page.title||''))}`
-  };
+  if(!page)throw new Error('Movie details were not available.');
+  return{provider:'wikipedia',externalId:String(page.pageid),title:String(page.title||'Untitled'),medium:'movie',poster:page.thumbnail?.source||'',backdrop:'',score:null,year:extractYear(page.extract),description:clean(page.extract),genres:[],themes:[],source:'Wikipedia',sourceUrl:page.fullurl||''};
 }
 
-async function searchVisualNovels(q:string){
+async function searchMovies(query:string){
+  try{const found=await searchTmdbMovies(query);if(found.length)return found;}catch{}
+  return searchWikipediaMovies(query);
+}
+
+async function detailMovie(provider:string,id:string){
+  if(provider==='tmdb-movie')return detailTmdbMovie(id);
+  if(provider==='wikipedia')return detailWikipediaMovie(id);
+  throw new Error('Unsupported movie source.');
+}
+
+/* ---------------- Visual Novels: VNDB ---------------- */
+
+async function searchVisualNovels(query:string){
   const data=await postJson('https://api.vndb.org/kana/vn',{
-    filters:['search','=',q],
+    filters:['search','=',cleanSearch(query)],
     fields:'id,title,alttitle,image.url,description,rating,released',
-    sort:'searchrank',
-    results:12
+    sort:'searchrank',results:12
   });
-  const rows=Array.isArray(data?.results)?data.results:[];
-  return rows.map((x:any)=>({
+  return(Array.isArray(data?.results)?data.results:[]).map((x:any)=>({
     provider:'vndb',externalId:String(x.id),title:String(x.title||'Untitled'),medium:'visual-novel',
     poster:x.image?.url||'',backdrop:'',score:x.rating==null?null:Number(x.rating)/10,
     year:extractYear(x.released),description:clean(x.description),genres:[],themes:[],
-    alternativeTitles:x.alttitle?[String(x.alttitle)]:[],source:'VNDB',
-    sourceUrl:`https://vndb.org/${x.id}`
+    alternativeTitles:x.alttitle?[String(x.alttitle)]:[],source:'VNDB',sourceUrl:'https://vndb.org/'+x.id
   }));
 }
+
 async function detailVisualNovel(id:string){
   const data=await postJson('https://api.vndb.org/kana/vn',{
-    filters:['id','=',id],
-    fields:'id,title,alttitle,image.url,description,rating,released',
-    results:1
+    filters:['id','=',id],fields:'id,title,alttitle,image.url,description,rating,released',results:1
   });
   const x=data?.results?.[0];
-  if(!x) throw new Error('Visual novel details were not available.');
-  return {
+  if(!x)throw new Error('Visual novel details were not available.');
+  return{
     provider:'vndb',externalId:String(x.id),title:String(x.title||'Untitled'),medium:'visual-novel',
-    poster:x.image?.url||'',backdrop:'',score:x.rating==null?undefined:Number(x.rating)/10,
+    poster:x.image?.url||'',backdrop:'',score:x.rating==null?null:Number(x.rating)/10,
     year:extractYear(x.released),description:clean(x.description),genres:[],themes:[],
-    alternativeTitles:x.alttitle?[String(x.alttitle)]:[],source:'VNDB',
-    sourceUrl:`https://vndb.org/${x.id}`
+    alternativeTitles:x.alttitle?[String(x.alttitle)]:[],source:'VNDB',sourceUrl:'https://vndb.org/'+x.id
   };
 }
-async function searchBooks(q:string){
-  const fields='key,title,author_name,first_publish_year,cover_i,subject';
-  const data=await getJson(`https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=12&fields=${encodeURIComponent(fields)}`);
-  const docs=Array.isArray(data?.docs)?data.docs:[];
-  return docs.slice(0,12).map((x:any)=>({
+
+/* ---------------- Books: Open Library + Google Books ---------------- */
+
+function mapOpenLibrary(x:any){
+  return{
     provider:'openlibrary',externalId:String(x.key||''),title:String(x.title||'Untitled'),medium:'book',
-    poster:x.cover_i?`https://covers.openlibrary.org/b/id/${x.cover_i}-L.jpg`:'',
-    backdrop:'',score:null,year:x.first_publish_year??null,description:'',
-    genres:[],themes:Array.isArray(x.subject)?x.subject.slice(0,8):[],
-    studio:Array.isArray(x.author_name)?x.author_name.join(', '):undefined,
-    sourceUrl:x.key?`https://openlibrary.org${x.key}`:'https://openlibrary.org/'
-  }));
-}
-
-async function detailBook(key:string){
-  const cleanKey=key.startsWith('/')?key:`/works/${key}`;
-  const data=await getJson(`https://openlibrary.org${cleanKey}.json`);
-  const cover=data?.covers?.[0];
-  return {
-    provider:'openlibrary',externalId:cleanKey,title:String(data?.title||'Untitled'),medium:'book',
-    poster:cover?`https://covers.openlibrary.org/b/id/${cover}-L.jpg`:'',
-    backdrop:'',score:undefined,year:data?.first_publish_date?extractYear(String(data.first_publish_date)):undefined,
-    description:typeof data?.description==='string'?data.description:typeof data?.description?.value==='string'?data.description.value:'',
-    genres:[],themes:Array.isArray(data?.subjects)?data.subjects.slice(0,12):[],
-    source:'Open Library',sourceUrl:`https://openlibrary.org${cleanKey}`
+    poster:x.cover_i?'https://covers.openlibrary.org/b/id/'+x.cover_i+'-L.jpg':'',backdrop:'',score:null,
+    year:x.first_publish_year?Number(x.first_publish_year):undefined,description:'',
+    genres:[],themes:Array.isArray(x.subject)?x.subject.slice(0,8).map(String):[],
+    studio:Array.isArray(x.author_name)?x.author_name.slice(0,4).map(String).join(', '):undefined,
+    source:'Open Library',sourceUrl:x.key?'https://openlibrary.org'+x.key:'https://openlibrary.org/'
   };
 }
 
-function extractYear(value?:string|null){
-  const m=String(value||'').match(/(?:18|19|20)\d{2}/);
-  return m?Number(m[0]):undefined;
+async function searchOpenLibrary(query:string){
+  const fields='key,title,author_name,first_publish_year,cover_i,subject';
+  const url='https://openlibrary.org/search.json?q='+encodeURIComponent(cleanSearch(query))+'&limit=12&fields='+encodeURIComponent(fields);
+  const data=await getJson(url);
+  return(Array.isArray(data?.docs)?data.docs:[]).slice(0,12).map(mapOpenLibrary);
 }
+
+function mapGoogleBook(item:any){
+  const v=item?.volumeInfo||{};
+  return{
+    provider:'googlebooks',externalId:String(item?.id||''),title:String(v.title||'Untitled'),medium:'book',
+    poster:v.imageLinks?.thumbnail?String(v.imageLinks.thumbnail).replace(/^http:/,'https:'):'',backdrop:'',score:v.averageRating==null?null:Number(v.averageRating),
+    year:extractYear(v.publishedDate),description:clean(v.description),genres:Array.isArray(v.categories)?v.categories.slice(0,6).map(String):[],themes:[],
+    studio:Array.isArray(v.authors)?v.authors.slice(0,4).map(String).join(', '):undefined,source:'Google Books',
+    sourceUrl:v.infoLink||('https://books.google.com/books?id='+item?.id)
+  };
+}
+
+async function searchGoogleBooks(query:string){
+  const url=new URL('https://www.googleapis.com/books/v1/volumes');
+  url.searchParams.set('q',cleanSearch(query));
+  url.searchParams.set('maxResults','12');
+  const key=Deno.env.get('GOOGLE_BOOKS_API_KEY')?.trim();
+  if(key)url.searchParams.set('key',key);
+  const data=await getJson(url.toString());
+  return(Array.isArray(data?.items)?data.items:[]).slice(0,12).map(mapGoogleBook);
+}
+
+async function detailOpenLibrary(key:string){
+  const cleanKey=key.startsWith('/')?key:'/works/'+key;
+  const data=await getJson('https://openlibrary.org'+cleanKey+'.json');
+  const cover=data?.covers?.[0];
+  return{
+    provider:'openlibrary',externalId:cleanKey,title:String(data?.title||'Untitled'),medium:'book',
+    poster:cover?'https://covers.openlibrary.org/b/id/'+cover+'-L.jpg':'',backdrop:'',score:null,
+    year:data?.first_publish_date?extractYear(String(data.first_publish_date)):undefined,
+    description:typeof data?.description==='string'?clean(data.description):typeof data?.description?.value==='string'?clean(data.description.value):'',
+    genres:[],themes:Array.isArray(data?.subjects)?data.subjects.slice(0,12).map(String):[],
+    source:'Open Library',sourceUrl:'https://openlibrary.org'+cleanKey
+  };
+}
+
+async function detailGoogleBooks(id:string){
+  const key=Deno.env.get('GOOGLE_BOOKS_API_KEY')?.trim();
+  const url='https://www.googleapis.com/books/v1/volumes/'+encodeURIComponent(id)+(key?'?key='+encodeURIComponent(key):'');
+  return mapGoogleBook(await getJson(url));
+}
+
+async function searchBooks(query:string){
+  const results:DiscoveryResultLike[]=[];
+  const errors:unknown[]=[];
+  const [openRes,googleRes]=await Promise.allSettled([searchOpenLibrary(query),searchGoogleBooks(query)]);
+  if(openRes.status==='fulfilled')results.push(...openRes.value);
+  else errors.push(openRes.reason);
+  if(googleRes.status==='fulfilled')results.push(...googleRes.value);
+  else errors.push(googleRes.reason);
+  const seen=new Set<string>();
+  const merged=[] as any[];
+  for(const row of results){
+    const key=String(row.title).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    if(!key||seen.has(key))continue;
+    seen.add(key);merged.push(row);
+    if(merged.length>=12)break;
+  }
+  if(merged.length)return merged;
+  throw new Error(firstError(errors).replace('No provider returned usable results.','Open Library and Google Books did not return usable book results.'));
+}
+
+async function detailBook(provider:string,id:string){
+  if(provider==='openlibrary')return detailOpenLibrary(id);
+  if(provider==='googlebooks')return detailGoogleBooks(id);
+  throw new Error('Unsupported book source.');
+}
+
+type DiscoveryResultLike=Record<string,unknown>;
+
+/* ---------------- Router ---------------- */
 
 Deno.serve(async(req:Request)=>{
-    if(req.method==='OPTIONS') return new Response('ok',{headers:HEADERS});
-    let body:any={};
-    if(req.method==='GET'){
-      const url=new URL(req.url);body={action:url.searchParams.get('action')||'search',provider:url.searchParams.get('provider')||'',query:url.searchParams.get('query')||'',externalId:url.searchParams.get('externalId')||''};
-    }else if(req.method==='POST'){
-      try{body=await req.json()}catch{return response({error:'Invalid JSON request.'},400)}
-    }else return response({error:'POST or GET required'},405);
-    try{
-      const action=String(body?.action||'search');
-      const provider=String(body?.provider||'');
-      if(!(['game','series','movie','book','visual-novel'].includes(provider))) return response({error:'Unsupported provider.'},400);
-      if(action==='search'){
-        const query=String(body?.query||'').trim();
-        if(query.length<2) return response({results:[]});
-        const fn=provider==='game'?searchGames:provider==='series'?searchSeries:provider==='movie'?searchMovies:provider==='book'?searchBooks:searchVisualNovels;
-        return response({results:await fn(query)});
-      }
-      const id=String(body?.externalId||'').trim();
-      if(!id) return response({error:'A valid external ID is required.'},400);
-      const fn=provider==='game'?detailGame:provider==='series'?detailSeries:provider==='movie'?detailMovie:provider==='book'?detailBook:detailVisualNovel;
-      return response({result:await fn(id)});
-    }catch(error){
-      return response({error:error instanceof Error?error.message:String(error)},400);
+  if(req.method==='OPTIONS')return new Response('ok',{headers:HEADERS});
+  let body:any={};
+  if(req.method==='GET'){
+    const url=new URL(req.url);
+    body={
+      action:url.searchParams.get('action')||'search',
+      provider:url.searchParams.get('provider')||'',
+      query:url.searchParams.get('query')||'',
+      externalId:url.searchParams.get('externalId')||''
+    };
+  }else if(req.method==='POST'){
+    try{body=await req.json()}catch{return response({error:'Invalid JSON request.'},400)}
+  }else return response({error:'GET, POST or OPTIONS required'},405);
+
+  try{
+    const action=String(body?.action||'search');
+    const provider=String(body?.provider||'');
+    if(!(['game','series','movie','book','visual-novel'].includes(provider)))return response({error:'Unsupported provider.'},400);
+
+    if(action==='search'){
+      const query=String(body?.query||'').trim();
+      if(query.length<2)return response({results:[]});
+      if(provider==='game')return response({results:await searchGames(query)});
+      if(provider==='series')return response({results:await searchSeries(query)});
+      if(provider==='movie')return response({results:await searchMovies(query)});
+      if(provider==='book')return response({results:await searchBooks(query)});
+      return response({results:await searchVisualNovels(query)});
     }
+
+    const id=String(body?.externalId||'').trim();
+    if(!id)return response({error:'A valid external ID is required.'},400);
+
+    if(provider==='game'){
+      return response({result:await detailGame(String(body?.source||'igdb'),id)});
+    }
+    if(provider==='series'){
+      return response({result:await detailSeries(String(body?.source||'tmdb-tv'),id)});
+    }
+    if(provider==='movie'){
+      return response({result:await detailMovie(String(body?.source||'tmdb-movie'),id)});
+    }
+    if(provider==='book'){
+      return response({result:await detailBook(String(body?.source||'openlibrary'),id)});
+    }
+    return response({result:await detailVisualNovel(id)});
+  }catch(error){
+    return response({error:error instanceof Error?error.message:String(error)},400);
+  }
 });
