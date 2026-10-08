@@ -48,7 +48,7 @@ const tabs:{id:Tab;label:string;icon:typeof Tv;hint:string}[]=[
  {id:'anime',label:'Anime',icon:Tv,hint:'AniList'},
  {id:'manga',label:'Manga / Manhwa / LN',icon:BookOpen,hint:'AniList'},
  {id:'visual-novel',label:'Visual Novels',icon:BookOpen,hint:'VNDB'},
- {id:'game',label:'Games',icon:Gamepad2,hint:'GameLegend'},
+ {id:'game',label:'Games',icon:Gamepad2,hint:'MobyGames'},
  {id:'series',label:'Series',icon:Tv,hint:'TVmaze'},
  {id:'movie',label:'Movies',icon:Film,hint:'Wikipedia'},
  {id:'book',label:'Books',icon:BookOpen,hint:'Open Library'}
@@ -125,7 +125,7 @@ async function fetchJsonWithTimeout(url:string,init?:RequestInit,timeoutMs=12000
 }
 
 function providerLabel(provider:Exclude<Tab,'anime'|'manga'>){
- return provider==='game'?'GameLegend':provider==='series'?'TVmaze':provider==='movie'?'Wikipedia':provider==='book'?'Open Library':'VNDB';
+ return provider==='game'?'MobyGames':provider==='series'?'TVmaze':provider==='movie'?'Wikipedia':provider==='book'?'Open Library':'VNDB';
 }
 
 async function enrichMovieArtwork(results:DiscoveryResult[]){
