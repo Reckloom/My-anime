@@ -326,7 +326,9 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   try{
    if(isAni){
     const r=selected as AniListSearchResult;
-    if(supabase){
+    if(r.sourceProvider==='jikan'){
+     onImported(localItem(r));
+    }else if(supabase){
      const{data,error:e}=await supabase.functions.invoke('anilist-import',{body:{action:'import',anilistId:r.id}});
      if(e)throw e;
      if((data as {existing?:boolean}|null)?.existing){setError('This title is already in your library.');return}
