@@ -135,10 +135,8 @@ export default function App(){
      }
     }
     else{
-     try{
-      const raw=localStorage.getItem(`frame-library:${user.id}`);const local=raw?JSON.parse(raw):[];
-      if(Array.isArray(local)&&local.length){const next=local.map(normalise);setItems(next);const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});if(error)console.warn('[FRAME cloud seed]',error)}
-     }catch(e){console.warn('[FRAME local library recovery]',e)}
+     setItems([]);
+     try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify([]))}catch{}
     }
     const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
     const effectivePrefs={...(prefs||{}),...guestPrefs};
