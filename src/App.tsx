@@ -74,14 +74,45 @@ function sortMedia(items:MediaItem[],mode:string){
 }
 
 function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?:boolean}){ const mode=logo&&logo!=='ultra-instinct'?logo:'frame-mark'; if(mode.startsWith('http'))return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src={mode} alt="Custom FRAME logo"/></span>; if(mode==='classic-f')return <span className={'frame-logo-mark classic-f '+(small?'small':'')}>F</span>; if(mode==='minimal-ring')return <span className={'frame-logo-mark minimal-ring '+(small?'small':'')}><i/></span>; return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src="/frame-logo.svg" alt="FRAME logo"/></span>;}
-function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){ const merged=[...primary]; for(const incomingRaw of secondary){ const incoming=normalise(incomingRaw); const index=merged.findIndex(x=>(incoming.anilistId&&x.anilistId===incoming.anilistId)||(incoming.sourceProvider&&incoming.externalId&&x.sourceProvider===incoming.sourceProvider&&x.externalId===incoming.externalId)||((x.title||'').trim().toLowerCase()===(incoming.title||'').trim().toLowerCase()&&x.medium===incoming.medium)); if(index<0){merged.push(incoming);continue} const current=merged[index]; merged[index]=normalise({...current,...incoming,id:current.id,parentId:incoming.parentId??current.parentId,metadataId:incoming.metadataId??current.metadataId}); } return merged; }
+function mediaIdentity(item:MediaItem){
+ if(item.anilistId)return 'anilist:'+item.anilistId;
+ if(item.sourceProvider&&item.externalId)return item.sourceProvider+':'+item.externalId;
+ return 'title:'+item.medium+':'+(item.parentId||'root')+':'+item.title.trim().toLowerCase().replace(/\\s+/g,' ');
+}
+function dedupeMediaItems(items:MediaItem[]){
+ const merged:MediaItem[]=[];
+ const indexes=new Map<string,number>();
+ for(const raw of items){
+  const incoming=normalise(raw); const key=mediaIdentity(incoming); const index=indexes.get(key);
+  if(index==null){indexes.set(key,merged.length);merged.push(incoming);continue}
+  const current=merged[index];
+  merged[index]=normalise({...current,
+   id:current.id,parentId:incoming.parentId??current.parentId,metadataId:current.metadataId??incoming.metadataId,
+   status:incoming.status||current.status,progress:incoming.progress??current.progress,total:incoming.total??current.total,
+   customTotal:incoming.customTotal??current.customTotal,personalRating:incoming.personalRating??current.personalRating,
+   favorite:incoming.favorite??current.favorite,notes:incoming.notes??current.notes
+  });
+ }
+ return merged;
+}
+function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
+ const merged=dedupeMediaItems(primary);
+ for(const incomingRaw of secondary){
+  const incoming=normalise(incomingRaw);
+  const index=merged.findIndex(x=>mediaIdentity(x)===mediaIdentity(incoming));
+  if(index<0){merged.push(incoming);continue}
+  const current=merged[index];
+  merged[index]=normalise({...current,id:current.id,parentId:incoming.parentId??current.parentId,metadataId:current.metadataId??incoming.metadataId,status:incoming.status||current.status,progress:incoming.progress??current.progress,total:incoming.total??current.total,customTotal:incoming.customTotal??current.customTotal,personalRating:incoming.personalRating??current.personalRating,favorite:incoming.favorite??current.favorite,notes:incoming.notes??current.notes});
+ }
+ return dedupeMediaItems(merged);
+}
 export default function App(){
  const {user,signOut}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
  const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
  const [items,setItems]=useState<MediaItem[]>(()=>{
   try{
    const scoped=localStorage.getItem(storageKey);
-   if(scoped)return JSON.parse(scoped).map(normalise);
+   if(scoped)return dedupeMediaItems(JSON.parse(scoped).map(normalise));
    if(uid!=='guest'){
     const legacy=localStorage.getItem('frame-library');
     if(legacy){
@@ -136,7 +167,7 @@ export default function App(){
     return;
    }
    if(active&&data){
-    const cloudItems=data.map(dbToMedia);
+    const cloudItems=dedupeMediaItems(data.map(dbToMedia));
     const localOverrides=guestItems.length?mergeMediaLists(scopedItems,guestItems):scopedItems;
     const merged=localOverrides.length?mergeMediaLists(cloudItems,localOverrides):cloudItems;
     if(merged.length){
@@ -187,7 +218,7 @@ export default function App(){
  },[user?.id]);
 
  const save=async(list:MediaItem[])=>{
-  const next=list.map(normalise);setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
+  const next=dedupeMediaItems(list.map(normalise));setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
   const client=supabase;
   if(!client||!user?.id)return true;
   const operation=saveQueue.current.then(async()=>{
