@@ -8,7 +8,7 @@ const HEADERS={
   'Access-Control-Allow-Methods':'POST, OPTIONS',
 };
 
-const MEDIA_QUERY='query ($ids:[Int!]!) { Page(page:1, perPage:50) { media(id_in:$ids) { id type format status chapters episodes title { userPreferred english romaji native } description coverImage { extraLarge } bannerImage genres tags { name } season seasonYear averageScore meanScore popularity favorites studios { nodes { name } } source duration startDate { year month day } endDate { year month day } relations { edges { relationType node { id type format status chapters episodes title { userPreferred english romaji native } coverImage { extraLarge } siteUrl startDate { year month day } } } } } } }';
+const MEDIA_QUERY='query ($ids:[Int!]!) { Page(page:1, perPage:50) { media(id_in:$ids) { id type format status chapters episodes title { userPreferred english romaji native } description coverImage { extraLarge } bannerImage genres tags { name } season seasonYear averageScore meanScore popularity favourites studios { nodes { name } } source duration startDate { year month day } endDate { year month day } relations { edges { relationType node { id type format status chapters episodes title { userPreferred english romaji native } coverImage { extraLarge } siteUrl startDate { year month day } } } } } } }';
 const SCHEDULE_QUERY='query ($ids:[Int!]!, $from:Int!, $to:Int!) { Page(page:1, perPage:50) { airingSchedules(mediaId_in:$ids, airingAt_greater:$from, airingAt_lesser:$to, sort:TIME) { id airingAt episode mediaId media { id title { userPreferred english romaji native } } } } }';
 
 function json(body:Record<string,unknown>,status=200){ return Response.json(body,{status,headers:HEADERS}); }
