@@ -112,14 +112,6 @@ export default function App(){
   if(!client||!user?.id)return;
   let active=true;
   const load=async()=>{
-   const resetKey=`frame-library-reset-2026-10-08:${user.id}`;
-   if(!localStorage.getItem(resetKey)){
-    localStorage.removeItem('frame-library:guest');
-    localStorage.removeItem('frame-library');
-    localStorage.removeItem(`frame-library:${user.id}`);
-    setItems([]);
-    try{localStorage.setItem(resetKey,'1')}catch{}
-   }
    const guestRaw=localStorage.getItem('frame-library:guest');
    let guestItems:MediaItem[]=[];
    try{const parsed=guestRaw?JSON.parse(guestRaw):[];if(Array.isArray(parsed))guestItems=parsed.map(normalise)}catch{}
@@ -148,8 +140,9 @@ export default function App(){
      }
     }
     else{
-     setItems([]);
-     try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify([]))}catch{}
+     const localOnly=guestItems.length?mergeMediaLists(scopedItems,guestItems):scopedItems;
+     setItems(localOnly);
+     try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(localOnly))}catch{}
     }
     const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
     const effectivePrefs={...(prefs||{}),...guestPrefs};
