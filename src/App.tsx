@@ -168,20 +168,18 @@ export default function App(){
    }
    if(active&&data){
     const cloudItems=dedupeMediaItems(data.map(dbToMedia));
-    const localOverrides=guestItems.length?mergeMediaLists(scopedItems,guestItems):scopedItems;
+    // Authenticated cloud data is authoritative. Keep local values only when they
+    // already correspond to a cloud record; never resurrect stale browser-only titles.
+    const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
+    const localOverrides=guestItems.length?mergeMediaLists(syncedLocal,guestItems):syncedLocal;
     const merged=localOverrides.length?mergeMediaLists(cloudItems,localOverrides):cloudItems;
-    if(merged.length){
-     setItems(merged);try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
-     if(localOverrides.length){
-      const {error}=await client.from('media_items').upsert(merged.map(item=>toRow(item,user.id)),{onConflict:'id'});
-      if(!error&&guestItems.length)localStorage.removeItem('frame-library:guest');
-      else if(error)console.warn('[FRAME local/cloud merge]',error);
-     }
-    }
-    else{
-     const localOnly=guestItems.length?mergeMediaLists(scopedItems,guestItems):scopedItems;
-     setItems(localOnly);
-     try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(localOnly))}catch{}
+    setItems(merged);
+    try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
+    if(guestItems.length)localStorage.removeItem('frame-library:guest');
+    const guestMigration=guestItems.filter(guest=>!cloudItems.some(cloud=>sameMedia(cloud,guest)));
+    if(guestMigration.length){
+     const {error:guestError}=await client.from('media_items').upsert(guestMigration.map(item=>toRow(item,user.id)),{onConflict:'id'});
+     if(guestError)console.warn('[FRAME guest migration]',guestError);
     }
     const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
     const effectivePrefs={...(prefs||{}),...guestPrefs};
