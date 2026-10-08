@@ -163,11 +163,32 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
   return (data.results||[]).map(x=>({provider:'vndb',externalId:String(x.id),title:String(x.title||term),alternativeTitles:x.alttitle?[String(x.alttitle)]:[],medium:'visual-novel',poster:x.image?.url,description:x.description||'',year:x.released?Number(String(x.released).slice(0,4)):undefined,score:x.rating==null?null:Number(x.rating)/10,sourceUrl:'https://vndb.org/'+x.id,source:'vndb',genres:[]}));
  }
  if(provider==='game'){
-  const data=await fetchJsonWithTimeout('https://store.steampowered.com/api/storesearch/?term='+q+'&l=english&cc=IN') as {items?:any[]};
-  return (data.items||[]).slice(0,12).map(x=>{
-   const finalPrice=Number(x.price?.final??0);
-   return{provider:'steam',externalId:String(x.id),title:String(x.name||term),medium:'game',poster:x.tiny_image||x.large_capsule_image,score:x.metascore?Number(x.metascore)/10:null,sourceUrl:'https://store.steampowered.com/app/'+x.id+'/',source:'steam',genres:[],game:{isFree:Boolean(x.price==null||x.is_free),priceText:finalPrice?('₹'+(finalPrice/100).toFixed(2)):undefined,storeUrl:'https://store.steampowered.com/app/'+x.id+'/'}};
-  });
+  const urls=[
+   'https://store.steampowered.com/search/results/?term='+q+'&start=0&count=12&sort_by=Relevance&category1=998&json=1&infinite=1&cc=US&l=english',
+   'https://store.steampowered.com/api/storesearch/?term='+q+'&l=english&cc=US'
+  ];
+  let rows:any[]=[];
+  for(const url of urls){
+   try{
+    const data=await fetchJsonWithTimeout(url) as {items?:any[];results?:any[]};
+    const candidate=Array.isArray(data.items)?data.items:Array.isArray(data.results)?data.results:[];
+    if(candidate.length){rows=candidate;break}
+   }catch{}
+  }
+  return rows
+   .map(x=>({
+    id:x.id??x.appid??x.appId??String(x.url||'').match(/\\/app\\/(\\d+)/)?.[1],
+    name:x.name??x.title,
+    poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
+    price:x.price
+   }))
+   .filter(x=>x.id&&x.name)
+   .slice(0,12)
+   .map(x=>{
+    const finalPrice=Number(x.price?.final??0);
+    return{provider:'steam',externalId:String(x.id),title:String(x.name||term),medium:'game',poster:x.poster,score:null,sourceUrl:'https://store.steampowered.com/app/'+x.id+'/',source:'steam',genres:[],game:{isFree:false,priceText:finalPrice?('₹'+(finalPrice/100).toFixed(2)):undefined,storeUrl:'https://store.steampowered.com/app/'+x.id+'/'}};
+   });
+ }
  }
  return [];
 }
