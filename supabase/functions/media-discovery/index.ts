@@ -55,9 +55,19 @@ async function postJson(url:string,body:unknown){
 }
 
 async function searchGames(q:string){
-  const url=`https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(q)}&cc=in&l=english&category1=998`;
-  const data=await getJson(url);
-  const items=Array.isArray(data?.items)?data.items:[];
+  const term=encodeURIComponent(q);
+  const primary=await getJson(`https://store.steampowered.com/api/storesearch/?term=${term}&cc=in&l=english&category1=998`);
+  let items=Array.isArray(primary?.items)?primary.items:[];
+  if(!items.length){
+    const fallback=await getJson(`https://store.steampowered.com/search/results/?term=${term}&category1=998&json=1&cc=in&l=english`);
+    const fallbackItems=Array.isArray(fallback?.items)?fallback.items:[];
+    items=fallbackItems.map((x:any)=>({
+      id:x.id||String(x.url||'').match(/\\/app\\/(\\d+)/)?.[1],
+      name:x.name||x.title,
+      tiny_image:x.tiny_image||x.logo,
+      large_capsule_image:x.large_capsule_image||x.logo
+    })).filter((x:any)=>x.id&&x.name);
+  }
   return items.slice(0,12).map((x:any)=>({
     provider:'steam',externalId:String(x.id),title:String(x.name||'Untitled'),medium:'game',
     poster:x.tiny_image||x.large_capsule_image||'',score:null,year:null,description:'',
