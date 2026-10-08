@@ -4,7 +4,7 @@ test.describe('FRAME core smoke flow', () => {
   test('loads the app and exposes the main navigation', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('banner')).toBeVisible();
-    for (const label of ['Home', 'Library', 'Discover', 'Web', 'Radar', 'Friends', 'Chat', 'Calls', 'Settings']) {
+    for (const label of ['Home', 'Library', 'Discover', 'Web', 'Radar', 'Friends', 'Chat']) {
       await expect(page.getByRole('button', { name: label, exact: true }).first()).toBeVisible();
     }
   });
@@ -42,12 +42,12 @@ test.describe('FRAME core smoke flow', () => {
     await page.reload();
 
     await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
-    await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
     await page.getByRole('button', { name: /Nothing Dot-matrix industrial/ }).click();
     await page.getByRole('button', { name: 'Dark', exact: true }).click();
 
     await page.reload();
-    await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
     await expect(page.getByText('Nothing is active.', { exact: true })).toBeVisible();
   });
 
@@ -64,7 +64,7 @@ test.describe('FRAME core smoke flow', () => {
 
   test('opens Settings and switches appearance controls', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: /Nothing Dot-matrix industrial/ }).click();
@@ -83,17 +83,23 @@ test.describe('FRAME core smoke flow', () => {
       ['Radar', /Release Radar/],
       ['Friends', /^Friends$/],
       ['Chat', /Global Chat/],
-      ['Calls', /^Calls$/],
       ['Settings', /^Settings$/],
     ];
 
     for (const [button, heading] of targets) {
       await page.getByRole('button', { name: button, exact: true }).first().click();
-      if (button === 'Calls') {
-        await expect(page.getByText(/Calls need your FRAME account|^Calls$/, { exact: false }).first()).toBeVisible();
-      } else {
-        await expect(page.locator('h1').filter({ hasText: heading })).toBeVisible();
-      }
+      await expect(page.locator('h1').filter({ hasText: heading })).toBeVisible();
     }
+  });
+});
+
+
+test.describe('FRAME global voice', () => {
+  test('opens the public global call and exposes the simple controls', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Global Call', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Global Call', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Join global call', exact: true })).toBeVisible();
+    await expect(page.getByText(/Public global calls are separate from private one-to-one calls/)).toBeVisible();
   });
 });
