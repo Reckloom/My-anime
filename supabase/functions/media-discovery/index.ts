@@ -132,6 +132,11 @@ async function searchMovies(q:string){
   const url=`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q+' film')}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
   const data=await getJson(url);
   const pages=Object.values(data?.query?.pages||{}) as any[];
+  const imdb=await getJson(`https://v3.sg.media-imdb.com/suggestion/x/${encodeURIComponent(q.trim())}.json`).catch(()=>({}));
+  const imdbPosters=new Map<string,string>();
+  for(const item of (Array.isArray(imdb?.d)?imdb.d:[])){
+    if(item?.qid==='movie'&&item?.l&&item?.i?.imageUrl)imdbPosters.set(String(item.l).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),String(item.i.imageUrl));
+  }
   const needle=q.trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   const tokens=needle.split(/\s+/).filter(Boolean);
   return pages.map((x:any)=>{
@@ -144,8 +149,9 @@ async function searchMovies(q:string){
     const extract=clean(x.extract);
     if(/\b(film|movie|cinema|feature film)\b/i.test(extract))relevance+=8;
     if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
-    return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster:x.thumbnail?.source||'',backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
-  }).sort((a:any,b:any)=>(Number(Boolean(b.poster))-Number(Boolean(a.poster)))||b._relevance-a._relevance).slice(0,12).map(({_relevance,...x}:any)=>x);
+    const poster=x.thumbnail?.source||imdbPosters.get(hay)||'';
+    return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster,backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
+  }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12).map(({_relevance,...x}:any)=>x);
 }
 
 async function detailMovie(id:string){
