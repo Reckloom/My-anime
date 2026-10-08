@@ -1798,3 +1798,29 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
  .ani-detail>img{width:96px;height:140px}
  .frame-popup-system{right:10px;bottom:78px}
 }
+
+
+/* FINAL DARK-MODE HOME CONTRAST FIX */
+:root[data-frame-mode="dark"] .home-intro,
+:root[data-frame-mode="dark"] .home-tools,
+:root[data-frame-mode="dark"] .home-overview{
+  color:var(--frame-text);
+}
+:root[data-frame-theme="sky"][data-frame-mode="dark"] .home-intro{
+  background:linear-gradient(135deg,var(--frame-surface),var(--frame-surface-2));
+  box-shadow:0 24px 70px rgba(0,0,0,.28);
+}
+:root[data-frame-theme="material"][data-frame-mode="dark"] .home-intro{
+  background:linear-gradient(135deg,var(--frame-surface),var(--frame-surface-2));
+  box-shadow:0 24px 70px rgba(0,0,0,.28);
+}
+:root[data-frame-theme="nothing"][data-frame-mode="dark"] .home-intro{
+  background:radial-gradient(circle,#272727 1px,transparent 1.5px),var(--frame-surface);
+  background-size:8px 8px;
+  border-color:var(--frame-line-strong);
+}
+:root[data-frame-theme="nothing"][data-frame-mode="dark"] .home-intro-copy h1{
+  background:var(--frame-surface-2);
+  color:var(--frame-text);
+  border-color:var(--frame-line-strong);
+}
