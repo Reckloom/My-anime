@@ -30,7 +30,7 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
    }
   };
   void load();
-  const channel=client.channel('frame-global-chat',{config:{broadcast:{ack:true}}})
+  const channel=client.channel('frame-global-chat',{config:{private:true,broadcast:{ack:true}}})
    .on('broadcast',{event:'message'},({payload}:any)=>{
     const row=payload?.row as GlobalMessage|undefined;
     if(!active||!row)return;
@@ -38,7 +38,7 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
       .then(({data})=>{if(active)setMessages(prev=>prev.some(x=>x.id===row.id)?prev:[...prev,{...row,profiles:data||null}].slice(-200));});
    });
   channelRef.current=channel;
-  channel.subscribe((status:string,err?:any)=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setError(err?.message||'Live chat realtime is unavailable; messages will still load from the database.');});
+  channel.subscribe((status:string,err?:any)=>{if(status==='SUBSCRIBED')setError('');else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setError(err?.message||'Live chat realtime is unavailable; messages will still load from the database.');});
   const fallback=window.setInterval(()=>void load(),5000);
   return()=>{active=false;window.clearInterval(fallback);void channel.unsubscribe();channelRef.current=null};
  },[guest]);
