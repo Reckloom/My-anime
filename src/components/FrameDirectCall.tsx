@@ -83,7 +83,7 @@ export function FrameDirectCall({uid,target,onClear}:{uid:string;target:DirectTa
  };
 
  const finish=async(notify=true,status:'ended'|'declined'|'missed'='ended')=>{
-  const id=callId.current;try{if(notify&&callChannel.current)await sendCall({type:'hangup'});if(supabase&&id)await supabase.from('direct_call_sessions').update({status,ended_at:new Date().toISOString()}).eq('id',id)}catch{}
+  const id=callId.current;try{if(notify&&callChannel.current)await sendCall({type:'hangup'});if(supabase&&id)await supabase!.from('direct_call_sessions').update({status,ended_at:new Date().toISOString()}).eq('id',id)}catch{}
   pc.current?.close();pc.current=null;local.current?.getTracks().forEach(t=>t.stop());local.current=null;setMicStream(null);pendingIce.current=[];
   if(callChannel.current)void callChannel.current.unsubscribe();callChannel.current=null;callReady.current=null;callId.current=null;setIncoming(null);setPhase('idle');setMuted(false);setPeer(target);setError('');if(notify||target)onClear();
  };
