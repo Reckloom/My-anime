@@ -4,11 +4,18 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 type AuthMode='login'|'signup'|'reset'|'update';
-type AuthContextValue={session:Session|null;user:User|null;loading:boolean};
-const AuthContext=createContext<AuthContextValue>({session:null,user:null,loading:false});
+type AuthContextValue={session:Session|null;user:User|null;loading:boolean;signOut:()=>Promise<void>};
+const AuthContext=createContext<AuthContextValue>({session:null,user:null,loading:false,signOut:async()=>{}});
 
 export function AuthProvider({children}:{children:ReactNode}){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(Boolean(supabase));
+ const signOutCurrent=async()=>{
+  localStorage.removeItem('frame-guest');
+  if(!supabase){setSession(null);return}
+  const {error}=await supabase.auth.signOut({scope:'local'});
+  if(error)throw error;
+  setSession(null);
+ };
  useEffect(()=>{
   if(!supabase){setLoading(false);return}
   let active=true;
@@ -16,7 +23,7 @@ export function AuthProvider({children}:{children:ReactNode}){
   const {data}=supabase.auth.onAuthStateChange((_event,next)=>{setSession(next);setLoading(false)});
   return()=>{active=false;data.subscription.unsubscribe()};
  },[]);
- return <AuthContext.Provider value={{session,loading,user:session?.user??null}}>{children}</AuthContext.Provider>;
+ return <AuthContext.Provider value={{session,loading,user:session?.user??null,signOut:signOutCurrent}}>{children}</AuthContext.Provider>;
 }
 export function useAuth(){return useContext(AuthContext)}
 
@@ -58,11 +65,4 @@ function AuthScreen(){
    {mode==='login'&&<button className="gate-link" type="button" onClick={()=>{localStorage.setItem('frame-guest','1');window.location.reload()}}>Continue as guest</button>}
   </div><div className="gate-footer"><Shield size={14}/> Your library is private unless you choose to share it.</div></section>
  </main>;
-}
-export async function signOut(){
- localStorage.removeItem('frame-guest');
- if(!supabase){window.location.reload();return}
- const {error}=await supabase.auth.signOut({scope:'local'});
- if(error)throw error;
- window.location.reload();
 }
