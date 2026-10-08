@@ -32,7 +32,8 @@ export function AuthGate({children}:{children:ReactNode}){
  if(!supabase)return <>{children}</>;
  if(loading)return <div className="auth-loading"><div className="auth-mark"><img src="/frame-logo.svg" alt="FRAME"/></div><span>Opening your library…</span></div>;
  if(session)return <>{children}</>;
- if(localStorage.getItem('frame-guest')==='1')return <>{children}</>;
+ localStorage.removeItem('frame-guest');
+ localStorage.removeItem('frame-force-auth');
  return <AuthScreen/>;
 }
 
