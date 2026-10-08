@@ -11,6 +11,7 @@ export function AuthProvider({children}:{children:ReactNode}){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(Boolean(supabase));
  const signOutCurrent=async()=>{
   localStorage.removeItem('frame-guest');
+  localStorage.setItem('frame-force-auth','1');
   try{
    if(supabase){
     const {error}=await supabase.auth.signOut({scope:'local'});
@@ -28,13 +29,12 @@ export function AuthProvider({children}:{children:ReactNode}){
   }catch{}
   setSession(null);
   setLoading(false);
-  window.location.assign(window.location.origin+window.location.pathname);
  };
  useEffect(()=>{
   if(!supabase){setLoading(false);return}
   let active=true;
-  supabase.auth.getSession().then(({data})=>{if(active){setSession(data.session);setLoading(false)}});
-  const {data}=supabase.auth.onAuthStateChange((_event,next)=>{setSession(next);setLoading(false)});
+  supabase.auth.getSession().then(({data})=>{if(active){const forced=localStorage.getItem('frame-force-auth')==='1';setSession(forced?null:data.session);setLoading(false)}});
+  const {data}=supabase.auth.onAuthStateChange((_event,next)=>{if(next)localStorage.removeItem('frame-force-auth');setSession(next);setLoading(false)});
   return()=>{active=false;data.subscription.unsubscribe()};
  },[]);
  return <AuthContext.Provider value={{session,loading,user:session?.user??null,signOut:signOutCurrent}}>{children}</AuthContext.Provider>;
@@ -45,6 +45,7 @@ export function AuthGate({children}:{children:ReactNode}){
  const {session,loading}=useAuth();
  if(!supabase)return <>{children}</>;
  if(loading)return <div className="auth-loading"><div className="auth-mark"><img src="/frame-logo.svg" alt="FRAME"/></div><span>Opening your library…</span></div>;
+ if(localStorage.getItem('frame-force-auth')==='1')return <AuthScreen/>;
  if(!session&&localStorage.getItem('frame-guest')==='1')return <>{children}</>;
  return session?<>{children}</>:<AuthScreen/>;
 }
