@@ -391,6 +391,13 @@ button:disabled{opacity:.48;cursor:not-allowed}
 
 .library-controls{display:flex;align-items:center;gap:12px;margin:-5px 0 20px}
 .filter-scroll{display:flex;flex-wrap:wrap;gap:7px;flex:1}
+.filter-groups{display:grid;gap:10px}
+.filter-group{display:grid;gap:6px}
+.filter-group-label{padding-left:2px;color:#8b8fa0;font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.filter-scroll{display:flex;flex-wrap:wrap;gap:7px;flex:1}
+.media-filter-scroll button{min-width:66px}
+.status-filter-scroll{padding-bottom:1px}
+
 .filter-scroll button{min-height:34px;padding:7px 11px;border:1px solid var(--frame-line);border-radius:999px;background:#ffffff04;color:#7f8490;font-size:9px}
 .filter-scroll button:hover,.filter-scroll button.active{color:#fff;background:#ffffff09;border-color:#a98bff45}
 .sort-select{display:flex;align-items:center;gap:7px;height:38px;border:1px solid var(--frame-line);background:#ffffff05;border-radius:11px;padding:0 10px;color:#777c89;font-size:9px;white-space:nowrap}
