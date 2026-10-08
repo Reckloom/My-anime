@@ -11,7 +11,6 @@ export function AuthProvider({children}:{children:ReactNode}){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(Boolean(supabase));
  const signOutCurrent=async()=>{
   localStorage.removeItem('frame-guest');
-  localStorage.setItem('frame-force-auth','1');
   setSession(null);
   setLoading(false);
   if(supabase){
@@ -27,8 +26,8 @@ export function AuthProvider({children}:{children:ReactNode}){
  }; useEffect(()=>{
   if(!supabase){setLoading(false);return}
   let active=true;
-  supabase.auth.getSession().then(({data})=>{if(active){const forced=localStorage.getItem('frame-force-auth')==='1';setSession(forced?null:data.session);setLoading(false)}});
-  const {data}=supabase.auth.onAuthStateChange((_event,next)=>{if(next)localStorage.removeItem('frame-force-auth');setSession(next);setLoading(false)});
+  supabase.auth.getSession().then(({data})=>{if(active){setSession(data.session);setLoading(false)}});
+  const {data}=supabase.auth.onAuthStateChange((_event,next)=>{if(next)localStorage.removeItem('frame-guest');setSession(next);setLoading(false)});
   return()=>{active=false;data.subscription.unsubscribe()};
  },[]);
  return <AuthContext.Provider value={{session,loading,user:session?.user??null,signOut:signOutCurrent}}>{children}</AuthContext.Provider>;
@@ -39,9 +38,9 @@ export function AuthGate({children}:{children:ReactNode}){
  const {session,loading}=useAuth();
  if(!supabase)return <>{children}</>;
  if(loading)return <div className="auth-loading"><div className="auth-mark"><img src="/frame-logo.svg" alt="FRAME"/></div><span>Opening your library…</span></div>;
- if(localStorage.getItem('frame-force-auth')==='1')return <AuthScreen/>;
- if(!session&&localStorage.getItem('frame-guest')==='1')return <>{children}</>;
- return session?<>{children}</>:<AuthScreen/>;
+ if(session)return <>{children}</>;
+ if(localStorage.getItem('frame-guest')==='1')return <>{children}</>;
+ return <AuthScreen/>;
 }
 
 function AuthScreen(){
@@ -53,7 +52,7 @@ function AuthScreen(){
   event.preventDefault();if(!supabase)return;setBusy(true);reset();
   try{
    if(mode==='signup'){const {error:e}=await supabase.auth.signUp({email,password});if(e)throw e;setMessage('Account created. Check your email if confirmation is enabled.');setMode('login')}
-   else if(mode==='login'){const {error:e}=await supabase.auth.signInWithPassword({email,password});if(e)throw e}
+   else if(mode==='login'){const {data,error:e}=await supabase.auth.signInWithPassword({email,password});if(e)throw e;localStorage.removeItem('frame-guest');localStorage.removeItem('frame-force-auth');if(data.session){window.history.replaceState({framePage:'home'},'',window.location.href)}}
    else if(mode==='reset'){const redirectTo=window.location.origin+window.location.pathname+'#reset';const {error:e}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});if(e)throw e;setMessage('If that email exists, a secure reset link has been sent.')}
    else {const {error:e}=await supabase.auth.updateUser({password});if(e)throw e;setMessage('Password updated. Continue into FRAME.');setMode('login');setPassword('')}
   }catch(e){setError(e instanceof Error?e.message:'Something went wrong. Please try again.')}
