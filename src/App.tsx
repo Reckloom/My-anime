@@ -277,10 +277,9 @@ export default function App(){
   <main className="frame-main">
    {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name}/>}
    {page==='library'&&<LibraryPage items={shown} filter={filter} setFilter={setFilter} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)}/>}
-   {page==='discover'&&<Discover finder={()=>setFinder(true)} ai={()=>go('ai')} go={go}/>} 
+   {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='web'&&<FrameWebSearch/>}
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
-   {page==='ai'&&<FrameAI items={items} provider={aiProvider} setProvider={x=>{setAiProvider(x);void persist('ai_provider',x)}}/>}
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setDirectCall}/>}
    {page==='chat'&&<FrameGlobalChat uid={uid} guest={guest}/>} 
    {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
