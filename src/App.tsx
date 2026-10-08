@@ -354,4 +354,5 @@ function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){
 function SharedCard({item}:{item:MediaItem}){
  const pct=item.medium==='game'||item.medium==='visual-novel'?item.progress:item.progress/(item.total||1)*100;
  return <article className="media-card shared-media-card"><div className="media-poster"><img src={item.poster||poster} alt="" loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total||500)} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">Shared view · read only</span></div></article>;
-}\nfunction Empty({text}:{text:string}){return <div className="empty-state"><Library size={25}/><p>{text}</p></div>}
+}
+function Empty({text}:{text:string}){return <div className="empty-state"><Library size={25}/><p>{text}</p></div>}
