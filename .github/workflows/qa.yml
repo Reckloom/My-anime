@@ -20,6 +20,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
       - name: Build FRAME
         run: npm run build
       - name: Install Playwright test runner
