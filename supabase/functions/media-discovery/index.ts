@@ -136,31 +136,28 @@ async function searchMovies(q:string){
   const imagesData=pageIds.length?await getJson(`https://en.wikipedia.org/w/api.php?action=query&pageids=${pageIds.join('|')}&prop=images&imlimit=20&format=json&origin=*`).catch(()=>({})):{};
   const preferredFiles=new Map<string,string>();
   for(const page of Object.values(imagesData?.query?.pages||{}) as any[]){
-    const images=Array.isArray(page?.images)?page.images:[]; const title=String(page?.title||'');
+    const images=Array.isArray(page?.images)?page.images:[];
+    const title=String(page?.title||'');
     const candidate=images.map((x:any)=>String(x.title||'')).filter((x:string)=>/\.(jpe?g|png|webp)$/i.test(x)&&!/logo|icon|screenshot|cast/i.test(x));
     const poster=candidate.find((x:string)=>/poster/i.test(x))||candidate.find((x:string)=>x.toLowerCase().includes(title.toLowerCase()))||candidate[0];
     if(poster)preferredFiles.set(String(page.pageid),poster);
   }
-  const fileTitles=[...preferredFiles.values()];
-  const infoData=fileTitles.length?await getJson(`https://en.wikipedia.org/w/api.php?action=query&titles=${fileTitles.map(encodeURIComponent).join('|')}&prop=imageinfo&iiprop=url&iiurlwidth=700&format=json&origin=*`).catch(()=>({})):{};
-  const fileUrls=new Map<string,string>();
-  for(const page of Object.values(infoData?.query?.pages||{}) as any[]){
-    const title=String(page?.title||''); const url=String(page?.imageinfo?.[0]?.thumburl||page?.imageinfo?.[0]?.url||'');
-    if(title&&url)fileUrls.set(title,url);
-  }
-  const needle=q.trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  const tokens=needle.split(/\s+/).filter(Boolean);
   const ranked=pages.map((x:any)=>{
     const title=String(x.title||'Untitled');
     const hay=title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    const needle=q.trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    const tokens=needle.split(/\s+/).filter(Boolean);
     let relevance=0;
     if(hay===needle)relevance+=100;
     if(hay.includes(needle))relevance+=45;
-    relevance+=tokens.filter(t=>hay.includes(t)).length*7;
+    relevance+=tokens.filter((t:string)=>hay.includes(t)).length*7;
     const extract=clean(x.extract);
     if(/\b(film|movie|cinema|feature film)\b/i.test(extract))relevance+=8;
     if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
-    const poster=x.thumbnail?.source||fileUrls.get(preferredFiles.get(String(x.pageid))||'')||'';
+    const file=preferredFiles.get(String(x.pageid))||'';
+    const poster=x.thumbnail?.source||(
+      file ? `https://en.wikipedia.org/wiki/Special:Redirect/file/${encodeURIComponent(file.replace(/^File:/i,''))}` : ''
+    );
     return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster,backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
   }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12);
   return ranked.map(({_relevance,...x}:any)=>x);
