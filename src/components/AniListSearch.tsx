@@ -118,6 +118,33 @@ function providerLabel(provider:Exclude<Tab,'anime'|'manga'>){
  return provider==='game'?'Steam':provider==='series'?'TVmaze':provider==='movie'?'Wikipedia':provider==='book'?'Open Library':'VNDB';
 }
 
+async function enrichMovieArtwork(results:DiscoveryResult[]){
+  if(!results.length)return results;
+  const missing=results.filter(x=>x.medium==='movie'&&!x.poster).slice(0,3);
+  if(!missing.length)return results;
+  try{
+    const ids=missing.map(x=>x.externalId).join('|');
+    const data=await fetchJsonWithTimeout('https://en.wikipedia.org/w/api.php?action=query&pageids='+encodeURIComponent(ids)+'&prop=images&imlimit=20&format=json&origin=*') as {query?:{pages?:Record<string,any>}};
+    const files=new Map<string,string>();
+    for(const page of Object.values(data.query?.pages||{})){
+      const images=Array.isArray((page as any).images)?(page as any).images:[];
+      const candidates=images.map((x:any)=>String(x.title||'')).filter((x:string)=>/\.(jpe?g|png|webp)$/i.test(x)&&!/logo|icon|screenshot|cast/i.test(x));
+      const poster=candidates.find((x:string)=>/poster/i.test(x))||candidates[0];
+      if((page as any).pageid&&poster)files.set(String((page as any).pageid),poster);
+    }
+    const titles=[...files.values()];
+    if(!titles.length)return results;
+    const info=await fetchJsonWithTimeout('https://en.wikipedia.org/w/api.php?action=query&titles='+titles.map(encodeURIComponent).join('|')+'&prop=imageinfo&iiprop=url&iiurlwidth=700&format=json&origin=*') as {query?:{pages?:Record<string,any>}};
+    const urls=new Map<string,string>();
+    for(const page of Object.values(info.query?.pages||{})){
+      const title=String((page as any).title||'');
+      const url=String((page as any).imageinfo?.[0]?.thumburl||(page as any).imageinfo?.[0]?.url||'');
+      if(title&&url)urls.set(title,url);
+    }
+    return results.map(x=>x.poster?x:{...x,poster:urls.get(files.get(x.externalId)||'')||x.poster});
+  }catch{return results}
+}
+
 async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'manga'>):Promise<DiscoveryResult[]>{
  const q=encodeURIComponent(term.trim());
  if(provider==='series'){
