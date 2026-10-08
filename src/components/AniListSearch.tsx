@@ -285,7 +285,7 @@ function externalToMedia(r:DiscoveryResult):MediaItem{
  };
 }
 
-export function AniListSearch({close,onImported,onManual,initialQuery='',guest=false}:{close:()=>void;onImported:(item:MediaItem)=>void;onManual?:()=>void;initialQuery?:string;guest?:boolean}){
+export function AniListSearch({close,onImported,onManual,initialQuery='',guest=false}:{close:()=>void;onImported:(item:MediaItem)=>void|Promise<void>;onManual?:()=>void;initialQuery?:string;guest?:boolean}){
  const[tab,setTab]=useState<Tab>('anime'),[query,setQuery]=useState(initialQuery),[results,setResults]=useState<(AniListMedia|DiscoveryResult)[]>([]),[selected,setSelected]=useState<AniListMedia|DiscoveryResult|null>(null);
  const[loading,setLoading]=useState(false),[detailLoading,setDetailLoading]=useState(false),[importing,setImporting]=useState(false),[error,setError]=useState('');
  const current=tabs.find(x=>x.id===tab)!;
@@ -337,15 +337,15 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
    if(isAni){
     const r=selected as AniListSearchResult;
     if(r.sourceProvider==='jikan'){
-     onImported(localItem(r));
+     await onImported(localItem(r));
     }else if(supabase){
      const{data,error:e}=await supabase.functions.invoke('anilist-import',{body:{action:'import',anilistId:r.id}});
      if(e)throw e;
      if((data as {existing?:boolean}|null)?.existing){setError('This title is already in your library.');return}
      const imported=(data as {media?:unknown}|null)?.media;
-     onImported(imported?fromImportedRow(imported):localItem(r));
-    }else onImported(localItem(r));
-   }else onImported(externalToMedia(selected as DiscoveryResult));
+     await onImported(imported?fromImportedRow(imported):localItem(r));
+    }else await onImported(localItem(r));
+   }else await onImported(externalToMedia(selected as DiscoveryResult));
   }catch(e){setError(e instanceof Error?e.message:'Could not import this title. Please try again.')}
   finally{setImporting(false)}
  };
