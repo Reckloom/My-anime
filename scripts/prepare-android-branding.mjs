@@ -66,3 +66,14 @@ styles = styles.replaceAll(
   '<item name="android:background">@drawable/frame_splash</item>',
 );
 await writeFile(stylesUrl, styles, 'utf8');
+
+const manifestUrl = new URL('../android/app/src/main/AndroidManifest.xml', import.meta.url);
+let manifest = await readFile(manifestUrl, 'utf8');
+if (!manifest.includes('android.permission.RECORD_AUDIO')) {
+  manifest = manifest.replace(
+    /<manifest([^>]*)>/,
+    '<manifest$1>\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />',
+  );
+  await writeFile(manifestUrl, manifest, 'utf8');
+}
+
