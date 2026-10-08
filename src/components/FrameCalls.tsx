@@ -52,6 +52,11 @@ export function CallsPage({uid,profile,onCloseCall:_onCloseCall}:{uid:string;pro
 
   const makePeer=async(id:string,initiator:boolean)=>{
     if(id===clientIdRef.current)return null;
+    if(!peers.current.has(id)&&peers.current.size>=MAX_PEERS-1){
+      await send({type:'busy',to:id});
+      if(mounted.current)setError('Global Call supports up to '+MAX_PEERS+' people at once. Wait for a place to open.');
+      return null;
+    }
     const existing=peers.current.get(id);
     if(existing)return existing;
     const stream=localRef.current;
@@ -114,6 +119,9 @@ export function CallsPage({uid,profile,onCloseCall:_onCloseCall}:{uid:string;pro
         closePeer(id);
       }else if(payload.type==='hello'){
         if(clientIdRef.current<id)await makePeer(id,true);
+      }else if(payload.type==='busy'){
+        closePeer(id);
+        if(mounted.current)setError('Global Call is currently full ('+MAX_PEERS+' people).');
       }
     }catch(e){
       if(mounted.current)setError(e instanceof Error?e.message:'Voice connection failed.');
@@ -147,6 +155,8 @@ export function CallsPage({uid,profile,onCloseCall:_onCloseCall}:{uid:string;pro
           else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')reject(new Error(err?.message||'Global voice is unavailable right now.'));
         });
       });
+      const preJoinCount=Object.keys(channel.presenceState()||{}).length;
+      if(preJoinCount>=MAX_PEERS)throw new Error('Global Call is currently full ('+MAX_PEERS+' people).');
       await channel.track({name:displayName,joinedAt:Date.now()});
       setJoined(true);
       updatePresence();
@@ -197,7 +207,7 @@ export function CallsPage({uid,profile,onCloseCall:_onCloseCall}:{uid:string;pro
       <div className="global-call-stats"><div><Users size={17}/><b>{participants}</b><span>Connected</span></div><div><Volume2 size={17}/><b>{remotes.length}</b><span>Audio peers</span></div><div><Radio size={17}/><b>Public</b><span>Room type</span></div></div>
       {error&&<div className="inline-error">{error}</div>}
       {joined?<div className="global-call-actions"><button className="secondary call-control" onClick={toggleMute}>{muted?<MicOff size={18}/>:<Mic size={18}/>} {muted?'Unmute':'Mute'}</button><button className="danger call-control" onClick={()=>void leave()}><LogOut size={18}/>Leave call</button></div>:<button className="primary global-call-join" disabled={joining} onClick={()=>void join()}><Phone size={18}/>{joining?'Joining…':'Join global call'}</button>}
-      <div className="global-call-note">Public global calls are separate from private one-to-one calls. Your microphone permission is requested only when you join.</div>
+      <div className="global-call-note">Public global calls are separate from private one-to-one calls. This browser-to-browser room supports up to {MAX_PEERS} participants. Your microphone permission is requested only when you join.</div>
       {remotes.map(remote=><audio key={remote.id} ref={el=>{if(el)audioRefs.current.set(remote.id,el);else audioRefs.current.delete(remote.id)}} autoPlay playsInline/> )}
     </section>
   </div>;
