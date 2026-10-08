@@ -33,19 +33,6 @@ async function getJson(url:string){
   }finally{clearTimeout(timer);}
 }
 
-async function getText(url:string){
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
-  try{
-    const r=await fetch(url,{headers:{Accept:'text/html', 'User-Agent':'FRAME/1.0'},signal:controller.signal});
-    const text=await r.text();
-    if(!r.ok)throw new Error(`Source request failed (HTTP ${r.status}).`);
-    return text;
-  }catch(e){
-    if(e instanceof DOMException&&e.name==='AbortError') throw new Error('Source request timed out.');
-    throw e;
-  }finally{clearTimeout(timer);}
-}
 async function postJson(url:string,body:unknown){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),12000);
