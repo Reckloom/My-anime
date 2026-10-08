@@ -172,20 +172,7 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
   }) as {results?:any[]};
   return (data.results||[]).map(x=>({provider:'vndb',externalId:String(x.id),title:String(x.title||term),alternativeTitles:x.alttitle?[String(x.alttitle)]:[],medium:'visual-novel',poster:x.image?.url,description:x.description||'',year:x.released?Number(String(x.released).slice(0,4)):undefined,score:x.rating==null?null:Number(x.rating)/10,sourceUrl:'https://vndb.org/'+x.id,source:'vndb',genres:[]}));
  }
- if(provider==='game'){
-  const data=await fetchJsonWithTimeout('https://www.gamelegend.com/api/v1/games?q='+q+'&limit=12') as {games?:any[]};
-  const rows=Array.isArray(data.games)?data.games:[];
-  return rows
-   .filter(x=>x?.slug&&x?.title)
-   .slice(0,12)
-   .map(x=>({
-    provider:'gamelegend',externalId:String(x.slug),title:String(x.title),medium:'game',
-    poster:String(x.coverImageUrl||''),description:String(x.description||''),
-    year:extractYear(x.releaseDate),genres:[],themes:Array.isArray(x.platforms)?x.platforms.map(String):[],
-    score:null,source:'GameLegend',sourceUrl:String(x.url||('https://www.gamelegend.com/games/'+x.slug)),
-    game:{isFree:false,platforms:Array.isArray(x.platforms)?x.platforms.map(String):[],releaseDate:x.releaseDate,storeUrl:String(x.url||('https://www.gamelegend.com/games/'+x.slug))}
-   }));
- }
+ if(provider==='game')return [];
  return [];
 }
 
@@ -212,13 +199,13 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
 async function detailExternal(result:DiscoveryResult){
  const provider=result.provider as Exclude<Tab,'anime'|'manga'>;
  try{
-  const providerName=result.provider==='gamelegend'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
+  const providerName=result.provider==='mobygames'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
   const data=await discoveryRequest({action:'detail',provider:providerName,externalId:result.externalId});
   if(data.result)return data.result as DiscoveryResult;
  }catch{}
  if(supabase){
   try{
-   const providerName=result.provider==='gamelegend'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
+   const providerName=result.provider==='mobygames'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
    const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:providerName,externalId:result.externalId}});
    if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;
   }catch{}
@@ -228,7 +215,7 @@ async function detailExternal(result:DiscoveryResult){
    const x=await fetchJsonWithTimeout('https://api.tvmaze.com/shows/'+encodeURIComponent(result.externalId)+'?embed=episodes') as any;
    return{...result,total:Array.isArray(x._embedded?.episodes)?x._embedded.episodes.length:result.total,description:x.summary||result.description,poster:x.image?.original||result.poster,backdrop:x.image?.original||result.backdrop,sourceUrl:x.officialSite||x.url};
   }
-  if(result.provider==='gamelegend'){
+  if(result.provider==='mobygames'){
    const data=await fetchJsonWithTimeout('https://www.gamelegend.com/api/v1/games/'+encodeURIComponent(result.externalId)) as {game?:any};
    const x=data.game;
    if(x)return{
