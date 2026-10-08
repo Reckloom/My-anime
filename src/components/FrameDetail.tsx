@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Check,Edit3,ExternalLink,Heart,RefreshCw,Star,X} from 'lucide-react';
+import {Check,ChevronLeft,ChevronRight,Edit3,ExternalLink,Heart,RefreshCw,Star,X} from 'lucide-react';
 import type {MediaAvailability,MediaItem,Status} from '../types';
 import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
 import {supabase} from '../lib/supabase';
@@ -27,7 +27,7 @@ function normaliseAvailability(value?:MediaAvailability):MediaAvailability|undef
  return Object.keys(next).length?next:undefined;
 }
 
-export function FrameDetail({item,library,close,save,onRefreshMetadata,onDelete}:{item:MediaItem;library:MediaItem[];close:()=>void;save:(x:MediaItem)=>void|Promise<boolean>;onRefreshMetadata?: (item:MediaItem)=>Promise<MediaItem>;onDelete?: (id:string)=>Promise<void>}){
+export function FrameDetail({item,library,navigationItems,navigate,close,save,onRefreshMetadata,onDelete}:{item:MediaItem;library:MediaItem[];navigationItems?:MediaItem[];navigate?:(item:MediaItem)=>void;close:()=>void;save:(x:MediaItem)=>void|Promise<boolean>;onRefreshMetadata?: (item:MediaItem)=>Promise<MediaItem>;onDelete?: (id:string)=>Promise<void>}){
  const[d,setD]=useState(item),[note,setNote]=useState(item.notes||''),[refreshing,setRefreshing]=useState(false),[refreshMessage,setRefreshMessage]=useState('');
  const[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[saveMessage,setSaveMessage]=useState('');
  const[artworkBusy,setArtworkBusy]=useState(false),[artworkMessage,setArtworkMessage]=useState('');
@@ -57,10 +57,18 @@ export function FrameDetail({item,library,close,save,onRefreshMetadata,onDelete}
  const genres=listValue(d.genres);
  const themes=listValue(d.themes);
  const parentCandidates=useMemo(()=>library.filter(canUseAsParent),[library,d.id,d.parentId]);
+ const navItems=navigationItems?.length?navigationItems:[item];
+ const navIndex=Math.max(0,navItems.findIndex(x=>x.id===item.id));
+ const hasPrevious=navItems.length>1;
+ const goPrevious=()=>{if(!navigate||navItems.length<2)return;navigate(navItems[(navIndex-1+navItems.length)%navItems.length])};
+ const goNext=()=>{if(!navigate||navItems.length<2)return;navigate(navItems[(navIndex+1)%navItems.length])};
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='ArrowLeft'){e.preventDefault();goPrevious()}else if(e.key==='ArrowRight'){e.preventDefault();goNext()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[navIndex,navItems.length,navigate]);
 
- return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
-  <aside className="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
-   <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
+ return <div className="overlay detail-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+  <div className="detail-modal-shell">
+   {hasPrevious&&<button className="detail-nav-arrow detail-nav-prev" aria-label="Previous media" title="Previous media" onClick={goPrevious}><ChevronLeft size={26}/></button>}
+   <aside className="detail-drawer detail-modal" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
+    <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
    <div className="detail-cover"><img src={d.backdrop||d.poster||'/frame-logo.svg'} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><div/></div>
    <div className="detail-body">
     <img className="detail-poster" src={d.poster||'/frame-logo.svg'} alt={d.title} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
@@ -157,6 +165,7 @@ export function FrameDetail({item,library,close,save,onRefreshMetadata,onDelete}
    <section className="detail-section"><label>Private notes<textarea value={note} onChange={e=>{setNote(e.target.value);setD({...d,notes:e.target.value})}} placeholder="Your notes…"/></label></section>
 
    <div className="detail-actions"><button className="primary" disabled={saving} onClick={()=>void saveEdits()}><Check size={16}/>Save changes</button><button className="secondary active" onClick={()=>setD({...d,favorite:!d.favorite})}><Heart size={16} fill={d.favorite?'currentColor':'none'}/>{d.favorite?'Favorited':'Favorite'}</button>{onDelete&&<button className="danger" type="button" onClick={()=>{const hasChildren=library.some(x=>x.parentId===d.id);const message=hasChildren?'Delete this entry? Its child entries will be kept but detached.':'Delete this entry? This cannot be undone.';if(window.confirm(message))void onDelete(d.id)}}>Delete</button>}</div>
-  </aside>
+   {hasPrevious&&<button className="detail-nav-arrow detail-nav-next" aria-label="Next media" title="Next media" onClick={goNext}><ChevronRight size={26}/></button>}
+  </div>
  </div>;
 }
