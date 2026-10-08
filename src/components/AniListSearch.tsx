@@ -287,7 +287,7 @@ function externalToMedia(r:DiscoveryResult):MediaItem{
 
 export function AniListSearch({close,onImported,onManual,initialQuery='',guest=false}:{close:()=>void;onImported:(item:MediaItem)=>void|Promise<void>;onManual?:()=>void;initialQuery?:string;guest?:boolean}){
  const[tab,setTab]=useState<Tab>('anime'),[query,setQuery]=useState(initialQuery),[results,setResults]=useState<(AniListMedia|DiscoveryResult)[]>([]),[selected,setSelected]=useState<AniListMedia|DiscoveryResult|null>(null);
- const[loading,setLoading]=useState(false),[detailLoading,setDetailLoading]=useState(false),[importing,setImporting]=useState(false),[error,setError]=useState('');
+ const[loading,setLoading]=useState(false),[detailLoading,setDetailLoading]=useState(false),[importing,setImporting]=useState(false),[added,setAdded]=useState(false),[error,setError]=useState('');
  const current=tabs.find(x=>x.id===tab)!;
  const isAni=tab==='anime'||tab==='manga';
  const catalogType:CatalogType=tab==='anime'?'ANIME':'MANGA';
@@ -314,7 +314,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
  },[query,tab,isAni,catalogType]);
 
  const choose=async(raw:AniListSearchResult|DiscoveryResult)=>{
-  setSelected(raw);setDetailLoading(true);setError('');
+  setSelected(raw);setAdded(false);setDetailLoading(true);setError('');
   try{
    if(isAni){
     const r=raw as AniListSearchResult;
@@ -331,22 +331,14 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   finally{setDetailLoading(false)}
  };
  const importMedia=async()=>{
-  if(!selected)return;
+  if(!selected||added)return;
   setImporting(true);setError('');
   try{
-   if(isAni){
-    const r=selected as AniListSearchResult;
-    if(r.sourceProvider==='jikan'){
-     await onImported(localItem(r));
-    }else if(supabase){
-     const{data,error:e}=await supabase.functions.invoke('anilist-import',{body:{action:'import',anilistId:r.id}});
-     if(e)throw e;
-     if((data as {existing?:boolean}|null)?.existing){setError('This title is already in your library.');return}
-     const imported=(data as {media?:unknown}|null)?.media;
-     await onImported(imported?fromImportedRow(imported):localItem(r));
-    }else await onImported(localItem(r));
-   }else await onImported(externalToMedia(selected as DiscoveryResult));
-  }catch(e){setError(e instanceof Error?e.message:'Could not import this title. Please try again.')}
+   const candidate=isAni?localItem(selected as AniListSearchResult):externalToMedia(selected as DiscoveryResult);
+   const result=await onImported(candidate);
+   if(result!==false)setAdded(true);
+   else setError('This title is already in your library.');
+  }catch(e){setError(e instanceof Error?e.message:'Could not add this title to your library. Please try again.')}
   finally{setImporting(false)}
  };
  const selectedAni=isAni?(selected as AniListSearchResult|null):null;
@@ -356,37 +348,47 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   if(isAni){const m=x as AniListMedia;return{title:titleOf(m),poster:m.coverImage?.extraLarge||'',meta:anilistMediumLabel(m)+' · '+(m.format||'Unknown format')+(m.seasonYear?' · '+m.seasonYear:''),tags:m.genres?.slice(0,3)||[]}}
   const r=x as DiscoveryResult;return{title:r.title,poster:r.poster||'',meta:r.medium.toUpperCase()+' · '+providerLabel(tab as Exclude<Tab,'anime'|'manga'>)+(r.year?' · '+r.year:''),tags:r.genres?.slice(0,3)||[]};
  };
- return <div className="modalwrap"><div className="modal search-modal">
-  <div className="modalhead"><div><small>MEDIA DISCOVERY</small><h2>Find anything for FRAME</h2><p className="muted">Live catalogues for anime, manga, manhwa, games, series, movies and books.</p></div><button onClick={close} aria-label="Close"><X/></button></div>
-  <div className="search-big"><Search size={18}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();close()}}} aria-label="Search media" placeholder={current.id==='game'?'Search games by title…':current.id==='series'?'Search TV series…':current.id==='movie'?'Search movies by title…':current.id==='book'?'Search books / novels…':current.id==='visual-novel'?'Search visual novels…':current.id==='manga'?'Search manga, manhwa or light novels…':'Search anime, movies, seasons…'}/></div>
-  <div className="catalog-tabs catalog-tabs-wide" role="tablist" aria-label="Media catalogues">{tabs.map(t=>{const Icon=t.icon;return <button role="tab" aria-selected={tab===t.id} key={t.id} className={tab===t.id?'active':''} onClick={()=>{setTab(t.id);setResults([]);setError('')}}><Icon size={14}/>{t.label}<small>{t.hint}</small></button>})}</div>
-  {error&&<div className="inline-error"><AlertCircle size={15}/><span>{error}</span></div>}
-  {loading&&<div className="search-state"><Loader2 className="spin"/>Searching {current.hint}…</div>}
-  {!loading&&query.trim().length<2&&<div className="search-state">Choose a catalogue and type at least two characters.</div>}
-  {!loading&&query.trim().length>=2&&!results.length&&!error&&<div className="search-state">No results yet. Try another title or spelling.</div>}
-  {results.length>0&&<div className="ani-results">{results.map(r=>{const i=resultInfo(r);return <button type="button" key={resultKey(r)} className={(isAni?(selected as AniListMedia|null)?.id=== (r as AniListMedia).id:(selected as DiscoveryResult|null)?.externalId===(r as DiscoveryResult).externalId)?'ani-result selected':'ani-result'} onClick={()=>void choose(r)}>
-   <img src={i.poster||'/frame-logo.svg'} alt={i.title} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
-   <span><b>{i.title}</b><small>{i.meta}</small><em>{i.tags.join(' · ')||'Metadata available on selection'}</em></span>
-  </button>})}</div>}
-  {selected&&<div className="ani-detail">
-   {isAni&&selectedAni?<img src={selectedAni.coverImage?.extraLarge||'/frame-logo.svg'} alt={titleOf(selectedAni)} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:
-    selectedExt?<img src={selectedExt.poster||'/frame-logo.svg'} alt={selectedExt.title} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:null}
-   <div>
-    {isAni&&selectedAni?<><small>{anilistMediumLabel(selectedAni)} · AniList</small><h3>{titleOf(selectedAni)}</h3></>:
-     selectedExt?<><small>{selectedExt.medium.toUpperCase()} · {selectedExt.source||providerLabel(tab as Exclude<Tab,'anime'|'manga'>)}</small><h3>{selectedExt.title}</h3></>:null}
-    {detailLoading?<p><Loader2 className="spin"/> Loading metadata…</p>:<>
-      <p>{cleanDescription(isAni&&selectedAni?selectedAni.description:selectedExt?.description)||'No description available.'}</p>
-      <div className="tags">{((isAni && selectedAni?.genres) || selectedExt?.genres || []).map((x:string)=><span key={x}>{x}</span>)}</div>
-      {!isAni&&selectedExt?.sourceUrl&&<p className="info-line">Source: {selectedExt.sourceUrl}</p>}
-    </>}
-    <div className="ani-actions">
-     <button className="primary" disabled={importing||detailLoading} onClick={()=>void importMedia()}>{importing?<Loader2 className="spin"/>:<Download/>}{importing?'Importing…':'Add to my library'}</button>
-     {isAni&&selectedAni?<a href={'https://anilist.co/'+selectedAni.type.toLowerCase()+'/'+selectedAni.id} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:
-      selectedExt?.sourceUrl?<a href={selectedExt.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:null}
-     {onManual&&<button className="secondary" onClick={onManual}>Manual entry</button>}
+ return <div className="modalwrap" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+  <div className="modal search-modal">
+   <div className="modalhead"><div><small>MEDIA DISCOVERY</small><h2>Find anything for FRAME</h2><p className="muted">Live catalogues for anime, manga, manhwa, games, series, movies and books.</p></div><button onClick={close} aria-label="Close"><X/></button></div>
+   <div className="search-big"><Search size={18}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();close()}}} aria-label="Search media" placeholder={current.id==='game'?'Search games by title…':current.id==='series'?'Search TV series…':current.id==='movie'?'Search movies by title…':current.id==='book'?'Search books / novels…':current.id==='visual-novel'?'Search visual novels…':current.id==='manga'?'Search manga, manhwa or light novels…':'Search anime, movies, seasons…'}/></div>
+   <div className="catalog-tabs catalog-tabs-wide" role="tablist" aria-label="Media catalogues">{tabs.map(t=>{const Icon=t.icon;return <button role="tab" aria-selected={tab===t.id} key={t.id} className={tab===t.id?'active':''} onClick={()=>{setTab(t.id);setResults([]);setSelected(null);setAdded(false);setError('')}}><Icon size={14}/>{t.label}<small>{t.hint}</small></button>})}</div>
+   {error&&<div className="inline-error"><AlertCircle size={15}/><span>{error}</span></div>}
+   {loading&&<div className="search-state"><Loader2 className="spin"/>Searching {current.hint}…</div>}
+   {!loading&&query.trim().length<2&&<div className="search-state">Choose a catalogue and type at least two characters.</div>}
+   {!loading&&query.trim().length>=2&&!results.length&&!error&&<div className="search-state">No results yet. Try another title or spelling.</div>}
+   {results.length>0&&<div className="ani-results">{results.map(r=>{const i=resultInfo(r);const isSelected=isAni?(selected as AniListMedia|null)?.id===(r as AniListMedia).id:(selected as DiscoveryResult|null)?.externalId===(r as DiscoveryResult).externalId;return <button type="button" key={resultKey(r)} className={isSelected?'ani-result selected':'ani-result'} onClick={()=>void choose(r)}>
+    <img className="ani-result-art" src={i.poster||'/frame-logo.svg'} alt={i.title} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
+    <span className="ani-result-copy"><b>{i.title}</b><small>{i.meta}</small><em>{i.tags.join(' · ')||'Metadata available on selection'}</em></span>
+   </button>})}</div>}
+   {onManual&&!selected&&<button className="secondary manual-fallback" onClick={onManual}>Can't find it? Add manually</button>}
+  </div>
+
+  {selected&&<div className="finder-detail-layer" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}>
+   <section className="finder-detail-bubble" role="dialog" aria-modal="true" aria-label="Media details" onMouseDown={e=>e.stopPropagation()}>
+    <button className="finder-detail-close" type="button" aria-label="Back to search results" onClick={()=>setSelected(null)}><X/></button>
+    <div className="finder-detail-head">
+     {isAni&&selectedAni?<img className="finder-detail-poster" src={selectedAni.coverImage?.extraLarge||'/frame-logo.svg'} alt={titleOf(selectedAni)} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:
+      selectedExt?<img className="finder-detail-poster" src={selectedExt.poster||'/frame-logo.svg'} alt={selectedExt.title} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:null}
+     <div className="finder-detail-copy">
+      {isAni&&selectedAni?<><small>{anilistMediumLabel(selectedAni)} · AniList</small><h3>{titleOf(selectedAni)}</h3><div className="tags">{selectedAni.genres?.map((x:string)=><span key={x}>{x}</span>)}</div></>:
+       selectedExt?<><small>{selectedExt.medium.toUpperCase()} · {selectedExt.source||providerLabel(tab as Exclude<Tab,'anime'|'manga'>)}</small><h3>{selectedExt.title}</h3><div className="tags">{(selectedExt.genres||[]).map((x:string)=><span key={x}>{x}</span>)}</div></>:null}
+     </div>
     </div>
-   </div>
+    <div className="finder-detail-body">
+     {detailLoading?<p className="finder-detail-loading"><Loader2 className="spin"/>Loading full metadata…</p>:<>
+      <p>{cleanDescription(isAni&&selectedAni?selectedAni.description:selectedExt?.description)||'No description available.'}</p>
+      {selectedExt?.year&&<p className="finder-detail-meta">Year: {selectedExt.year}</p>}
+      {selectedExt?.sourceUrl&&<p className="finder-detail-meta">Source: {selectedExt.sourceUrl}</p>}
+     </>}
+     <div className="ani-actions finder-detail-actions">
+      <button className="primary" disabled={importing||detailLoading||added} onClick={()=>void importMedia()}>{importing?<Loader2 className="spin"/>:<Download/>}{added?'Added to library':importing?'Adding…':'Add to my library'}</button>
+      {isAni&&selectedAni?<a href={'https://anilist.co/'+selectedAni.type.toLowerCase()+'/'+selectedAni.id} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:
+       selectedExt?.sourceUrl?<a href={selectedExt.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:null}
+      {onManual&&<button className="secondary" onClick={onManual}>Manual entry</button>}
+     </div>
+    </div>
+   </section>
   </div>}
-  {onManual&&!selected&&<button className="secondary manual-fallback" onClick={onManual}>Can't find it? Add manually</button>}
- </div></div>;
+ </div>;
 }
