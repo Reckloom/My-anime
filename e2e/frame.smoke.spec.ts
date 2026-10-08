@@ -133,6 +133,19 @@ test.describe('FRAME global voice', () => {
   });
 });
 
+test.describe('FRAME private voice rooms', () => {
+  test('exposes create and join-by-code controls', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Global Call', exact: true }).first().click();
+    await page.getByRole('tab', { name: 'Private Rooms', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Private Rooms', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create room', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Private room code')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Join room', exact: true })).toBeVisible();
+    await expect(page.getByText(/Among Us room code/)).toBeVisible();
+  });
+});
+
 test.describe('FRAME discovery integration', () => {
   test('movie and game discovery return real image-backed results', async ({ request }) => {
     const base = 'https://blwnhfhpckqbetwxamqr.supabase.co/functions/v1/media-discovery';
