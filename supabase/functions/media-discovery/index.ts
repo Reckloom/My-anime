@@ -55,71 +55,36 @@ async function postJson(url:string,body:unknown){
 }
 
 async function searchGames(q:string){
-  const term=encodeURIComponent(q.trim());
-  const sources=[
-    `https://store.steampowered.com/search/results/?term=${term}&start=0&count=12&sort_by=Relevance&category1=998&json=1&infinite=1&cc=us&l=english`,
-    `https://store.steampowered.com/api/storesearch/?term=${term}&cc=us&l=english`
-  ];
-  let items:any[]=[];
-  let lastError='Steam search did not return results.';
-  for(const url of sources){
-    try{
-      const data=await getJson(url);
-      const rows=Array.isArray(data?.items)?data.items:Array.isArray(data?.results)?data.results:[];
-      if(rows.length){
-        items=rows;
-        break;
-      }
-    }catch(error){
-      lastError=error instanceof Error?error.message:String(error);
-    }
-  }
-  if(!items.length)throw new Error(lastError);
-  return items
-    .map((x:any)=>({
-      id:x.id??x.appid??x.appId??String(x.url||'').match(/\/app\/(\d+)/)?.[1],
-      name:x.name??x.title,
-      poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
-      type:x.type
-    }))
-    .filter((x:any)=>x.id&&x.name&&(!x.type||x.type==='app'||x.type==='game'||x.type===1))
-    .slice(0,12)
-    .map((x:any)=>({
-      provider:'steam',externalId:String(x.id),title:String(x.name),medium:'game',
-      poster:String(x.poster||''),score:null,year:null,description:'',
-      genres:[],themes:[],sourceUrl:`https://store.steampowered.com/app/${x.id}/`,
-      game:{isFree:false,storeUrl:`https://store.steampowered.com/app/${x.id}/`}
-    }));
+  const data=await getJson(`https://www.gamelegend.com/api/v1/games?q=${encodeURIComponent(q.trim())}&limit=12`);
+  const games=Array.isArray(data?.games)?data.games:[];
+  return games.filter((x:any)=>x?.slug&&x?.title).slice(0,12).map((x:any)=>{
+    const platforms=Array.isArray(x.platforms)?x.platforms.map(String):[];
+    const url=String(x.url||`https://www.gamelegend.com/games/${x.slug}`);
+    return {
+      provider:'gamelegend',externalId:String(x.slug),title:String(x.title),medium:'game',
+      poster:String(x.coverImageUrl||''),backdrop:'',score:null,year:extractYear(x.releaseDate),
+      description:clean(String(x.description||'')),genres:[],themes:platforms,source:'GameLegend',
+      sourceUrl:url,game:{isFree:false,platforms,releaseDate:x.releaseDate,storeUrl:url}
+    };
+  });
 }
 
 async function detailGame(id:string){
-  const data=await getJson(`https://store.steampowered.com/api/appdetails?appids=${encodeURIComponent(id)}&cc=in&l=english`);
-  const game=data?.[id]?.data;
+  const gameData=await getJson(`https://www.gamelegend.com/api/v1/games/${encodeURIComponent(id)}`);
+  const game=gameData?.game;
   if(!game) throw new Error('Game details were not available.');
-  const genres=Array.isArray(game.genres)?game.genres.map((x:any)=>String(x.description)):[];
-  const categories=Array.isArray(game.categories)?game.categories.map((x:any)=>String(x.description)):[];
-  const developers=Array.isArray(game.developers)?game.developers.map(String):[];
-  const publishers=Array.isArray(game.publishers)?game.publishers.map(String):[];
+  const themes=Array.isArray(game?.dna?.themes)?game.dna.themes.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
+  const mechanics=Array.isArray(game?.dna?.mechanics)?game.dna.mechanics.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
+  const platforms=Array.isArray(game.platforms)?game.platforms.map(String):[];
+  const store=Array.isArray(game.storefronts)&&game.storefronts.length?game.storefronts[0]:null;
+  const storeUrl=String((store as any)?.url||game.url||`https://www.gamelegend.com/games/${id}`);
   return {
-    provider:'steam',externalId:id,title:String(game.name||'Untitled'),
-    medium:genres.some((x:string)=>x.toLowerCase()==='visual novel')?'visual-novel':'game',
-    poster:String(game.header_image||game.capsule_image||''),backdrop:String(game.background||''),
-    description:clean(String(game.short_description||game.detailed_description||'')),
-    genres, themes:categories, studio:developers.join(', ')||undefined,
-    source:publishers.join(', ')||'Steam',year:game.release_date?.date?Number(String(game.release_date.date).match(/(19|20)\d{2}/)?.[0]):undefined,
-    score:game.metacritic?.score?Number(game.metacritic.score)/10:undefined,
-    sourceUrl:`https://store.steampowered.com/app/${id}/`,
-    game:{
-      developer:developers.join(', ')||undefined,
-      publisher:publishers.join(', ')||undefined,
-      releaseDate:game.release_date?.date||undefined,
-      platforms:Array.isArray(game.platforms)?Object.entries(game.platforms).filter(([,v])=>Boolean(v)).map(([k])=>k):[],
-      gameModes:categories.filter((x:string)=>/single-player|multi-player|co-op/i.test(x)),
-      isFree:Boolean(game.is_free),
-      priceText:game.price_overview?.final_formatted||game.price_overview?.initial_formatted||undefined,
-      storeUrl:`https://store.steampowered.com/app/${id}/`,
-    },
-    meta:{website:game.website||undefined,free:Boolean(game.is_free),price:game.price_overview?.final_formatted||game.price_overview?.initial_formatted||null}
+    provider:'gamelegend',externalId:id,title:String(game.title||'Untitled'),medium:'game',
+    poster:String(game.coverImageUrl||''),backdrop:'',score:null,year:extractYear(game.releaseDate),
+    description:clean(String(game.description||'')),genres:mechanics,themes:[...platforms,...themes],
+    source:'GameLegend',sourceUrl:String(game.url||storeUrl),studio:undefined,
+    game:{isFree:false,platforms,releaseDate:game.releaseDate,gameModes:[],storeUrl},
+    meta:{gameLegendUrl:game.url||undefined}
   };
 }
 
