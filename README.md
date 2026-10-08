@@ -36,7 +36,6 @@ VITE_SUPABASE_PUBLISHABLE_KEY=...
 
 Never place `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` or other server secrets in a `VITE_*` variable.
 
-The AI function reads its OpenAI secret and optional `FRAME_AI_MODEL` from Supabase server-side environment variables.
 
 ## Supabase
 
@@ -91,7 +90,7 @@ The latest browser feature suite passes 4/4 core tests:
 
 - User library/social/call data is protected with RLS.
 - Browser clients do not receive Supabase service-role keys.
-- Sensitive AI and release-tracker secrets remain server-side.
+- Release-tracker and third-party provider secrets remain server-side.
 - OAuth linking uses Supabase Auth redirects and never asks FRAME for third-party passwords.
 - The Supabase security advisor currently reports two non-blocking warnings: the managed `pg_net` extension is installed in `public`, and leaked-password protection is disabled. `pg_net` is non-relocatable in the current deployment, so it was not moved blindly because that could break the scheduled release tracker. Leaked-password protection should be enabled in Supabase Auth settings before treating the production security checklist as fully green.
 
@@ -103,4 +102,4 @@ For GitHub Pages or any non-root static path, configure the Vite base path for t
 
 ## Current finish line
 
-The codebase, cloud schema, deployed functions, browser smoke suite and Android build are green in CI. The only certification gap is physical live-session testing that requires an authenticated browser account and real user/device access: OAuth provider handshakes, two-user chat/calls, microphone/WebRTC behavior and configured third-party AI provider calls.
+The codebase, cloud schema, deployed discovery/release functions, browser smoke suite and Android build are validated in CI. The remaining certification gap is live multi-user verification that requires real authenticated accounts and devices: OAuth provider handshakes, two-user chat/calls, and microphone/WebRTC behavior.
