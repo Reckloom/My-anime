@@ -8,38 +8,53 @@ export function FrameWebSearch(){
  const [query,setQuery]=useState(''),[results,setResults]=useState<WebResult[]>([]),[loading,setLoading]=useState(false),[message,setMessage]=useState(''),[fallbackUrl,setFallbackUrl]=useState('');
  const run=async()=>{
   const q=query.trim();if(q.length<2)return;
-  setLoading(true);setMessage('');setResults([]);
+  setLoading(true);setMessage('');setResults([]);setFallbackUrl('');
+  const googleUrl='https://www.google.com/search?q='+encodeURIComponent(q);
   try{
    if(supabase){
     const {data,error}=await supabase.functions.invoke('web-search',{body:{query:q}});
-    if(!error&&Array.isArray((data as any)?.results)&&((data as any).results.length||((data as any)?.configured===true))){
-      setResults(((data as any).results||[]) as WebResult[]);
-      if(!(data as any).results?.length)setMessage('Google returned no matching pages.');
+    const payload=data as {results?:WebResult[];fallbackUrl?:string;configured?:boolean}|null;
+    if(!error&&Array.isArray(payload?.results)&&payload.results.length){
+      setResults(payload.results.filter(x=>x?.title&&x?.link).slice(0,10));
       return;
     }
-    if((data as any)?.fallbackUrl){
-      setFallbackUrl(String((data as any).fallbackUrl));
-      setMessage('In-site Google results are not configured. Open the full Google results page below.');
-      return;
-    }
+    if(payload?.fallbackUrl)setFallbackUrl(String(payload.fallbackUrl));
+    else setFallbackUrl(googleUrl);
+    setMessage('Google is ready. Open the full results page to continue.');
+    return;
    }
-   setFallbackUrl('https://www.google.com/search?q='+encodeURIComponent(q));
-   setMessage('In-site search is not configured. Open the full Google results page below.');
+   setFallbackUrl(googleUrl);
+   setMessage('Google is ready. Open the full results page to continue.');
   }catch{
-   setFallbackUrl('https://www.google.com/search?q='+encodeURIComponent(q));
-   setMessage('In-site search could not connect. Open the full Google results page below.');
+   setFallbackUrl(googleUrl);
+   setMessage('Google could not be searched inside FRAME right now. Open the full results page instead.');
   }finally{
    setLoading(false);
   }
  };
+ const hasQuery=query.trim().length>=2;
  return <div className="page web-search-page">
-  <div className="page-heading"><div><small>WEB DISCOVERY</small><h1>Google Search</h1><p>Google results and media catalogue search are separate tools.</p></div></div>
+  <div className="page-heading">
+   <div><small>WEB DISCOVERY</small><h1>Google Search</h1><p>Search the web without mixing web results into your personal media library.</p></div>
+  </div>
   <section className="web-search-panel">
-   <form onSubmit={e=>{e.preventDefault();void run()}} className="web-search-bar"><Globe size={19}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search Google for anything…"/><button className="primary" disabled={loading||query.trim().length<2}>{loading?<Loader2 className="spin"/>:<Search size={16}/>}Search</button></form>
-   {message&&<div className="web-search-note">{message}{fallbackUrl&&<a className="secondary" href={fallbackUrl} target="_blank" rel="noreferrer"><ExternalLink size={14}/>Open Google results</a>}</div>}
+   <form onSubmit={e=>{e.preventDefault();void run()}} className="web-search-bar">
+    <Globe size={19}/><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search Google for anything…"/>
+    <button className="primary" disabled={loading||!hasQuery}>{loading?<Loader2 className="spin"/>:<Search size={16}/>}Search</button>
+   </form>
    {loading&&<div className="search-state"><Loader2 className="spin"/>Searching Google…</div>}
-   {!loading&&results.length>0&&<div className="web-results">{results.map((r,i)=><a key={r.link||i} className="web-result" href={r.link} target="_blank" rel="noreferrer"><div><small>{r.displayLink||r.link}</small><h3>{r.title}</h3><p>{r.snippet||'Open this result.'}</p></div><ExternalLink size={15}/></a>)}</div>}
-   {!loading&&!results.length&&!message&&<div className="web-empty"><Globe size={25}/><b>Search Google</b><span>Use this page for anything outside your media library.</span></div>}
+   {!loading&&message&&<div className="web-search-empty">
+    <div className="web-search-empty-icon"><Globe size={22}/></div>
+    <div><b>{message}</b><span>FRAME will keep your library separate from the web.</span></div>
+    {fallbackUrl&&<a className="primary" href={fallbackUrl} target="_blank" rel="noreferrer"><ExternalLink size={14}/>Open Google results</a>}
+   </div>}
+   {!loading&&!results.length&&!message&&<div className="web-search-empty">
+    <div className="web-search-empty-icon"><Search size={22}/></div>
+    <div><b>Search the web</b><span>Type a query above and FRAME will show the available results here.</span></div>
+   </div>}
+   {!loading&&results.length>0&&<div className="web-results">{results.map((r,i)=><a key={r.link||i} className="web-result" href={r.link} target="_blank" rel="noreferrer">
+    <div><small>{r.displayLink||new URL(r.link).hostname}</small><h3>{r.title}</h3><p>{r.snippet||'Open this result.'}</p></div><ExternalLink size={15}/>
+   </a>)}</div>}
   </section>
  </div>;
 }
