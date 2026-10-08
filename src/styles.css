@@ -2128,6 +2128,47 @@ button,a{color:inherit}
   color:var(--frame-muted);
 }
 .frame-notification-panel>header button:hover{color:var(--frame-text);border-color:var(--frame-line-strong);background:var(--frame-surface-3)}
+.frame-notification-tabs{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  padding:8px;
+  border-bottom:1px solid var(--frame-line);
+  background:var(--frame-surface);
+}
+.frame-notification-tabs button{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:7px 8px;
+  border:1px solid transparent;
+  border-radius:10px;
+  background:transparent;
+  color:var(--frame-muted);
+  font-size:9px;
+  font-weight:800;
+}
+.frame-notification-tabs button:hover{color:var(--frame-text);background:var(--frame-surface-2)}
+.frame-notification-tabs button.active{
+  color:var(--frame-text);
+  background:var(--frame-surface-3);
+  border-color:var(--frame-line);
+}
+.frame-notification-tabs span{
+  min-width:16px;
+  height:16px;
+  padding:0 4px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:var(--frame-bg);
+  color:var(--frame-dim);
+  font-size:7px;
+  line-height:1;
+}
+.frame-notification-tabs button.active span{color:var(--frame-accent)}
 .frame-notification-list{
   min-height:0;
   overflow:auto;
