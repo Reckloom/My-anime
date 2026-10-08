@@ -9,6 +9,7 @@ export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind
  const [open,setOpen]=useState(false),[panel,setPanel]=useState<'chat'|'call'|null>(null);
  const [messages,setMessages]=useState<Msg[]>([]),[draft,setDraft]=useState(''),[friends,setFriends]=useState<Profile[]>([]),[error,setError]=useState('');
  const loadChat=async()=>{
+  if(uid==='guest')return;
   if(!supabase)return;
   const {data}=await supabase.from('global_messages').select('id,user_id,body,created_at,profiles(display_name,username)').order('created_at',{ascending:true}).limit(60);
   if(data)setMessages(data as Msg[]);else setError('Chat is temporarily unavailable.');
@@ -21,21 +22,23 @@ export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind
   const {data:p}=await supabase.from('profiles').select('id,username,display_name').in('id',ids);
   setFriends((p||[]) as Profile[]);
  };
- useEffect(()=>{if(uid==='guest')return;void loadChat();void loadFriends();const t=window.setInterval(()=>{void loadChat();void loadFriends()},5000);return()=>window.clearInterval(t)},[uid]);
+ useEffect(()=>{void loadChat();void loadFriends();const t=window.setInterval(()=>{void loadChat();void loadFriends()},5000);return()=>window.clearInterval(t)},[uid]);
  const send=async()=>{
-  if(!supabase||!draft.trim())return;
+  if(uid==='guest'||!supabase||!draft.trim())return;
   const body=draft.trim().slice(0,2000);
   const {data}=await supabase.from('global_messages').insert({user_id:uid,body}).select('id,user_id,body,created_at').single();
   if(data){setMessages(prev=>[...prev,{...(data as Msg),profiles:{display_name:'You'}}].slice(-60));setDraft('');setError('')}else setError('Message could not be sent.');
  };
  const choose=(next:'chat'|'call')=>{setOpen(true);setPanel(next)};
- if(uid==='guest')return null;
+
  return <div className="frame-popup-system">
   <div className={'frame-popup-panel '+(open&&panel?'visible':'')} role="dialog" aria-label="FRAME quick panel">
    <header><div><small>FRAME QUICK</small><b>{panel==='chat'?'Global chat':'Voice calls'}</b></div><button aria-label="Minimize quick panel" onClick={()=>setPanel(null)}><Minimize2 size={15}/></button></header>
    {panel==='chat'&&<div className="frame-popup-chat">
-    <div className="frame-popup-messages">{error&&<small className="inline-error" role="alert">{error}</small>}{messages.map(m=><div key={m.id}><b>{m.user_id===uid?'You':m.profiles?.display_name||m.profiles?.username||'FRAME user'}</b><span>{m.body}</span></div>)}</div>
-    <form onSubmit={e=>{e.preventDefault();void send()}}><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Message everyone…"/><button disabled={!draft.trim()}><Send size={14}/></button></form>
+    {uid==='guest'?<div className="frame-popup-locked"><b>Sign in to join Global Chat</b><p>Chat is account-only. Your guest library can still be used normally.</p></div>:<>
+      <div className="frame-popup-messages">{error&&<small className="inline-error" role="alert">{error}</small>}{messages.map(m=><div key={m.id}><b>{m.user_id===uid?'You':m.profiles?.display_name||m.profiles?.username||'FRAME user'}</b><span>{m.body}</span></div>)}</div>
+      <form onSubmit={e=>{e.preventDefault();void send()}}><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Message everyone…"/><button disabled={!draft.trim()}><Send size={14}/></button></form>
+    </>}
     <button className="frame-popup-link" onClick={onOpenCalls}>Open call center</button>
    </div>}
    {panel==='call'&&<div className="frame-popup-calls">
