@@ -57,10 +57,10 @@ function toRow(item:MediaItem,userId:string){
 }
 function progressPercent(item:MediaItem){
  const total=item.total||item.customTotal||0;
- if(item.status==='completed')return 100;
  if(item.medium==='game'||item.medium==='visual-novel')return Math.max(0,Math.min(100,item.progress||0));
  if(item.medium==='movie')return item.progress>=1?100:0;
- return total>0?Math.max(0,Math.min(100,(item.progress/total)*100)):0;
+ if(total>0)return Math.max(0,Math.min(100,(item.progress/total)*100));
+ return item.status==='completed'?100:0;
 }
 function sortMedia(items:MediaItem[],mode:string){
  return [...items].sort((a,b)=>{
