@@ -246,8 +246,6 @@ async function detailExternal(result:DiscoveryResult){
     }
    };
   }
-   }
-  }
   if(result.provider==='movie'){
    const data=await fetchJsonWithTimeout('https://en.wikipedia.org/w/api.php?action=query&pageids='+encodeURIComponent(result.externalId)+'&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*') as {query?:{pages?:Record<string,any>}};
    const page=Object.values(data.query?.pages||{})[0];
