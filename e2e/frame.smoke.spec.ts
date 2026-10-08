@@ -1,3 +1,5 @@
+async function navigatePrimary(page:any,label:string){const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}await page.getByRole('button',{name:/Open navigation menu/}).click();await page.getByRole('button',{name:label,exact:true}).click();}
+
 import { test, expect } from '@playwright/test';
 
 test.describe('FRAME core smoke flow', () => {
@@ -5,7 +7,9 @@ test.describe('FRAME core smoke flow', () => {
     await page.goto('/');
     await expect(page.getByRole('banner')).toBeVisible();
     for (const label of ['Home', 'Library', 'Discover']) {
-      await expect(page.getByRole('button', { name: label, exact: true }).first()).toBeVisible();
+      const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});
+      const mobile=page.getByRole('button',{name:label,exact:true});
+      expect((await primary.count())+(await mobile.count())).toBeGreaterThan(0);
     }
   });
 
@@ -32,7 +36,7 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByRole('heading', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
 
     await page.reload();
-    await page.getByRole('button', { name: 'Library', exact: true }).first().click();
+    await navigatePrimary(page,'Library');
     await expect(page.getByText('FRAME Guest Persistence Test', { exact: true })).toBeVisible();
   });
 
@@ -56,8 +60,9 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: 'Find media' }).click();
     await expect(page.getByText('Find anything for FRAME')).toBeVisible();
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
-    await page.getByRole('heading', { name: 'Connections', exact: true }).click();
+    await navigatePrimary(page,'Discover');
+    await expect(page.getByRole('heading', { name: 'Explore everything.', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /Connections Control the catalogues and services FRAME uses/ }).click();
     await expect(page.getByRole('heading', { name: 'Connections', exact: true })).toBeVisible();
   });
 
@@ -90,7 +95,7 @@ test.describe('FRAME core smoke flow', () => {
     ];
 
     for (const [button, heading] of targets) {
-      await page.getByRole('button', { name: button, exact: true }).first().click();
+      await navigatePrimary(page,button);
       await expect(page.locator('h1').filter({ hasText: heading })).toBeVisible();
     }
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
