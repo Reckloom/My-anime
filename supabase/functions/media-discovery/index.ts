@@ -207,16 +207,44 @@ async function detailRawg(id:string){
 }
 
 
+function wikipediaGameImage(images:unknown[]){
+  const files=Array.isArray(images)?images.map((x:any)=>String(x?.title||'')).filter(Boolean):[];
+  const candidates=files.filter((name:string)=>{
+    if(!/^File:/i.test(name))return false;
+    if(!/\.(jpe?g|png|webp)$/i.test(name))return false;
+    const lower=name.toLowerCase();
+    return !/logo|icon|screenshot|diagram|photo|portrait|sound|audio|edit-|featured|wikidata|wikiquote|commons|symbol|flag|map|sprite|interface/.test(lower);
+  });
+  candidates.sort((a:string,b:string)=>{
+    const score=(name:string)=>{
+      const lower=name.toLowerCase();
+      let n=0;
+      if(/box|cover|poster|artwork|key.?art|package/.test(lower))n+=100;
+      if(/game/.test(lower))n+=20;
+      if(/front/.test(lower))n+=10;
+      return n;
+    };
+    return score(b)-score(a);
+  });
+  const file=candidates[0];
+  return file?'https://en.wikipedia.org/wiki/Special:Redirect/file/'+encodeURIComponent(file.replace(/^File:/i,'')):'';
+}
+
 async function searchWikipediaGames(query:string){
   const search=cleanSearch(query)+' video game';
-  const url='https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(search)+'&gsrnamespace=0&gsrlimit=12&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*';
+  const url='https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(search)+'&gsrnamespace=0&gsrlimit=12&prop=pageimages|images|extracts|info&imlimit=50&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*';
   const data=await getJson(url);
-  return Object.values(data?.query?.pages||{}).map((x:any)=>({
-    provider:'wikipedia-game',externalId:String(x.pageid),title:String(x.title||'Untitled'),medium:'game',
-    poster:String(x.thumbnail?.source||''),backdrop:'',score:null,year:extractYear(x.extract),description:clean(x.extract),
-    genres:[],themes:[],source:'Wikipedia',sourceUrl:x.fullurl||'https://en.wikipedia.org/?curid='+x.pageid,
-    game:{isFree:false,platforms:[],releaseDate:undefined,gameModes:[],storeUrl:x.fullurl||('https://en.wikipedia.org/?curid='+x.pageid)}
-  })).slice(0,12);
+  const pages=Object.values(data?.query?.pages||{}).map((x:any)=>{
+    const poster=String(x.thumbnail?.source||'')||wikipediaGameImage(x.images);
+    return{
+      provider:'wikipedia-game',externalId:String(x.pageid),title:String(x.title||'Untitled'),medium:'game',
+      poster,backdrop:'',score:null,year:extractYear(x.extract),description:clean(x.extract),
+      genres:[],themes:[],source:'Wikipedia',sourceUrl:x.fullurl||'https://en.wikipedia.org/?curid='+x.pageid,
+      game:{isFree:false,platforms:[],releaseDate:undefined,gameModes:[],storeUrl:x.fullurl||('https://en.wikipedia.org/?curid='+x.pageid)}
+    };
+  });
+  const withArtwork=pages.filter((x:any)=>x.poster);
+  return [...withArtwork,...pages.filter((x:any)=>!x.poster)].slice(0,12);
 }
 
 async function detailWikipediaGame(id:string){
