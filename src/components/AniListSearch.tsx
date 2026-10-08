@@ -299,11 +299,11 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   {!loading&&query.trim().length<2&&<div className="search-state">Choose a catalogue and type at least two characters.</div>}
   {!loading&&query.trim().length>=2&&!results.length&&!error&&<div className="search-state">No results yet. Try another title or spelling.</div>}
   {results.length>0&&<div className="ani-results">{results.map(r=>{const i=resultInfo(r);return <button type="button" key={resultKey(r)} className={(isAni?(selected as AniListMedia|null)?.id=== (r as AniListMedia).id:(selected as DiscoveryResult|null)?.externalId===(r as DiscoveryResult).externalId)?'ani-result selected':'ani-result'} onClick={()=>void choose(r)}>
-   <img src={i.poster||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>
+   <img src={i.poster||'/frame-logo.svg'} alt={i.title} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
    <span><b>{i.title}</b><small>{i.meta}</small><em>{i.tags.join(' · ')||'Metadata available on selection'}</em></span>
   </button>})}</div>}
   {selected&&<div className="ani-detail">
-   {isAni&&selectedAni?<img src={selectedAni.coverImage?.extraLarge||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>:
+   {isAni&&selectedAni?<img src={selectedAni.coverImage?.extraLarge||'/frame-logo.svg'} alt="" loading="lazy" decoding="async"/>:
     selectedExt?<img src={selectedExt.poster||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>:null}
    <div>
     {isAni&&selectedAni?<><small>{anilistMediumLabel(selectedAni)} · AniList</small><h3>{titleOf(selectedAni)}</h3></>:
