@@ -260,7 +260,28 @@ export default function App(){
    return hasMatchingDescendant(x.id);
   });
  },[items,sortMode,query,filter]);
- const go=(next:string)=>{setPage(next);setMenu(false);setSelected(null);if(next!=='friend-library')setFriendLibrary(null)};
+ const pageHistoryReady=useRef(false);
+ useEffect(()=>{
+  if(!pageHistoryReady.current){
+   if(history.state?.framePage!==page)history.replaceState({framePage:page},'',window.location.href);
+   pageHistoryReady.current=true;
+   return;
+  }
+  if(history.state?.framePage!==page)history.pushState({framePage:page},'',window.location.href);
+ },[page]);
+ useEffect(()=>{
+  const onPopState=()=>{
+   setFinder(false);setManualEntry(false);setSelected(null);setMenu(false);setCommandOpen(false);
+   const next=typeof history.state?.framePage==='string'?history.state.framePage:'home';
+   setPage(next);
+  };
+  window.addEventListener('popstate',onPopState);
+  return()=>window.removeEventListener('popstate',onPopState);
+ },[]);
+ const go=(next:string)=>{
+  if(next===page){setMenu(false);setSelected(null);return}
+  setPage(next);setMenu(false);setSelected(null);if(next!=='friend-library')setFriendLibrary(null);
+ };
 
  return <div className="frame-app">
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
