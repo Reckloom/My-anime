@@ -290,7 +290,7 @@ export default function App(){
   {finder&&<AniListSearch initialQuery={query} guest={guest} close={()=>setFinder(false)} onImported={importItem} onManual={()=>{setFinder(false);setManualEntry(true)}} />}
   {manualEntry&&<ManualEntryForm close={()=>setManualEntry(false)} onCreate={raw=>{const item=normalise({...raw,id:crypto.randomUUID()});save([item,...items]);setSelected(item);setManualEntry(false);}}/>}
   {!guest&&<FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/>} 
-  <FramePopupHub uid={uid} onFind={()=>setFinder(true)} onOpenCalls={()=>go('calls')} onCall={setDirectCall}/>
+  <FramePopupHub uid={uid} hidden={finder||manualEntry||selected!==null||commandOpen} onFind={()=>setFinder(true)} onOpenCalls={()=>go('calls')} onCall={setDirectCall}/>
   {commandOpen&&<FrameCommandPalette onGo={go} onFind={()=>setFinder(true)} onClose={()=>setCommandOpen(false)}/>}
  </div>;
 }
