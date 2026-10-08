@@ -199,8 +199,7 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
  }catch(e){
   lastError=e instanceof Error?e.message:'Discovery request failed.';
  }
- // Browser-to-Steam requests are intentionally the last fallback because Steam's
- // CORS behavior varies by browser/network. FRAME's own Supabase proxy is preferred.
+ // Direct provider fallback is last-resort only; the FRAME Supabase gateway is preferred.
  try{
   const found=await directExternalSearch(term,provider);
   if(found.length)return await enrichMovieArtwork(found);
