@@ -8,8 +8,13 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByRole('banner')).toBeVisible();
     for (const label of ['Home', 'Library', 'Discover']) {
       const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});
-      const mobile=page.getByRole('button',{name:label,exact:true});
-      expect((await primary.count())+(await mobile.count())).toBeGreaterThan(0);
+      if(await primary.isVisible().catch(()=>false))continue;
+      const mobile=page.locator('.mobile-bottom').getByRole('button',{name:label,exact:true});
+      if(await mobile.isVisible().catch(()=>false))continue;
+      const menu=page.getByRole('button',{name:/Open navigation menu/});
+      await expect(menu).toBeVisible();
+      if(!(await page.locator('.frame-mobile-menu').getByRole('button',{name:label,exact:true}).isVisible().catch(()=>false)))await menu.click();
+      await expect(page.locator('.frame-mobile-menu').getByRole('button',{name:label,exact:true})).toBeVisible();
     }
   });
 
