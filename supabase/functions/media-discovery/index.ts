@@ -46,18 +46,6 @@ async function getText(url:string){
     throw e;
   }finally{clearTimeout(timer);}
 }
-function htmlEntityDecode(value:string){
-  return value.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-}
-async function wikipediaOgImage(title:string){
-  try{
-    const html=await getText(`https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g,'_'))}`);
-    const match=html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    return match?.[1]?htmlEntityDecode(match[1]):'';
-  }catch{return ''}
-}
-
 async function postJson(url:string,body:unknown){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),12000);
@@ -157,10 +145,21 @@ async function searchMovies(q:string){
   const url=`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q+' film')}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
   const data=await getJson(url);
   const pages=Object.values(data?.query?.pages||{}) as any[];
-  const imdb=await getJson(`https://v3.sg.media-imdb.com/suggestion/x/${encodeURIComponent(q.trim())}.json`).catch(()=>({}));
-  const imdbPosters=new Map<string,string>();
-  for(const item of (Array.isArray(imdb?.d)?imdb.d:[])){
-    if(item?.qid==='movie'&&item?.l&&item?.i?.imageUrl)imdbPosters.set(String(item.l).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(),String(item.i.imageUrl));
+  const pageIds=pages.slice(0,8).map((x:any)=>String(x.pageid)).filter(Boolean);
+  const imagesData=pageIds.length?await getJson(`https://en.wikipedia.org/w/api.php?action=query&pageids=${pageIds.join('|')}&prop=images&imlimit=20&format=json&origin=*`).catch(()=>({})):{};
+  const preferredFiles=new Map<string,string>();
+  for(const page of Object.values(imagesData?.query?.pages||{}) as any[]){
+    const images=Array.isArray(page?.images)?page.images:[]; const title=String(page?.title||'');
+    const candidate=images.map((x:any)=>String(x.title||'')).filter((x:string)=>/\.(jpe?g|png|webp)$/i.test(x)&&!/logo|icon|screenshot|cast/i.test(x));
+    const poster=candidate.find((x:string)=>/poster/i.test(x))||candidate.find((x:string)=>x.toLowerCase().includes(title.toLowerCase()))||candidate[0];
+    if(poster)preferredFiles.set(String(page.pageid),poster);
+  }
+  const fileTitles=[...preferredFiles.values()];
+  const infoData=fileTitles.length?await getJson(`https://en.wikipedia.org/w/api.php?action=query&titles=${fileTitles.map(encodeURIComponent).join('|')}&prop=imageinfo&iiprop=url&iiurlwidth=700&format=json&origin=*`).catch(()=>({})):{};
+  const fileUrls=new Map<string,string>();
+  for(const page of Object.values(infoData?.query?.pages||{}) as any[]){
+    const title=String(page?.title||''); const url=String(page?.imageinfo?.[0]?.thumburl||page?.imageinfo?.[0]?.url||'');
+    if(title&&url)fileUrls.set(title,url);
   }
   const needle=q.trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   const tokens=needle.split(/\s+/).filter(Boolean);
@@ -174,13 +173,10 @@ async function searchMovies(q:string){
     const extract=clean(x.extract);
     if(/\b(film|movie|cinema|feature film)\b/i.test(extract))relevance+=8;
     if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
-    const poster=x.thumbnail?.source||imdbPosters.get(hay)||'';
+    const poster=x.thumbnail?.source||fileUrls.get(preferredFiles.get(String(x.pageid))||'')||'';
     return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster,backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
   }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12);
-  const missing=ranked.filter((x:any)=>!x.poster).slice(0,5);
-  const enriched=await Promise.all(missing.map(async(x:any)=>[x,wikipediaOgImage(x.title)] as const));
-  const imageMap=new Map(enriched.map(([x,image])=>[x.externalId,image]));
-  return ranked.map(({_relevance,...x}:any)=>({...x,poster:x.poster||imageMap.get(x.externalId)||''}));
+  return ranked.map(({_relevance,...x}:any)=>x);
 }
 
 async function detailMovie(id:string){
