@@ -15,8 +15,7 @@ FRAME is a private, cloud-backed personal media platform for tracking anime, man
 - Friends, friend messaging, global chat and library sharing.
 - Direct one-to-one calls and group voice rooms with WebRTC microphone handling.
 - Steam library synchronization and import into FRAME.
-- Built-in web search and media discovery surfaces.
-- FRAME AI through a JWT-protected Supabase Edge Function; provider secrets stay server-side.
+- Universal media discovery across supported catalogues.
 - Multiple visual themes, light/dark/system mode, density controls and custom FRAME logos.
 - Responsive desktop/mobile UI, PWA shell and Capacitor Android packaging.
 - Backup/import tools and resilient local/cloud recovery paths.
