@@ -63,7 +63,6 @@ function AuthScreen(){
    {mode==='reset'&&<button className="gate-link" onClick={()=>{setMode('login');reset()}}>Back to login</button>}
    {mode==='update'&&<button className="gate-link" onClick={()=>setMode('login')}>Back to login</button>}
    {(mode==='login'||mode==='signup')&&<p className="gate-switch">{mode==='login'?'New to FRAME?':'Already have an account?'} <button onClick={()=>{setMode(mode==='login'?'signup':'login');reset()}}>{mode==='login'?'Create account':'Sign in'}</button></p>}
-   {mode==='login'&&<button className="gate-link" type="button" onClick={()=>{localStorage.setItem('frame-guest','1');window.location.reload()}}>Continue as guest</button>}
   </div><div className="gate-footer"><Shield size={14}/> Your library is private unless you choose to share it.</div></section>
  </main>;
 }
