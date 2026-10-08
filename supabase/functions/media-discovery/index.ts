@@ -55,24 +55,41 @@ async function postJson(url:string,body:unknown){
 }
 
 async function searchGames(q:string){
-  const term=encodeURIComponent(q);
-  const primary=await getJson(`https://store.steampowered.com/api/storesearch/?term=${term}&cc=in&l=english&category1=998`);
-  let items=Array.isArray(primary?.items)?primary.items:[];
-  if(!items.length){
-    const fallback=await getJson(`https://store.steampowered.com/search/results/?term=${term}&category1=998&json=1&cc=in&l=english`);
-    const fallbackItems=Array.isArray(fallback?.items)?fallback.items:[];
-    items=fallbackItems.map((x:any)=>({
-      id:x.id||String(x.url||'').match(/\/app\/(\d+)/)?.[1],
-      name:x.name||x.title,
-      tiny_image:x.tiny_image||x.logo,
-      large_capsule_image:x.large_capsule_image||x.logo
-    })).filter((x:any)=>x.id&&x.name);
+  const term=encodeURIComponent(q.trim());
+  const sources=[
+    `https://store.steampowered.com/search/results/?term=${term}&start=0&count=12&sort_by=Relevance&category1=998&json=1&infinite=1&cc=us&l=english`,
+    `https://store.steampowered.com/api/storesearch/?term=${term}&cc=us&l=english`
+  ];
+  let items:any[]=[];
+  let lastError='Steam search did not return results.';
+  for(const url of sources){
+    try{
+      const data=await getJson(url);
+      const rows=Array.isArray(data?.items)?data.items:Array.isArray(data?.results)?data.results:[];
+      if(rows.length){
+        items=rows;
+        break;
+      }
+    }catch(error){
+      lastError=error instanceof Error?error.message:String(error);
+    }
   }
-  return items.slice(0,12).map((x:any)=>({
-    provider:'steam',externalId:String(x.id),title:String(x.name||'Untitled'),medium:'game',
-    poster:x.tiny_image||x.large_capsule_image||'',score:null,year:null,description:'',
-    genres:[],themes:[],sourceUrl:`https://store.steampowered.com/app/${x.id}/`
-  }));
+  if(!items.length)throw new Error(lastError);
+  return items
+    .map((x:any)=>({
+      id:x.id??x.appid??x.appId??String(x.url||'').match(/\\/app\\/(\\d+)/)?.[1],
+      name:x.name??x.title,
+      poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
+      type:x.type
+    }))
+    .filter((x:any)=>x.id&&x.name&&(!x.type||x.type==='app'||x.type===1))
+    .slice(0,12)
+    .map((x:any)=>({
+      provider:'steam',externalId:String(x.id),title:String(x.name),medium:'game',
+      poster:String(x.poster||''),score:null,year:null,description:'',
+      genres:[],themes:[],sourceUrl:`https://store.steampowered.com/app/${x.id}/`,
+      game:{isFree:false,storeUrl:`https://store.steampowered.com/app/${x.id}/`}
+    }));
 }
 
 async function detailGame(id:string){
