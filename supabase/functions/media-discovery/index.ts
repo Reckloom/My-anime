@@ -62,7 +62,7 @@ async function searchGames(q:string){
     const fallback=await getJson(`https://store.steampowered.com/search/results/?term=${term}&category1=998&json=1&cc=in&l=english`);
     const fallbackItems=Array.isArray(fallback?.items)?fallback.items:[];
     items=fallbackItems.map((x:any)=>({
-      id:x.id||String(x.url||'').match(/\\/app\\/(\\d+)/)?.[1],
+      id:x.id||String(x.url||'').match(/\/app\/(\d+)/)?.[1],
       name:x.name||x.title,
       tiny_image:x.tiny_image||x.logo,
       large_capsule_image:x.large_capsule_image||x.logo
