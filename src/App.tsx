@@ -74,17 +74,17 @@ function sortMedia(items:MediaItem[],mode:string){
 }
 
 function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?:boolean}){ const mode=logo&&logo!=='ultra-instinct'?logo:'frame-mark'; if(mode.startsWith('http'))return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src={mode} alt="Custom FRAME logo"/></span>; if(mode==='classic-f')return <span className={'frame-logo-mark classic-f '+(small?'small':'')}>F</span>; if(mode==='minimal-ring')return <span className={'frame-logo-mark minimal-ring '+(small?'small':'')}><i/></span>; return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src="/frame-logo.svg" alt="FRAME logo"/></span>;}
-function mediaIdentity(item:MediaItem){
- if(item.anilistId)return 'anilist:'+item.anilistId;
- if(item.sourceProvider&&item.externalId)return item.sourceProvider+':'+item.externalId;
- return 'title:'+item.medium+':'+(item.parentId||'root')+':'+item.title.trim().toLowerCase().replace(/\\s+/g,' ');
+function sameMedia(a:MediaItem,b:MediaItem){
+ const aTitle=a.title.trim().toLowerCase().replace(/\\s+/g,' '),bTitle=b.title.trim().toLowerCase().replace(/\\s+/g,' ');
+ if(a.anilistId&&b.anilistId)return a.anilistId===b.anilistId;
+ if(a.sourceProvider&&a.externalId&&b.sourceProvider&&b.externalId)return a.sourceProvider===b.sourceProvider&&a.externalId===b.externalId;
+ return a.medium===b.medium&&a.parentId===b.parentId&&aTitle===bTitle;
 }
 function dedupeMediaItems(items:MediaItem[]){
  const merged:MediaItem[]=[];
- const indexes=new Map<string,number>();
  for(const raw of items){
-  const incoming=normalise(raw); const key=mediaIdentity(incoming); const index=indexes.get(key);
-  if(index==null){indexes.set(key,merged.length);merged.push(incoming);continue}
+  const incoming=normalise(raw); const index=merged.findIndex(x=>sameMedia(x,incoming));
+  if(index<0){merged.push(incoming);continue}
   const current=merged[index];
   merged[index]=normalise({...current,
    id:current.id,parentId:incoming.parentId??current.parentId,metadataId:current.metadataId??incoming.metadataId,
@@ -99,7 +99,7 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
  const merged=dedupeMediaItems(primary);
  for(const incomingRaw of secondary){
   const incoming=normalise(incomingRaw);
-  const index=merged.findIndex(x=>mediaIdentity(x)===mediaIdentity(incoming));
+  const index=merged.findIndex(x=>sameMedia(x,incoming));
   if(index<0){merged.push(incoming);continue}
   const current=merged[index];
   merged[index]=normalise({...current,id:current.id,parentId:incoming.parentId??current.parentId,metadataId:current.metadataId??incoming.metadataId,status:incoming.status||current.status,progress:incoming.progress??current.progress,total:incoming.total??current.total,customTotal:incoming.customTotal??current.customTotal,personalRating:incoming.personalRating??current.personalRating,favorite:incoming.favorite??current.favorite,notes:incoming.notes??current.notes});
