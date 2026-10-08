@@ -28,7 +28,9 @@ export function FrameAI({items,provider,setProvider}:{items:MediaItem[];provider
     }
     throw new Error(detail||error.message||'FRAME AI request failed.');
    }
-   const out=String((data as {answer?:string}|null)?.answer||'No answer returned.');
+   const payload=data as {answer?:string;error?:string}|null;
+   if(payload?.error) throw new Error(payload.error);
+   const out=String(payload?.answer||'No answer returned.');
    setAnswer(out);
    if(voice&&'speechSynthesis' in window){window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(out))}
   }catch(e){setAnswer(e instanceof Error?e.message:'FRAME AI is unavailable right now.')}finally{setBusy(false)}
