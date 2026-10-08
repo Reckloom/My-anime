@@ -51,6 +51,16 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByText('Nothing is active.', { exact: true })).toBeVisible();
   });
 
+  test('makes Discover shortcuts useful', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
+    await page.getByRole('heading', { name: 'Where to find it', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Google Search', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
+    await page.getByRole('heading', { name: 'Connections', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Connections', exact: true })).toBeVisible();
+  });
+
   test('keeps unavailable AI connectors out of the active controls', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'AI', exact: true }).first().click();
