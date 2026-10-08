@@ -303,8 +303,8 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
    <span><b>{i.title}</b><small>{i.meta}</small><em>{i.tags.join(' · ')||'Metadata available on selection'}</em></span>
   </button>})}</div>}
   {selected&&<div className="ani-detail">
-   {isAni&&selectedAni?<img src={selectedAni.coverImage?.extraLarge||'/frame-logo.svg'} alt="" loading="lazy" decoding="async"/>:
-    selectedExt?<img src={selectedExt.poster||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>:null}
+   {isAni&&selectedAni?<img src={selectedAni.coverImage?.extraLarge||'/frame-logo.svg'} alt={titleOf(selectedAni)} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:
+    selectedExt?<img src={selectedExt.poster||'/frame-logo.svg'} alt={selectedExt.title} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:null}
    <div>
     {isAni&&selectedAni?<><small>{anilistMediumLabel(selectedAni)} · AniList</small><h3>{titleOf(selectedAni)}</h3></>:
      selectedExt?<><small>{selectedExt.medium.toUpperCase()} · {selectedExt.provider}</small><h3>{selectedExt.title}</h3></>:null}
