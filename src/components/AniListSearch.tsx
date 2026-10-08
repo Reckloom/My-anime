@@ -223,7 +223,6 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
 }
 
 async function detailExternal(result:DiscoveryResult){
- const provider=result.provider as Exclude<Tab,'anime'|'manga'>;
  try{
   const providerName=['igdb','rawg'].includes(result.provider)?'game':['tmdb-tv','tvmaze'].includes(result.provider)?'series':['tmdb-movie','wikipedia'].includes(result.provider)?'movie':['openlibrary','googlebooks'].includes(result.provider)?'book':'visual-novel';
   const data=await discoveryRequest({action:'detail',provider:providerName,externalId:result.externalId,source:result.provider});
@@ -231,7 +230,7 @@ async function detailExternal(result:DiscoveryResult){
  }catch{}
  if(supabase){
   try{
-   const providerName=result.provider==='mobygames'?'game':result.provider==='tvmaze'?'series':result.provider==='wikipedia'?'movie':result.provider==='vndb'?'visual-novel':'book';
+   const providerName=['igdb','rawg'].includes(result.provider)?'game':['tmdb-tv','tvmaze'].includes(result.provider)?'series':['tmdb-movie','wikipedia'].includes(result.provider)?'movie':['openlibrary','googlebooks'].includes(result.provider)?'book':'visual-novel';
    const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:providerName,externalId:result.externalId,source:result.provider}});
    if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;
   }catch{}
