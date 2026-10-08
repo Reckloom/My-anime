@@ -18,7 +18,6 @@ type SearchResponse={results?:AniListMedia[]};
 type ExternalResponse={results?:DiscoveryResult[]};
 
 const SUPABASE_URL=((import.meta.env.VITE_SUPABASE_URL as string|undefined)?.trim()||'https://blwnhfhpckqbetwxamqr.supabase.co').replace(/\/+$/,'');
-const SUPABASE_KEY=(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string|undefined)?.trim()||'';
 const DISCOVERY_URL=SUPABASE_URL+'/functions/v1/media-discovery';
 
 async function discoveryRequest(body:Record<string,unknown>){
@@ -212,17 +211,6 @@ async function searchExternal(term:string,provider:Exclude<Tab,'anime'|'manga'>)
   lastError=String((data as {error?:unknown})?.error||'The discovery service returned no matches.');
  }catch(e){
   lastError=e instanceof Error?e.message:'Discovery request failed.';
- }
- if(supabase){
-  try{
-   const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'search',query:term,provider}});
-   const payload=((data||{}) as ExternalResponse);
-   const found=Array.isArray(payload.results)?payload.results:[];
-   if(!error&&found.length)return await enrichMovieArtwork(found);
-   if(error)lastError=error.message||lastError;
-  }catch(e){
-   lastError=e instanceof Error?e.message:lastError;
-  }
  }
  // Browser-to-Steam requests are intentionally the last fallback because Steam's
  // CORS behavior varies by browser/network. FRAME's own Supabase proxy is preferred.
