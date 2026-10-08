@@ -165,6 +165,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    <section className="detail-section"><label>Private notes<textarea value={note} onChange={e=>{setNote(e.target.value);setD({...d,notes:e.target.value})}} placeholder="Your notes…"/></label></section>
 
    <div className="detail-actions"><button className="primary" disabled={saving} onClick={()=>void saveEdits()}><Check size={16}/>Save changes</button><button className="secondary active" onClick={()=>setD({...d,favorite:!d.favorite})}><Heart size={16} fill={d.favorite?'currentColor':'none'}/>{d.favorite?'Favorited':'Favorite'}</button>{onDelete&&<button className="danger" type="button" onClick={()=>{const hasChildren=library.some(x=>x.parentId===d.id);const message=hasChildren?'Delete this entry? Its child entries will be kept but detached.':'Delete this entry? This cannot be undone.';if(window.confirm(message))void onDelete(d.id)}}>Delete</button>}</div>
+   </aside>
    {hasPrevious&&<button className="detail-nav-arrow detail-nav-next" aria-label="Next media" title="Next media" onClick={goNext}><ChevronRight size={26}/></button>}
   </div>
  </div>;
