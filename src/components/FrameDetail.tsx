@@ -40,9 +40,9 @@ function hierarchyPartOrder(item:MediaItem){
   'chainsaw man: reze arc':20,
  };
  if(exact[t]!=null)return exact[t];
- const season=t.match(/season\\s+(\\d+)/i);
- const part=t.match(/part\\s+(\\d+)/i);
- const cour=t.match(/cour\\s+(\\d+)/i);
+ const season=t.match(/season\s+(\d+)/i);
+ const part=t.match(/part\s+(\d+)/i);
+ const cour=t.match(/cour\s+(\d+)/i);
  return (season?Number(season[1])*100:10000)+(part?Number(part[1])*10:0)+(cour?Number(cour[1]):0);
 }
 function compareHierarchyParts(a:MediaItem,b:MediaItem){
