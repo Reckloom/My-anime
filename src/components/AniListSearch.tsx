@@ -285,9 +285,10 @@ function externalToMedia(r:DiscoveryResult):MediaItem{
  };
 }
 
-export function AniListSearch({close,onImported,onManual,initialQuery='',guest=false}:{close:()=>void;onImported:(item:MediaItem)=>void|Promise<void|boolean>;onManual?:()=>void;initialQuery?:string;guest?:boolean}){
+export function AniListSearch({close,onImported,onManual,initialQuery='',guest=false,library=[]}:{close:()=>void;onImported:(item:MediaItem)=>void|Promise<void|boolean>;onManual?:()=>void;initialQuery?:string;guest?:boolean;library?:MediaItem[]}){
  const[tab,setTab]=useState<Tab>('anime'),[query,setQuery]=useState(initialQuery),[results,setResults]=useState<(AniListMedia|DiscoveryResult)[]>([]),[selected,setSelected]=useState<AniListMedia|DiscoveryResult|null>(null);
  const[loading,setLoading]=useState(false),[detailLoading,setDetailLoading]=useState(false),[importing,setImporting]=useState(false),[added,setAdded]=useState(false),[error,setError]=useState('');
+ const[status,setStatus]=useState<MediaItem['status']>('planned'),[progress,setProgress]=useState(0),[total,setTotal]=useState(0),[personalRating,setPersonalRating]=useState<number|undefined>(undefined),[favorite,setFavorite]=useState(false),[notes,setNotes]=useState(''),[parentId,setParentId]=useState('');
  const current=tabs.find(x=>x.id===tab)!;
  const isAni=tab==='anime'||tab==='manga';
  const catalogType:CatalogType=tab==='anime'?'ANIME':'MANGA';
@@ -313,6 +314,18 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   return()=>{cancelled=true;window.clearTimeout(timer)};
  },[query,tab,isAni,catalogType]);
 
+ useEffect(()=>{
+  if(!selected)return;
+  const candidate=isAni?localItem(selected as AniListSearchResult):externalToMedia(selected as DiscoveryResult);
+  setStatus('planned');
+  setProgress(0);
+  setTotal(candidate.total&&candidate.total>0?candidate.total:0);
+  setPersonalRating(undefined);
+  setFavorite(false);
+  setNotes('');
+  setParentId('');
+ },[selected,isAni]);
+
  const choose=async(raw:AniListSearchResult|DiscoveryResult)=>{
   setSelected(raw);setAdded(false);setDetailLoading(true);setError('');
   try{
@@ -334,7 +347,11 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   if(!selected||added)return;
   setImporting(true);setError('');
   try{
-   const candidate=isAni?localItem(selected as AniListSearchResult):externalToMedia(selected as DiscoveryResult);
+   const base=isAni?localItem(selected as AniListSearchResult):externalToMedia(selected as DiscoveryResult);
+   const resolvedTotal=total>0?Math.min(2000,total):(base.total||undefined);
+   const resolvedMax=base.medium==='movie'?1:(base.medium==='game'||base.medium==='visual-novel'?100:(resolvedTotal||2000));
+   const resolvedProgress=Math.max(0,Math.min(resolvedMax,status==='completed'&&resolvedTotal?resolvedTotal:progress));
+   const candidate={...base,status,progress:resolvedProgress,total:resolvedTotal,customTotal:total>0?resolvedTotal:base.customTotal,personalRating,favorite,notes:notes.trim()||undefined,parentId:parentId||undefined};
    const result=await onImported(candidate);
    if(result!==false)setAdded(true);
    else setError('This title is already in your library.');
@@ -344,6 +361,10 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
  const selectedAni=isAni?(selected as AniListSearchResult|null):null;
  const selectedExt=!isAni?(selected as DiscoveryResult|null):null;
  const resultKey=(x:AniListSearchResult|DiscoveryResult)=>isAni?String((x as AniListSearchResult).sourceProvider||'anilist')+':'+String((x as AniListSearchResult).id):(x as DiscoveryResult).provider+':'+(x as DiscoveryResult).externalId;
+ const selectedCandidate=isAni&&selectedAni?localItem(selectedAni):selectedExt?externalToMedia(selectedExt):null;
+ const detailTotal=total>0?total:(selectedCandidate?.total||0);
+ const detailMax=selectedCandidate?(selectedCandidate.medium==='movie'?1:(selectedCandidate.medium==='game'||selectedCandidate.medium==='visual-novel'?100:(detailTotal||2000))):2000;
+ const parentOptions=library.slice().sort((a,b)=>a.title.localeCompare(b.title));
  const resultInfo=(x:AniListSearchResult|DiscoveryResult)=>{
   if(isAni){const m=x as AniListMedia;return{title:titleOf(m),poster:m.coverImage?.extraLarge||'',meta:anilistMediumLabel(m)+' · '+(m.format||'Unknown format')+(m.seasonYear?' · '+m.seasonYear:''),tags:m.genres?.slice(0,3)||[]}}
   const r=x as DiscoveryResult;return{title:r.title,poster:r.poster||'',meta:r.medium.toUpperCase()+' · '+providerLabel(tab as Exclude<Tab,'anime'|'manga'>)+(r.year?' · '+r.year:''),tags:r.genres?.slice(0,3)||[]};
@@ -381,8 +402,20 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
       {selectedExt?.year&&<p className="finder-detail-meta">Year: {selectedExt.year}</p>}
       {selectedExt?.sourceUrl&&<p className="finder-detail-meta">Source: {selectedExt.sourceUrl}</p>}
      </>}
+     <section className="finder-add-details">
+      <div className="finder-add-details-head"><div><small>YOUR LIBRARY DETAILS</small><h4>Set it before adding</h4><span>These values belong to your account and can be edited later.</span></div></div>
+      <div className="finder-add-details-grid">
+       <label>Status<select value={status} onChange={e=>{const next=e.target.value as MediaItem['status'];setStatus(next);if(next==='completed'&&detailTotal)setProgress(detailTotal)}}><option value="planned">Planned</option><option value="watching">Watching</option><option value="reading">Reading</option><option value="playing">Playing</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="dropped">Dropped</option></select></label>
+       <label>Progress<input type="number" min="0" max={detailMax} value={progress} onChange={e=>setProgress(Math.max(0,Math.min(detailMax,Number(e.target.value)||0)))} /></label>
+       <label>Total<input type="number" min="1" max="2000" value={total||''} placeholder={selectedCandidate?.total?String(selectedCandidate.total):'Unknown'} onChange={e=>setTotal(Math.max(0,Math.min(2000,Number(e.target.value)||0)))} /></label>
+       <label>Your rating<input type="number" min="0" max="10" step=".1" value={personalRating??''} placeholder="0–10" onChange={e=>setPersonalRating(e.target.value===''?undefined:Math.max(0,Math.min(10,Number(e.target.value)||0)))} /></label>
+       <label>Parent entry<select value={parentId} onChange={e=>setParentId(e.target.value)}><option value="">None — top level</option>{parentOptions.map(x=><option key={x.id} value={x.id}>{x.parentId?'↳ ':''}{x.title}</option>)}</select></label>
+       <label>Favorite<select value={favorite?'yes':'no'} onChange={e=>setFavorite(e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label>
+       <label className="finder-add-details-wide">Notes<textarea rows={3} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything you want to remember about this entry…" /></label>
+      </div>
+     </section>
      <div className="ani-actions finder-detail-actions">
-      <button className="primary" disabled={importing||detailLoading||added} onClick={()=>void importMedia()}>{importing?<Loader2 className="spin"/>:<Download/>}{added?'Added to library':importing?'Adding…':'Add to my library'}</button>
+      <button className="primary" disabled={importing||detailLoading||added} onClick={()=>void importMedia()}>{importing?<Loader2 className="spin"/>:<Download/>}{added?'Added to library':importing?'Adding…':'Add with these details'}</button>
       {isAni&&selectedAni?<a href={'https://anilist.co/'+selectedAni.type.toLowerCase()+'/'+selectedAni.id} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:
        selectedExt?.sourceUrl?<a href={selectedExt.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink/>Source</a>:null}
       {onManual&&<button className="secondary" onClick={onManual}>Manual entry</button>}
