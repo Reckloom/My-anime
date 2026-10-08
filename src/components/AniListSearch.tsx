@@ -151,7 +151,7 @@ async function fetchJsonWithTimeout(url:string,init?:RequestInit,timeoutMs=12000
 }
 
 function providerLabel(provider:Exclude<Tab,'anime'|'manga'>){
- return provider==='game'?'IGDB + RAWG':provider==='series'?'TMDB + TVmaze':provider==='movie'?'TMDB + Wikipedia':provider==='book'?'Open Library + Google Books':'VNDB';
+ return provider==='game'?'IGDB + RAWG + Wikipedia fallback':provider==='series'?'TMDB + TVmaze':provider==='movie'?'TMDB + Wikipedia':provider==='book'?'Open Library + Google Books':'VNDB';
 }
 
 async function enrichMovieArtwork(results:DiscoveryResult[]){
@@ -192,6 +192,11 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
   const data=await fetchJsonWithTimeout(url) as {query?:{pages?:Record<string,any>}};
   return Object.values(data.query?.pages||{}).map(x=>({provider:'wikipedia',externalId:String(x.pageid),title:String(x.title||term),medium:'movie',poster:x.thumbnail?.source,description:String(x.extract||''),sourceUrl:x.fullurl||('https://en.wikipedia.org/?curid='+x.pageid),source:'wikipedia',genres:[],year:extractYear(x.extract)}));
  }
+ if(provider==='game'){
+  const url='https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch='+q+'%20video%20game&gsrnamespace=0&gsrlimit=12&prop=extracts|pageimages|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=700&format=json&origin=*';
+  const data=await fetchJsonWithTimeout(url) as {query?:{pages?:Record<string,any>}};
+  return Object.values(data.query?.pages||{}).map(x=>({provider:'wikipedia-game',externalId:String(x.pageid),title:String(x.title||term),medium:'game',poster:x.thumbnail?.source||'',backdrop:'',description:String(x.extract||''),sourceUrl:x.fullurl||('https://en.wikipedia.org/?curid='+x.pageid),source:'Wikipedia',genres:[],themes:[],year:extractYear(x.extract),game:{isFree:false,platforms:[],releaseDate:undefined,gameModes:[],storeUrl:x.fullurl||('https://en.wikipedia.org/?curid='+x.pageid)}}));
+ }
  if(provider==='visual-novel'){
   const data=await fetchJsonWithTimeout('https://api.vndb.org/kana/vn',{
    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filters:['search','=',term.trim()],fields:'id,title,alttitle,description,image.url,released,rating',sort:'searchrank',results:12})
@@ -230,12 +235,17 @@ async function detailExternal(result:DiscoveryResult){
  }catch{}
  if(supabase){
   try{
-   const providerName=['igdb','rawg'].includes(result.provider)?'game':['tmdb-tv','tvmaze'].includes(result.provider)?'series':['tmdb-movie','wikipedia'].includes(result.provider)?'movie':['openlibrary','googlebooks'].includes(result.provider)?'book':'visual-novel';
+   const providerName=['igdb','rawg','wikipedia-game'].includes(result.provider)?'game':['tmdb-tv','tvmaze'].includes(result.provider)?'series':['tmdb-movie','wikipedia'].includes(result.provider)?'movie':['openlibrary','googlebooks'].includes(result.provider)?'book':'visual-novel';
    const{data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'detail',provider:providerName,externalId:result.externalId,source:result.provider}});
    if(!error&&(data as {result?:DiscoveryResult})?.result)return(data as {result:DiscoveryResult}).result!;
   }catch{}
  }
  try{
+  if(result.provider==='wikipedia-game'){
+   const data=await fetchJsonWithTimeout('https://en.wikipedia.org/w/api.php?action=query&pageids='+encodeURIComponent(result.externalId)+'&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=900&format=json&origin=*') as {query?:{pages?:Record<string,any>}};
+   const page=Object.values(data.query?.pages||{})[0];
+   if(page)return{...result,title:String((page as any).title||result.title),poster:(page as any).thumbnail?.source||result.poster,description:String((page as any).extract||result.description),year:extractYear((page as any).extract),sourceUrl:(page as any).fullurl||result.sourceUrl,source:'Wikipedia',game:{...(result.game||{}),storeUrl:(page as any).fullurl||result.sourceUrl}};
+  }
   if(result.provider==='tvmaze'){
    const x=await fetchJsonWithTimeout('https://api.tvmaze.com/shows/'+encodeURIComponent(result.externalId)+'?embed=episodes') as any;
    return{...result,total:Array.isArray(x._embedded?.episodes)?x._embedded.episodes.length:result.total,description:x.summary||result.description,poster:x.image?.original||result.poster,backdrop:x.image?.original||result.backdrop,sourceUrl:x.officialSite||x.url};
