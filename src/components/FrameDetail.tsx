@@ -106,6 +106,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    <aside className="detail-drawer detail-modal" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
     <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
    <div className="detail-body">
+    <img className="detail-poster" src={d.poster||'/frame-logo.svg'} alt={d.title} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
     <div className="detail-main">
      <small>{types[d.medium]} · {labels[d.status]}</small>
      <h2 id="frame-detail-title">{d.title}</h2>
