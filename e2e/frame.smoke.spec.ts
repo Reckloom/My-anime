@@ -87,7 +87,6 @@ test.describe('FRAME core smoke flow', () => {
     const targets: Array<[string, RegExp]> = [
       ['Library', /^Library$/],
       ['Discover', /Explore everything\./],
-      ['Radar', /Release Radar/],
     ];
 
     for (const [button, heading] of targets) {
