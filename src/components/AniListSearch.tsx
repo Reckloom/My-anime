@@ -189,7 +189,6 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
     return{provider:'steam',externalId:String(x.id),title:String(x.name||term),medium:'game',poster:x.poster,score:null,sourceUrl:'https://store.steampowered.com/app/'+x.id+'/',source:'steam',genres:[],game:{isFree:false,priceText:finalPrice?('₹'+(finalPrice/100).toFixed(2)):undefined,storeUrl:'https://store.steampowered.com/app/'+x.id+'/'}};
    });
  }
- }
  return [];
 }
 
