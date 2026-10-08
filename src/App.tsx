@@ -108,16 +108,24 @@ export default function App(){
    const guestRaw=localStorage.getItem('frame-library:guest');
    let guestItems:MediaItem[]=[];
    try{const parsed=guestRaw?JSON.parse(guestRaw):[];if(Array.isArray(parsed))guestItems=parsed.map(normalise)}catch{}
+   const scopedRaw=localStorage.getItem(`frame-library:${user.id}`);
+   let scopedItems:MediaItem[]=[];
+   try{const parsed=scopedRaw?JSON.parse(scopedRaw):[];if(Array.isArray(parsed))scopedItems=parsed.map(normalise)}catch{}
    const guestPrefsRaw=localStorage.getItem('frame-guest-preferences');
    let guestPrefs:Record<string,string>={};
    try{const parsed=guestPrefsRaw?JSON.parse(guestPrefsRaw):{};if(parsed&&typeof parsed==='object')guestPrefs=parsed as Record<string,string>}catch{}
    const {data}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
    if(active&&data){
     const cloudItems=data.map(dbToMedia);
-    const merged=guestItems.length?mergeMediaLists(cloudItems,guestItems):cloudItems;
+    const localOverrides=guestItems.length?mergeMediaLists(scopedItems,guestItems):scopedItems;
+    const merged=localOverrides.length?mergeMediaLists(cloudItems,localOverrides):cloudItems;
     if(merged.length){
      setItems(merged);try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
-     if(guestItems.length){const {error}=await client.from('media_items').upsert(merged.map(item=>toRow(item,user.id)),{onConflict:'id'});if(!error)localStorage.removeItem('frame-library:guest');else console.warn('[FRAME guest migration]',error)}
+     if(localOverrides.length){
+      const {error}=await client.from('media_items').upsert(merged.map(item=>toRow(item,user.id)),{onConflict:'id'});
+      if(!error&&guestItems.length)localStorage.removeItem('frame-library:guest');
+      else if(error)console.warn('[FRAME local/cloud merge]',error);
+     }
     }
     else{
      try{
@@ -185,10 +193,12 @@ export default function App(){
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
   const duplicate=items.find(x=>(item.anilistId&&x.anilistId===item.anilistId)||(item.sourceProvider&&item.externalId&&x.sourceProvider===item.sourceProvider&&x.externalId===item.externalId));
-  if(duplicate){setSelected(duplicate);setFinder(false);return}
-  const ok=await save([item,...items]);
-  if(!ok)return;
-  setSelected(item);setFinder(false);
+  if(duplicate){
+   setAppMessage('This title is already in your library.');
+   window.setTimeout(()=>setAppMessage(''),3000);
+   return false;
+  }
+  return await save([item,...items]);
  };
  const addSteamGame=(game:{appId?:string;name:string;header?:string;storeUrl?:string})=>{
   if(!game.name.trim())return;
