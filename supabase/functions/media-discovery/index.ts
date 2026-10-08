@@ -132,16 +132,14 @@ async function searchMovies(q:string){
   const url=`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q+' film')}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts|info&exintro=1&explaintext=1&inprop=url&piprop=thumbnail&pithumbsize=500&format=json&origin=*`;
   const data=await getJson(url);
   const pages=Object.values(data?.query?.pages||{}) as any[];
-  const pageIds=pages.slice(0,8).map((x:any)=>String(x.pageid)).filter(Boolean);
-  const imagesData=pageIds.length?await getJson(`https://en.wikipedia.org/w/api.php?action=query&pageids=${pageIds.join('|')}&prop=images&imlimit=20&format=json&origin=*`).catch(()=>({})):{};
-  const preferredFiles=new Map<string,string>();
-  for(const page of Object.values(imagesData?.query?.pages||{}) as any[]){
-    const images=Array.isArray(page?.images)?page.images:[];
-    const title=String(page?.title||'');
-    const candidate=images.map((x:any)=>String(x.title||'')).filter((x:string)=>/\.(jpe?g|png|webp)$/i.test(x)&&!/logo|icon|screenshot|cast/i.test(x));
-    const poster=candidate.find((x:string)=>/poster/i.test(x))||candidate.find((x:string)=>x.toLowerCase().includes(title.toLowerCase()))||candidate[0];
-    if(poster)preferredFiles.set(String(page.pageid),poster);
-  }
+  const summaries=await Promise.all(pages.slice(0,8).map(async(page:any)=>{
+    const title=String(page?.title||'').replace(/#/g,'%23');
+    try{return await getJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g,'_'))}`)}catch{return null}
+  }));
+  const posterById=new Map<string,string>();
+  summaries.forEach((summary:any)=>{
+    if(summary?.pageid&&summary?.thumbnail?.source)posterById.set(String(summary.pageid),String(summary.thumbnail.source));
+  });
   const ranked=pages.map((x:any)=>{
     const title=String(x.title||'Untitled');
     const hay=title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -154,10 +152,7 @@ async function searchMovies(q:string){
     const extract=clean(x.extract);
     if(/\b(film|movie|cinema|feature film)\b/i.test(extract))relevance+=8;
     if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
-    const file=preferredFiles.get(String(x.pageid))||'';
-    const poster=x.thumbnail?.source||(
-      file ? `https://en.wikipedia.org/wiki/Special:Redirect/file/${encodeURIComponent(file.replace(/^File:/i,''))}` : ''
-    );
+    const poster=x.thumbnail?.source||posterById.get(String(x.pageid))||'';
     return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster,backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
   }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12);
   return ranked.map(({_relevance,...x}:any)=>x);
