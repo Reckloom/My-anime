@@ -152,7 +152,7 @@ function mapIgdbGame(game:any){
 }
 
 async function searchIgdb(query:string){
-  const term=cleanSearch(query).replace(/\/g,'\\').replace(/"/g,'\"');
+  const term=cleanSearch(query).replaceAll('"',' ');
   const data=await igdbQuery(
     'search "'+term+'"; fields id,name,slug,summary,cover.image_id,artworks.image_id,first_release_date,genres.name,platforms.name,alternative_names.name,rating,aggregated_rating,url,game_modes.name; limit 12;'
   );
