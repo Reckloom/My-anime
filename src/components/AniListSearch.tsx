@@ -182,7 +182,7 @@ async function directExternalSearch(term:string,provider:Exclude<Tab,'anime'|'ma
     poster:x.tiny_image??x.logo??x.header_image??x.capsule_image,
     price:x.price
    }))
-   .filter(x=>x.id&&x.name)
+   .filter(x=>x.id&&x.name&&(!x.type||x.type==='app'||x.type==='game'||x.type===1))
    .slice(0,12)
    .map(x=>{
     const finalPrice=Number(x.price?.final??0);
