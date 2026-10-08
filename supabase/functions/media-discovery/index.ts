@@ -1,7 +1,7 @@
 const HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
 type Provider = 'game'|'series'|'movie'|'book';
@@ -54,37 +54,58 @@ async function postJson(url:string,body:unknown){
   }finally{clearTimeout(timer);}
 }
 
+
+function mobyGamesUrl(path:string,key:string){
+  const url=new URL('https://api.mobygames.com/v1'+path);
+  url.searchParams.set('api_key',key);
+  return url.toString();
+}
+function mobyImage(value:unknown){
+  const url=String(value||'').trim();
+  return url?url.replace(/^http:/,'https:'):'';
+}
+function mobyKey(){
+  const key=Deno.env.get('MOBYGAMES_API_KEY')?.trim();
+  if(!key)throw new Error('MobyGames API key is not configured for FRAME.');
+  return key;
+}
 async function searchGames(q:string){
-  const data=await getJson(`https://www.gamelegend.com/api/v1/games?q=${encodeURIComponent(q.trim())}&limit=12`);
+  const key=mobyKey();
+  const data=await getJson(mobyGamesUrl('/games?'+new URLSearchParams({title:q.trim(),limit:'12',format:'normal'}).toString(),key));
   const games=Array.isArray(data?.games)?data.games:[];
-  return games.filter((x:any)=>x?.slug&&x?.title).slice(0,12).map((x:any)=>{
-    const platforms=Array.isArray(x.platforms)?x.platforms.map(String):[];
-    const url=String(x.url||`https://www.gamelegend.com/games/${x.slug}`);
+  return games.slice(0,12).map((game:any)=>{
+    const platforms=Array.isArray(game?.platforms)?game.platforms.map((x:any)=>String(x?.platform_name||'')).filter(Boolean):[];
+    const genres=Array.isArray(game?.genres)?game.genres.map((x:any)=>String(x?.genre_name||'')).filter(Boolean):[];
+    const alternatives=Array.isArray(game?.alternate_titles)?game.alternate_titles.map((x:any)=>String(x?.title||'')).filter(Boolean):[];
+    const url=mobyImage(game?.moby_url)||('https://www.mobygames.com/game/'+String(game?.game_id||''));
+    const poster=mobyImage(game?.sample_cover?.image||game?.sample_cover?.thumbnail_image);
+    const year=extractYear(game?.platforms?.[0]?.first_release_date);
     return {
-      provider:'gamelegend',externalId:String(x.slug),title:String(x.title),medium:'game',
-      poster:String(x.coverImageUrl||''),backdrop:'',score:null,year:extractYear(x.releaseDate),
-      description:clean(String(x.description||'')),genres:[],themes:platforms,source:'GameLegend',
-      sourceUrl:url,game:{isFree:false,platforms,releaseDate:x.releaseDate,storeUrl:url}
+      provider:'mobygames',externalId:String(game?.game_id),title:String(game?.title||'Untitled'),medium:'game',
+      poster,backdrop:'',score:game?.moby_score==null?null:Number(game.moby_score),year,
+      description:clean(game?.description),genres,themes:platforms,alternativeTitles:[...new Set(alternatives)],
+      source:'MobyGames',sourceUrl:url,
+      game:{isFree:false,platforms,releaseDate:game?.platforms?.[0]?.first_release_date,gameModes:[],storeUrl:url}
     };
   });
 }
 
 async function detailGame(id:string){
-  const gameData=await getJson(`https://www.gamelegend.com/api/v1/games/${encodeURIComponent(id)}`);
-  const game=gameData?.game;
+  const key=mobyKey();
+  const gameData=await getJson(mobyGamesUrl('/games/'+encodeURIComponent(id)+'?format=normal',key));
+  const game=Array.isArray(gameData?.games)?gameData.games[0]:gameData?.game;
   if(!game) throw new Error('Game details were not available.');
-  const themes=Array.isArray(game?.dna?.themes)?game.dna.themes.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
-  const mechanics=Array.isArray(game?.dna?.mechanics)?game.dna.mechanics.map((x:any)=>String(x?.name||'')).filter(Boolean):[];
-  const platforms=Array.isArray(game.platforms)?game.platforms.map(String):[];
-  const store=Array.isArray(game.storefronts)&&game.storefronts.length?game.storefronts[0]:null;
-  const storeUrl=String((store as any)?.url||game.url||`https://www.gamelegend.com/games/${id}`);
+  const platforms=Array.isArray(game?.platforms)?game.platforms.map((x:any)=>String(x?.platform_name||'')).filter(Boolean):[];
+  const genres=Array.isArray(game?.genres)?game.genres.map((x:any)=>String(x?.genre_name||'')).filter(Boolean):[];
+  const alternatives=Array.isArray(game?.alternate_titles)?game.alternate_titles.map((x:any)=>String(x?.title||'')).filter(Boolean):[];
+  const url=mobyImage(game?.moby_url)||('https://www.mobygames.com/game/'+encodeURIComponent(id));
   return {
-    provider:'gamelegend',externalId:id,title:String(game.title||'Untitled'),medium:'game',
-    poster:String(game.coverImageUrl||''),backdrop:'',score:null,year:extractYear(game.releaseDate),
-    description:clean(String(game.description||'')),genres:mechanics,themes:[...platforms,...themes],
-    source:'GameLegend',sourceUrl:String(game.url||storeUrl),studio:undefined,
-    game:{isFree:false,platforms,releaseDate:game.releaseDate,gameModes:[],storeUrl},
-    meta:{gameLegendUrl:game.url||undefined}
+    provider:'mobygames',externalId:String(game?.game_id||id),title:String(game?.title||'Untitled'),medium:'game',
+    poster:mobyImage(game?.sample_cover?.image||game?.sample_cover?.thumbnail_image),backdrop:'',
+    score:game?.moby_score==null?null:Number(game.moby_score),year:extractYear(game?.platforms?.[0]?.first_release_date),
+    description:clean(game?.description),genres,themes:platforms,alternativeTitles:[...new Set(alternatives)],
+    source:'MobyGames',sourceUrl:url,
+    game:{isFree:false,platforms,releaseDate:game?.platforms?.[0]?.first_release_date,gameModes:[],storeUrl:url}
   };
 }
 
