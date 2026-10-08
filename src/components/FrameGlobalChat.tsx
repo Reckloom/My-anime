@@ -65,6 +65,7 @@ export function FrameGlobalChat({uid,guest}:{uid:string;guest:boolean}){
   if(!supabase)return;
   const {error:e}=await supabase.from('global_messages').delete().eq('id',id).eq('user_id',uid);
   if(e)setError(e.message);
+  else setMessages(prev=>prev.filter(x=>x.id!==id));
  };
 
  if(guest)return <div className="page"><div className="social-lock"><Users size={28}/><h2>Global chat is account-only</h2><p>Sign in to join the FRAME community chat. Your media library stays separate from chat data.</p></div></div>;
