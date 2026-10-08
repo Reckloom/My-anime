@@ -25,7 +25,8 @@ type Radar={mediaId:string;anilistId:number;title:string;poster:string;episode:n
 
 function normalise(item:MediaItem):MediaItem{
  const total=item.total&&item.total>0?item.total:(item.medium==='game'||item.medium==='visual-novel'?100:item.medium==='movie'?1:500);
- return {...item,poster:item.poster||poster,total,progress:Math.max(0,Math.min(item.progress||0,total)),progressUnit:item.progressUnit||unitFor(item.medium)};
+ const cleanBackdrop=item.backdrop&&item.backdrop.trim()!==item.poster.trim()?item.backdrop:'';
+ return {...item,poster:item.poster||poster,backdrop:cleanBackdrop,total,progress:Math.max(0,Math.min(item.progress||0,total)),progressUnit:item.progressUnit||unitFor(item.medium)};
 }
 function dbToMedia(raw:unknown):MediaItem{
  const r=raw as any;
