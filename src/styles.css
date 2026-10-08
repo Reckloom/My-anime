@@ -1791,3 +1791,28 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
  .settings-page .section-title{align-items:flex-start}
  .settings-reset{font-size:8px!important}
 }
+
+
+/* FINAL HEADER + PROFILE SAVE FIX */
+.frame-topbar{min-width:0}
+.frame-nav{min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.frame-nav::-webkit-scrollbar{display:none}
+.frame-nav button{flex:0 0 auto}
+.frame-actions{min-width:0}
+.global-search{flex:0 1 310px;min-width:190px;width:310px}
+@media(max-width:1350px) and (min-width:801px){
+ .frame-topbar{gap:12px}
+ .frame-nav{gap:1px}
+ .frame-nav button{padding-inline:8px;font-size:10px}
+ .global-search{width:220px;min-width:180px}
+ .top-find{padding-inline:10px}
+}
+@media(max-width:1180px) and (min-width:801px){
+ .global-search{width:240px;min-width:200px}
+}
+@media(max-width:800px){
+ .global-search{display:none}
+}
+.settings-form-grid>label{min-width:0}
+.settings-form-grid input{width:100%}
+.logo-choice{min-width:0}
