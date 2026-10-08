@@ -1958,3 +1958,309 @@ button,a{color:inherit}
 .global-call-stats>div{background:var(--frame-surface-2);border-color:var(--frame-line)}
 .global-call-stats span{color:var(--frame-muted)!important}
 .global-call-visual p,.global-call-note{color:var(--frame-muted)!important}
+
+
+/* ==========================================================
+   FINAL FRAME POLISH — notification surface + global spacing
+   ========================================================== */
+
+/* The small in-app alert must behave like a normal banner, never like
+   loose text sitting on top of the header. */
+.frame-app-message{
+  position:fixed;
+  top:84px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:240;
+  width:min(620px,calc(100vw - 32px));
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:10px 13px 10px 15px;
+  border:1px solid var(--frame-line-strong);
+  border-radius:14px;
+  background:color-mix(in srgb,var(--frame-surface) 94%,transparent);
+  color:var(--frame-text);
+  box-shadow:0 18px 60px #0004;
+  backdrop-filter:blur(22px);
+  font-size:11px;
+  line-height:1.45;
+}
+.frame-app-message button{
+  flex:0 0 auto;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--frame-line);
+  border-radius:9px;
+  background:var(--frame-surface-2);
+  color:var(--frame-muted);
+}
+.frame-app-message button:hover{color:var(--frame-text);background:var(--frame-surface-3)}
+
+/* Notification control + dropdown. Everything is explicitly scoped so the
+   old generic .notification rules cannot scramble this component. */
+.frame-notification-wrap{position:relative;flex:0 0 auto;display:flex;align-items:center}
+.frame-notification-button{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:42px!important;
+  height:42px!important;
+  min-height:42px!important;
+  padding:0!important;
+  border:1px solid var(--frame-line)!important;
+  border-radius:13px!important;
+  background:var(--frame-surface-2)!important;
+  color:var(--frame-muted)!important;
+  box-shadow:none!important;
+}
+.frame-notification-button:hover,
+.frame-notification-button:focus-visible,
+.frame-notification-button.has-unread{
+  color:var(--frame-text)!important;
+  background:var(--frame-surface-3)!important;
+  border-color:var(--frame-line-strong)!important;
+}
+.frame-notification-button.has-unread{box-shadow:inset 0 -2px 0 var(--frame-accent)!important}
+.frame-notification-button i{
+  position:absolute;
+  top:-4px;
+  right:-4px;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  display:grid;
+  place-items:center;
+  border:2px solid var(--frame-bg);
+  border-radius:999px;
+  background:var(--frame-accent);
+  color:#fff;
+  font-size:8px;
+  font-style:normal;
+  font-weight:800;
+  line-height:1;
+}
+.frame-notification-panel{
+  position:absolute;
+  top:calc(100% + 10px);
+  right:0;
+  width:min(420px,calc(100vw - 24px));
+  max-height:min(620px,calc(100vh - 100px));
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  overflow:hidden;
+  border:1px solid var(--frame-line-strong);
+  border-radius:20px;
+  background:var(--frame-surface);
+  color:var(--frame-text);
+  box-shadow:0 28px 90px #0007;
+  backdrop-filter:blur(24px);
+  animation:frame-notification-in .16s ease-out;
+}
+@keyframes frame-notification-in{
+  from{opacity:0;transform:translateY(-5px) scale(.985)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.frame-notification-panel>header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:15px 16px;
+  border-bottom:1px solid var(--frame-line);
+  background:var(--frame-surface);
+}
+.frame-notification-panel>header>div:first-child{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.frame-notification-panel>header small{
+  color:var(--frame-accent);
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.14em;
+}
+.frame-notification-panel>header b{font-size:14px;letter-spacing:-.02em}
+.frame-notification-panel>header>div:last-child{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.frame-notification-panel>header button{
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid var(--frame-line);
+  border-radius:10px;
+  background:var(--frame-surface-2);
+  color:var(--frame-muted);
+}
+.frame-notification-panel>header button:hover{color:var(--frame-text);border-color:var(--frame-line-strong);background:var(--frame-surface-3)}
+.frame-notification-list{
+  min-height:0;
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:8px;
+  background:var(--frame-surface-2);
+}
+.frame-notification-list>.inline-error{
+  margin:2px 0 8px;
+}
+.frame-notification-item{
+  width:100%;
+  min-width:0;
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr) auto;
+  align-items:start;
+  gap:10px;
+  padding:11px 10px;
+  margin:0;
+  border:1px solid transparent;
+  border-radius:13px;
+  background:transparent;
+  color:var(--frame-text);
+  text-align:left;
+}
+.frame-notification-item:hover{
+  background:var(--frame-surface);
+  border-color:var(--frame-line);
+}
+.frame-notification-item.unread{
+  background:color-mix(in srgb,var(--frame-accent) 7%,var(--frame-surface-2));
+  border-color:color-mix(in srgb,var(--frame-accent) 15%,var(--frame-line));
+}
+.frame-notification-item>span{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:var(--frame-surface-3);
+  color:var(--frame-accent);
+  font-size:13px;
+  font-weight:800;
+}
+.frame-notification-item>div{min-width:0;display:grid;gap:3px}
+.frame-notification-item b{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:10px;
+  color:var(--frame-text);
+}
+.frame-notification-item p{
+  margin:0;
+  color:var(--frame-muted);
+  font-size:10px;
+  line-height:1.45;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+  overflow:hidden;
+}
+.frame-notification-item small{
+  color:var(--frame-dim);
+  font-size:8px;
+  line-height:1.3;
+}
+.frame-notification-item>svg{
+  margin-top:6px;
+  color:var(--frame-dim);
+  flex:none;
+}
+.frame-notification-empty{
+  min-height:220px;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:8px;
+  color:var(--frame-muted);
+  font-size:10px;
+}
+.frame-notification-empty svg{color:var(--frame-accent)}
+@media(max-width:800px){
+  .frame-app-message{
+    top:72px;
+    width:calc(100vw - 20px);
+  }
+  .frame-notification-panel{
+    position:fixed;
+    top:calc(66px + 8px);
+    right:10px;
+    width:min(420px,calc(100vw - 20px));
+    max-height:calc(100vh - 92px);
+  }
+}
+@media(max-width:420px){
+  .frame-notification-panel{
+    left:10px;
+    right:10px;
+    width:auto;
+    border-radius:18px;
+  }
+  .frame-notification-item{grid-template-columns:28px minmax(0,1fr) auto;padding:10px 8px}
+  .frame-notification-item>span{width:28px;height:28px}
+}
+
+/* Final desktop balance: give the header breathing room and stop actions
+   from collapsing into one another at common laptop widths. */
+@media(max-width:1180px) and (min-width:801px){
+  .frame-topbar{gap:9px;padding-inline:18px}
+  .frame-actions{gap:6px}
+  .top-account-name{display:none}
+  .global-search{flex-basis:220px;min-width:180px;width:220px}
+}
+@media(max-width:980px) and (min-width:801px){
+  .global-search{display:none}
+  .frame-nav{overflow:visible}
+  .frame-nav button{padding-inline:10px}
+}
+@media(max-width:800px){
+  .frame-topbar{
+    box-shadow:0 8px 30px #0003;
+  }
+  .frame-actions{gap:5px}
+  .top-account{padding-right:5px}
+  .top-account-name{display:none}
+}
+
+/* More consistent page rhythm and cards across the last few legacy surfaces. */
+.page-heading h1{
+  text-wrap:balance;
+}
+.page-heading p{
+  max-width:720px;
+  line-height:1.6;
+}
+.section-title{
+  min-width:0;
+}
+.section-title>div{
+  min-width:0;
+}
+.media-card{
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+.media-card:hover{
+  transform:translateY(-2px);
+}
+.media-card .media-copy b{
+  line-height:1.3;
+}
+.connection-card,
+.settings-panel,
+.quick-panel,
+.radar-panel,
+.social-panel,
+.calls-panel,
+.global-chat-panel,
+.chat-panel{
+  box-shadow:0 12px 38px #0000000a;
+}
