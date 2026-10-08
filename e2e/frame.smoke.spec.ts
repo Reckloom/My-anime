@@ -51,6 +51,15 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByText('Nothing is active.', { exact: true })).toBeVisible();
   });
 
+  test('keeps unavailable AI connectors out of the active controls', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'AI', exact: true }).first().click();
+    await expect(page.getByRole('button', { name: /FRAME AI/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'OpenAI', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Gemini', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Claude', exact: true })).toHaveCount(0);
+  });
+
   test('opens Settings and switches appearance controls', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
