@@ -175,12 +175,9 @@ export default function App(){
     const merged=localOverrides.length?mergeMediaLists(cloudItems,localOverrides):cloudItems;
     setItems(merged);
     try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
+    // Do not auto-import the guest cache after authentication; it can contain
+    // obsolete browser-only records. The account library is the source of truth.
     if(guestItems.length)localStorage.removeItem('frame-library:guest');
-    const guestMigration=guestItems.filter(guest=>!cloudItems.some(cloud=>sameMedia(cloud,guest)));
-    if(guestMigration.length){
-     const {error:guestError}=await client.from('media_items').upsert(guestMigration.map(item=>toRow(item,user.id)),{onConflict:'id'});
-     if(guestError)console.warn('[FRAME guest migration]',guestError);
-    }
     const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
     const effectivePrefs={...(prefs||{}),...guestPrefs};
     if(Object.keys(effectivePrefs).length){
