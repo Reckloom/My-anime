@@ -108,3 +108,31 @@ test.describe('FRAME global voice', () => {
     await expect(page.getByText(/Public global calls are separate from private one-to-one calls/)).toBeVisible();
   });
 });
+
+test.describe('FRAME discovery integration', () => {
+  test('movie and game discovery return real image-backed results', async ({ request }) => {
+    const base = 'https://blwnhfhpckqbetwxamqr.supabase.co/functions/v1/media-discovery';
+    const movie = await request.post(base, { data: { action: 'search', provider: 'movie', query: 'Inception' } });
+    expect(movie.ok()).toBeTruthy();
+    const movieJson = await movie.json();
+    expect(movieJson.results?.length).toBeGreaterThan(0);
+    expect(movieJson.results[0].poster).toMatch(/^https?:\/\//);
+
+    const game = await request.post(base, { data: { action: 'search', provider: 'game', query: 'Portal' } });
+    expect(game.ok()).toBeTruthy();
+    const gameJson = await game.json();
+    expect(gameJson.results?.length).toBeGreaterThan(0);
+    expect(gameJson.results[0].poster).toMatch(/^https?:\/\//);
+  });
+});
+
+test.describe('FRAME quick actions', () => {
+  test('keeps Chat and Call in the floating action hub, not primary nav', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
+    await page.getByTitle('Open quick actions').click();
+    await expect(page.getByTitle('Chat')).toBeVisible();
+    await expect(page.getByTitle('Call')).toBeVisible();
+  });
+});
