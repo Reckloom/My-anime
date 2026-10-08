@@ -12,8 +12,21 @@ export function AuthProvider({children}:{children:ReactNode}){
  const signOutCurrent=async()=>{
   localStorage.removeItem('frame-guest');
   if(!supabase){setSession(null);return}
-  const {error}=await supabase.auth.signOut({scope:'local'});
-  if(error)throw error;
+  const logoutPromise=supabase.auth.signOut({scope:'local'}).catch(error=>{
+   console.warn('[FRAME logout]',error);
+   return {error};
+  });
+  await Promise.race([
+   logoutPromise,
+   new Promise<void>(resolve=>window.setTimeout(resolve,2500)),
+  ]);
+  try{
+   for(const storage of [window.localStorage,window.sessionStorage]){
+    for(const key of Object.keys(storage)){
+     if(key.startsWith('sb-')&&key.endsWith('-auth-token'))storage.removeItem(key);
+    }
+   }
+  }catch{}
   setSession(null);
  };
  useEffect(()=>{
