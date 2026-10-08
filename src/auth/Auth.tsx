@@ -11,19 +11,12 @@ export function AuthProvider({children}:{children:ReactNode}){
  const [session,setSession]=useState<Session|null>(null),[loading,setLoading]=useState(Boolean(supabase));
  const signOutCurrent=async()=>{
   localStorage.removeItem('frame-guest');
+  localStorage.removeItem('frame-force-auth');
   setSession(null);
   setLoading(false);
-  if(supabase){
-   void supabase.auth.signOut({scope:'local'}).catch(error=>console.warn('[FRAME logout]',error));
-  }
-  try{
-   for(const storage of [window.localStorage,window.sessionStorage]){
-    for(const key of Object.keys(storage)){
-     if(key.startsWith('sb-')&&key.endsWith('-auth-token'))storage.removeItem(key);
-    }
-   }
-  }catch{}
- }; useEffect(()=>{
+  try{for(const storage of [window.localStorage,window.sessionStorage])for(const key of Object.keys(storage))if(key.startsWith('sb-')&&key.endsWith('-auth-token'))storage.removeItem(key)}catch{}
+  if(supabase)void supabase.auth.signOut({scope:'local'}).catch(error=>console.warn('[FRAME logout]',error));
+ };useEffect(()=>{
   if(!supabase){setLoading(false);return}
   let active=true;
   supabase.auth.getSession().then(({data})=>{if(active){setSession(data.session);setLoading(false)}});
@@ -52,7 +45,7 @@ function AuthScreen(){
   event.preventDefault();if(!supabase)return;setBusy(true);reset();
   try{
    if(mode==='signup'){const {error:e}=await supabase.auth.signUp({email,password});if(e)throw e;setMessage('Account created. Check your email if confirmation is enabled.');setMode('login')}
-   else if(mode==='login'){const {data,error:e}=await supabase.auth.signInWithPassword({email,password});if(e)throw e;localStorage.removeItem('frame-guest');localStorage.removeItem('frame-force-auth');if(data.session){window.history.replaceState({framePage:'home'},'',window.location.href)}}
+   else if(mode==='login'){const {error:e}=await supabase.auth.signInWithPassword({email,password});if(e)throw e;localStorage.removeItem('frame-guest');localStorage.removeItem('frame-force-auth')}
    else if(mode==='reset'){const redirectTo=window.location.origin+window.location.pathname+'#reset';const {error:e}=await supabase.auth.resetPasswordForEmail(email,{redirectTo});if(e)throw e;setMessage('If that email exists, a secure reset link has been sent.')}
    else {const {error:e}=await supabase.auth.updateUser({password});if(e)throw e;setMessage('Password updated. Continue into FRAME.');setMode('login');setPassword('')}
   }catch(e){setError(e instanceof Error?e.message:'Something went wrong. Please try again.')}
