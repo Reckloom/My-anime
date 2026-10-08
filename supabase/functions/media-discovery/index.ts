@@ -33,6 +33,31 @@ async function getJson(url:string){
   }finally{clearTimeout(timer);}
 }
 
+async function getText(url:string){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const r=await fetch(url,{headers:{Accept:'text/html', 'User-Agent':'FRAME/1.0'},signal:controller.signal});
+    const text=await r.text();
+    if(!r.ok)throw new Error(`Source request failed (HTTP ${r.status}).`);
+    return text;
+  }catch(e){
+    if(e instanceof DOMException&&e.name==='AbortError') throw new Error('Source request timed out.');
+    throw e;
+  }finally{clearTimeout(timer);}
+}
+function htmlEntityDecode(value:string){
+  return value.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+}
+async function wikipediaOgImage(title:string){
+  try{
+    const html=await getText(`https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g,'_'))}`);
+    const match=html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    return match?.[1]?htmlEntityDecode(match[1]):'';
+  }catch{return ''}
+}
+
 async function postJson(url:string,body:unknown){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),12000);
@@ -139,7 +164,7 @@ async function searchMovies(q:string){
   }
   const needle=q.trim().toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   const tokens=needle.split(/\s+/).filter(Boolean);
-  return pages.map((x:any)=>{
+  const ranked=pages.map((x:any)=>{
     const title=String(x.title||'Untitled');
     const hay=title.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
     let relevance=0;
@@ -151,7 +176,11 @@ async function searchMovies(q:string){
     if(/\b(actor|actress|producer)\b/i.test(extract)&&!/\bfilm\b/i.test(hay))relevance-=18;
     const poster=x.thumbnail?.source||imdbPosters.get(hay)||'';
     return {provider:'wikipedia',externalId:String(x.pageid),title,medium:'movie',poster,backdrop:'',score:null,year:extractYear(extract),description:extract,genres:[],themes:[],sourceUrl:x.fullurl||`https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,_relevance:relevance};
-  }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12).map(({_relevance,...x}:any)=>x);
+  }).sort((a:any,b:any)=>b._relevance-a._relevance).slice(0,12);
+  const missing=ranked.filter((x:any)=>!x.poster).slice(0,5);
+  const enriched=await Promise.all(missing.map(async(x:any)=>[x,wikipediaOgImage(x.title)] as const));
+  const imageMap=new Map(enriched.map(([x,image])=>[x.externalId,image]));
+  return ranked.map(({_relevance,...x}:any)=>({...x,poster:x.poster||imageMap.get(x.externalId)||''}));
 }
 
 async function detailMovie(id:string){
