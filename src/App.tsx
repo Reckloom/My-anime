@@ -112,6 +112,14 @@ export default function App(){
   if(!client||!user?.id)return;
   let active=true;
   const load=async()=>{
+   const resetKey=`frame-library-reset-2026-10-08:${user.id}`;
+   if(!localStorage.getItem(resetKey)){
+    localStorage.removeItem('frame-library:guest');
+    localStorage.removeItem('frame-library');
+    localStorage.removeItem(`frame-library:${user.id}`);
+    setItems([]);
+    try{localStorage.setItem(resetKey,'1')}catch{}
+   }
    const guestRaw=localStorage.getItem('frame-library:guest');
    let guestItems:MediaItem[]=[];
    try{const parsed=guestRaw?JSON.parse(guestRaw):[];if(Array.isArray(parsed))guestItems=parsed.map(normalise)}catch{}
@@ -121,7 +129,12 @@ export default function App(){
    const guestPrefsRaw=localStorage.getItem('frame-guest-preferences');
    let guestPrefs:Record<string,string>={};
    try{const parsed=guestPrefsRaw?JSON.parse(guestPrefsRaw):{};if(parsed&&typeof parsed==='object')guestPrefs=parsed as Record<string,string>}catch{}
-   const {data}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
+   const {data,error}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
+   if(error){
+    console.warn('[FRAME cloud library load]',error);
+    if(active){setItems([]);try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify([]))}catch{}}
+    return;
+   }
    if(active&&data){
     const cloudItems=data.map(dbToMedia);
     const localOverrides=guestItems.length?mergeMediaLists(scopedItems,guestItems):scopedItems;
