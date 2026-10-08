@@ -128,20 +128,16 @@ async function enrichMovieArtwork(results:DiscoveryResult[]){
     const files=new Map<string,string>();
     for(const page of Object.values(data.query?.pages||{})){
       const images=Array.isArray((page as any).images)?(page as any).images:[];
+      const title=String((page as any).title||'');
       const candidates=images.map((x:any)=>String(x.title||'')).filter((x:string)=>/\.(jpe?g|png|webp)$/i.test(x)&&!/logo|icon|screenshot|cast/i.test(x));
-      const poster=candidates.find((x:string)=>/poster/i.test(x))||candidates[0];
+      const poster=candidates.find((x:string)=>/poster/i.test(x))||candidates.find((x:string)=>x.toLowerCase().includes(title.toLowerCase()))||candidates[0];
       if((page as any).pageid&&poster)files.set(String((page as any).pageid),poster);
     }
-    const titles=[...files.values()];
-    if(!titles.length)return results;
-    const info=await fetchJsonWithTimeout('https://en.wikipedia.org/w/api.php?action=query&titles='+titles.map(encodeURIComponent).join('|')+'&prop=imageinfo&iiprop=url&iiurlwidth=700&format=json&origin=*') as {query?:{pages?:Record<string,any>}};
-    const urls=new Map<string,string>();
-    for(const page of Object.values(info.query?.pages||{})){
-      const title=String((page as any).title||'');
-      const url=String((page as any).imageinfo?.[0]?.thumburl||(page as any).imageinfo?.[0]?.url||'');
-      if(title&&url)urls.set(title,url);
-    }
-    return results.map(x=>x.poster?x:{...x,poster:urls.get(files.get(x.externalId)||'')||x.poster});
+    return results.map(x=>{
+      if(x.poster)return x;
+      const file=files.get(x.externalId);
+      return file?{...x,poster:'https://en.wikipedia.org/wiki/Special:Redirect/file/'+encodeURIComponent(file.replace(/^File:/i,''))}:x;
+    });
   }catch{return results}
 }
 
