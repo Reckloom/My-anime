@@ -264,7 +264,7 @@ export default function App(){
     <FrameNotifications uid={uid} onNavigate={href=>href&&go(href)}/>
     {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
     <button className="top-account" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
-      <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt="" onError={e=>{e.currentTarget.style.display='none'}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
+      <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt={(profile.display_name||user?.email||'Account')+' avatar'} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
       <span className="top-account-name">{profile?.display_name||user?.email?.split('@')[0]||'Account'}</span>
     </button>
     <button className="top-icon mobile-only" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
