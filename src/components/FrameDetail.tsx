@@ -105,10 +105,6 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    {hasPrevious&&<button className="detail-nav-arrow detail-nav-prev" aria-label="Previous media" title="Previous media" onClick={goPrevious}><ChevronLeft size={26}/></button>}
    <aside className="detail-drawer detail-modal" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
     <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
-   <div className="detail-cover poster-backdrop">
-    <img className="detail-cover-art" src={d.poster||'/frame-logo.svg'} alt="" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
-    <div/>
-   </div>
    <div className="detail-body">
     <img className="detail-poster" src={d.poster||'/frame-logo.svg'} alt={d.title} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
     <div className="detail-main">
