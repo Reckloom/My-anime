@@ -5,7 +5,7 @@ import {supabase} from '../lib/supabase';
 type Profile={id:string;username:string;display_name:string};
 type Msg={id:string;user_id:string;body:string;created_at:string;profiles?:{display_name?:string;username?:string}|null};
 
-export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind:()=>void;onOpenCalls:()=>void;onCall:(friend:Profile)=>void}){
+export function FramePopupHub({uid,onFind,onOpenCalls,onCall,hidden}:{uid:string;onFind:()=>void;onOpenCalls:()=>void;onCall:(friend:Profile)=>void;hidden?:boolean}){
  const [open,setOpen]=useState(false),[panel,setPanel]=useState<'chat'|'call'|null>(null);
  const [messages,setMessages]=useState<Msg[]>([]),[draft,setDraft]=useState(''),[friends,setFriends]=useState<Profile[]>([]),[error,setError]=useState('');
  const loadChat=async()=>{
@@ -31,6 +31,7 @@ export function FramePopupHub({uid,onFind,onOpenCalls,onCall}:{uid:string;onFind
  };
  const choose=(next:'chat'|'call')=>{setOpen(true);setPanel(next)};
 
+ if(hidden)return null;
  return <div className="frame-popup-system">
   <div className={'frame-popup-panel '+(open&&panel?'visible':'')} role="dialog" aria-label="FRAME quick panel">
    <header><div><small>FRAME QUICK</small><b>{panel==='chat'?'Global chat':'Voice calls'}</b></div><button aria-label="Minimize quick panel" onClick={()=>setPanel(null)}><Minimize2 size={15}/></button></header>
