@@ -298,10 +298,10 @@ export function AniListSearch({close,onImported,onManual,onAi,initialQuery='',gu
   {loading&&<div className="search-state"><Loader2 className="spin"/>Searching {current.hint}…</div>}
   {!loading&&query.trim().length<2&&<div className="search-state">Choose a catalogue and type at least two characters.</div>}
   {!loading&&query.trim().length>=2&&!results.length&&!error&&<div className="search-state">No results yet. Try another title or spelling.</div>}
-  <div className="ani-results">{results.map(r=>{const i=resultInfo(r);return <button key={resultKey(r)} className={(isAni?(selected as AniListMedia|null)?.id=== (r as AniListMedia).id:(selected as DiscoveryResult|null)?.externalId===(r as DiscoveryResult).externalId)?'ani-result selected':'ani-result'} onClick={()=>void choose(r)}>
+  {results.length>0&&<div className="ani-results">{results.map(r=>{const i=resultInfo(r);return <button type="button" key={resultKey(r)} className={(isAni?(selected as AniListMedia|null)?.id=== (r as AniListMedia).id:(selected as DiscoveryResult|null)?.externalId===(r as DiscoveryResult).externalId)?'ani-result selected':'ani-result'} onClick={()=>void choose(r)}>
    <img src={i.poster||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>
    <span><b>{i.title}</b><small>{i.meta}</small><em>{i.tags.join(' · ')||'Metadata available on selection'}</em></span>
-  </button>})}</div>
+  </button>})}</div>}
   {selected&&<div className="ani-detail">
    {isAni&&selectedAni?<img src={selectedAni.coverImage?.extraLarge||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>:
     selectedExt?<img src={selectedExt.poster||'https://placehold.co/240x360/111116/777?text=FRAME'} alt="" loading="lazy" decoding="async"/>:null}
