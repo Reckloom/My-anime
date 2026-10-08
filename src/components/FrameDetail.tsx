@@ -21,10 +21,10 @@ function hierarchyPartOrder(item:MediaItem){
  const t=item.title.trim().toLowerCase();
  const exact:Record<string,number>={
   'steins;gate':10,
-  'steins;gate: kyoukaimenjou no missing link - divide by zero':20,
-  'steins;gate 0':30,
-  'steins;gate: fuka ryouiki no déjà vu':40,
-  'steins;gate: oukoubakko no poriomania':50,
+  'steins;gate: oukoubakko no poriomania':20,
+  'steins;gate: fuka ryouiki no déjà vu':30,
+  'steins;gate: kyoukaimenjou no missing link - divide by zero':40,
+  'steins;gate 0':50,
   'steins;gate 0: kesshou takei no valentine - bittersweet day':60,
   'attack on titan season 1':10,
   'attack on titan season 2':20,
