@@ -4,7 +4,7 @@ test.describe('FRAME core smoke flow', () => {
   test('loads the app and exposes the main navigation', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('banner')).toBeVisible();
-    for (const label of ['Home', 'Library', 'Discover', 'Web', 'Radar', 'AI', 'Friends', 'Chat', 'Calls', 'Settings']) {
+    for (const label of ['Home', 'Library', 'Discover', 'Web', 'Radar', 'Friends', 'Chat', 'Calls', 'Settings']) {
       await expect(page.getByRole('button', { name: label, exact: true }).first()).toBeVisible();
     }
   });
@@ -55,20 +55,12 @@ test.describe('FRAME core smoke flow', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
     await page.getByRole('heading', { name: 'Where to find it', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Google Search', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Web Search', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Discover', exact: true }).first().click();
     await page.getByRole('heading', { name: 'Connections', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Connections', exact: true })).toBeVisible();
   });
 
-  test('keeps unavailable AI connectors out of the active controls', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'AI', exact: true }).first().click();
-    await expect(page.getByRole('button', { name: /FRAME AI/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'OpenAI', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Gemini', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Claude', exact: true })).toHaveCount(0);
-  });
 
   test('opens Settings and switches appearance controls', async ({ page }) => {
     await page.goto('/');
@@ -87,9 +79,8 @@ test.describe('FRAME core smoke flow', () => {
     const targets: Array<[string, RegExp]> = [
       ['Library', /^Library$/],
       ['Discover', /Explore everything\./],
-      ['Web', /Google Search/],
+      ['Web', /Web Search/],
       ['Radar', /Release Radar/],
-      ['AI', /AI Search/],
       ['Friends', /^Friends$/],
       ['Chat', /Global Chat/],
       ['Calls', /^Calls$/],
