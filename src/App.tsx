@@ -267,7 +267,7 @@ export default function App(){
     <button className="top-icon" title="Connections" aria-label="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
     <FrameNotifications uid={uid} onNavigate={href=>href&&go(href)}/>
     {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
-    <button className="top-account" type="button" title="Open account settings" aria-label="Open account settings" onClick={()=>go('settings')}>
+    <button className="top-account" type="button" title="Settings" aria-label="Settings" onClick={()=>go('settings')}>
       <span className="top-avatar">{(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
       <span className="top-account-name">{profile?.display_name||user?.email?.split('@')[0]||'Account'}</span>
     </button>
