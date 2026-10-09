@@ -425,12 +425,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
   // Manga-canon episodes only. Pure filler, mixed canon/filler and anime-original
   // episodes are deliberately excluded until the user asks to include them.
-  const included=[...new Map(episodes.filter((e:any)=>{const episodeNumber=Number(e.mal_id);const title=String(e.title||'').trim();return episodeNumber>0&&episodeNumber<=1180&&isOnePieceCanonEpisodeNumber(episodeNumber)&&Boolean(title)&&!/^episode\s*\d+$/i.test(title)&&title.toLowerCase()!=='episode '+episodeNumber;}).sort((a:any,b:any)=>{
-   const aHasMetadata=Boolean(String(a.title||'').trim()&&String(a.title||'').trim()!=='Episode '+Number(a.mal_id))||Boolean(a.synopsis)||Boolean(a.aired)||Boolean(a.images?.jpg?.image_url);
-   const bHasMetadata=Boolean(String(b.title||'').trim()&&String(b.title||'').trim()!=='Episode '+Number(b.mal_id))||Boolean(b.synopsis)||Boolean(b.aired)||Boolean(b.images?.jpg?.image_url);
-   return Number(bHasMetadata)-Number(aHasMetadata);
-  }).map((e:any)=>[Number(e.mal_id),e])).values()].sort((a:any,b:any)=>Number(a.mal_id)-Number(b.mal_id));
-  if(!included.length)throw new Error('The catalogue returned no usable episodes.');
+  // Complete episode index: use real provider metadata when available, and keep numbered records for gaps.
+  const catalogueByNumber=new Map<number,any>();
+  for(const e of episodes){const number=Number(e.mal_id);if(!Number.isInteger(number)||number<1||number>1180)continue;const prior=catalogueByNumber.get(number);if(!prior||(!String(prior.title||'').trim()&&String(e.title||'').trim()))catalogueByNumber.set(number,e);}
+  const included=Array.from({length:1180},(_,index)=>{const number=index+1;const found=catalogueByNumber.get(number);if(found)return {...found,mal_id:number,title:String(found.title||'').trim()||('Episode '+number)};return {mal_id:number,title:'Episode '+number,synopsis:'Episode metadata was not returned by connected catalogues. Use the Google Images search link to find an official still.',ratingSource:'Metadata unavailable',sourceUrl:'https://www.google.com/search?tbm=isch&q='+encodeURIComponent('One Piece anime episode '+number+' official still')};});
   const arcs=[
    {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},{name:'Syrup Village',start:9,end:18},
    {name:'Baratie',start:19,end:30},{name:'Arlong Park',start:31,end:44},{name:'Loguetown',start:45,end:53},
@@ -464,19 +462,20 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const seriesTotal=1180;
   const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(watchedThrough,seriesTotal),status:'completed'}];
   const assigned=new Set<number>();
+  const usedEpisodePosterUrls=new Set<string>();
   for(let index=0;index<arcs.length;index++){
    const arc=arcs[index];
-   const arcEpisodes=included.filter((e:any)=>!e.special&&Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
+   const arcEpisodes=included.filter((e:any)=>Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
    if(!arcEpisodes.length)continue;
    const arcId='one-piece-arc-'+arc.start;
-   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' canon episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:arcEpisodes.every((e:any)=>Number(e.mal_id)<=watchedThrough)?'completed':'planned',progress:arcEpisodes.filter((e:any)=>Number(e.mal_id)<=watchedThrough).length,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Canon episodes only. Filler and non-canon episodes are excluded.'});
-   for(const e of arcEpisodes){assigned.add(Number(e.mal_id));created.push(makeOnePieceEpisode(e,arc, index+1,arcId,root));}
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:arcEpisodes.every((e:any)=>Number(e.mal_id)<=watchedThrough)?'completed':'planned',progress:arcEpisodes.filter((e:any)=>Number(e.mal_id)<=watchedThrough).length,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'All numbered episodes in this arc are included, including filler and specials, and are marked completed per the library owner’s viewing status.'});
+   for(const e of arcEpisodes){assigned.add(Number(e.mal_id));created.push(makeOnePieceEpisode(e,arc,index+1,arcId,root,usedEpisodePosterUrls));}
   }
   const ungrouped=included.filter((e:any)=>!assigned.has(Number(e.mal_id)));
   if(ungrouped.length){
    const arcId='one-piece-arc-other';
-   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other episodes',description:'Catalogue episodes outside the predefined arc ranges, including filler, recap and specials where listed.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted; episode classification can differ between guides.'});
-   for(const e of ungrouped)created.push(makeOnePieceEpisode(e,{name:'Other episodes',start:0,end:0},arcs.length+1,arcId,root));
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other episodes',description:'Episodes outside the predefined arc ranges.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted.'});
+   for(const e of ungrouped)created.push(makeOnePieceEpisode(e,{name:'Other episodes',start:0,end:0},arcs.length+1,arcId,root,usedEpisodePosterUrls));
   }
   const descendantIds=new Set<string>([rootId]);
   let changed=true;
@@ -500,12 +499,17 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(created[0])}
   return ok;
  };
- const makeOnePieceEpisode=(e:any,arc:{name:string;start:number;end:number},arcNumber:number,parentId:string,root:MediaItem):MediaItem=>{
+ const makeOnePieceEpisode=(e:any,arc:{name:string;start:number;end:number},arcNumber:number,parentId:string,root:MediaItem,usedPosters:Set<string>):MediaItem=>{
   const epNo=Number(e.mal_id);
   const score=Number(e.score);
   const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
   const synopsis=cleanDescription(String(e.synopsis||''))||'Synopsis not supplied by the catalogue.';
-  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:String(epNo)+'. '+String(e.title||('Episode '+epNo)).replace(/^(?:(?:episode|ep)\s*\d+\s*[:·.—-]?\s*)+/i,'').trim(),description:synopsis,poster:String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||(epNo<=746?'https://one-piece.com/img/anime/story/img_story_'+String(epNo).padStart(3,'0')+'.jpg':epNo>=1156&&epNo<=1171?'https://one-piece.com/img/anime/tvanime_'+epNo+'_1_2.png':root.poster)),backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:epNo<=1180?'completed':'planned',progress:epNo<=1180?1:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),synopsis}};
+  const cataloguePoster=String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||'').trim();
+  const officialStill=epNo>=1156&&epNo<=1180?'https://one-piece.com/img/anime/tvanime_'+epNo+'_1_2.png':'https://one-piece.com/img/anime/story/img_story_'+String(epNo).padStart(3,'0')+'.jpg';
+  const poster=cataloguePoster&&cataloguePoster!==root.poster&&!usedPosters.has(cataloguePoster)?cataloguePoster:officialStill;
+  usedPosters.add(poster);
+  const googleImageSearchUrl='https://www.google.com/search?tbm=isch&q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')+' official still');
+  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:String(epNo)+'. '+String(e.title||('Episode '+epNo)).replace(/^(?:(?:episode|ep)\s*\d+\s*[:·.—-]?\s*)+/i,'').trim(),description:synopsis,poster,backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:epNo<=1180?'completed':'planned',progress:epNo<=1180?1:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),googleImageSearchUrl,synopsis},externalLinks:{officialUrl:String(e.sourceUrl||'https://one-piece.com/anime/'),newsUrl:googleImageSearchUrl}};
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
