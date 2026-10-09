@@ -2862,3 +2862,109 @@ body{background:var(--frame-bg);color:#f5f4f0}
 }
 @media(min-width:851px) and (max-width:1200px){.media-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 @media(prefers-reduced-motion:reduce){.media-card,.media-card img,.primary,.vinland-feature-actions button{transition:none!important}}
+
+
+/* FRAME unified visual system — one cohesive cinematic archive, across every page */
+:root{
+ --frame-bg:#08090b;
+ --frame-panel:#101114;
+ --frame-panel-raised:#151619;
+ --frame-line:#ffffff18;
+ --frame-text:#f3f0e9;
+ --frame-muted:#a3a09a;
+ --frame-gold:#d9bd8b;
+ --frame-gold-bright:#f0d9ad;
+ --frame-radius:18px;
+ color-scheme:dark;
+}
+html,body,#root{min-height:100%;background:#08090b!important;color:var(--frame-text)!important}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+.app,.frame-app,.main-shell,.content-shell,.page,.settings-page,.discover-page,.social-page,.calendar-page,.calls-page{
+ background:#08090b!important;color:var(--frame-text)!important
+}
+button,input,textarea,select{font-family:inherit}
+button{transition:background .18s ease,border-color .18s ease,transform .18s ease,color .18s ease}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--frame-gold)!important;outline-offset:3px}
+.top,.frame-topbar,.topbar,.app-header,.site-header{
+ background:#090a0cf0!important;border-bottom:1px solid var(--frame-line)!important;
+ backdrop-filter:blur(24px)!important;box-shadow:0 8px 36px #0002!important
+}
+.logo,.frame-brand,.brand,.menulogo{color:var(--frame-text)!important;letter-spacing:.17em!important}
+.logo b,.menulogo b,.frame-brand-mark,.brand-mark{
+ background:linear-gradient(135deg,#f0d9ad,#9b7c4d)!important;color:#17130d!important;box-shadow:0 0 25px #d9bd8b20!important
+}
+.top nav button,.frame-topbar nav button,.nav-item,.sidebar button,.menu button{
+ color:#a6a39c!important;border-radius:999px!important
+}
+.top nav button.on,.top nav button:hover,.frame-topbar nav button.active,.nav-item.active,.sidebar button.active,.menu button.active{
+ background:#d9bd8b18!important;color:#f0d9ad!important
+}
+.search,.global-search,.top-find,.search-box,.library-controls,.toolbar,.filter-bar{
+ background:#ffffff04!important;border:1px solid var(--frame-line)!important;border-radius:999px!important
+}
+.search input,.global-search input,.top-find input,.search-box input{color:var(--frame-text)!important}
+.primary,.add,.vinland-library-action,.home-intro-actions .primary{
+ background:linear-gradient(135deg,#f0d9ad,#c8a979)!important;color:#17130d!important;border:1px solid #f0d9ad!important;border-radius:999px!important;font-weight:700!important
+}
+.primary:hover,.add:hover,.vinland-library-action:hover{transform:translateY(-1px);filter:brightness(1.06)}
+.secondary,.danger,.icon-button,.modalhead button,.close-btn{
+ border:1px solid var(--frame-line)!important;border-radius:999px!important;background:#ffffff06!important;color:var(--frame-text)!important
+}
+.danger{color:#f2a6a0!important}
+.page-heading h1,.page-heading h2,.section-title h2,.home-intro h1,.home-intro h2,.settings-panel h2{
+ color:var(--frame-text)!important;letter-spacing:-.045em!important
+}
+.page-heading p,.section-title p,.muted,.page-heading small,.section-title small{color:var(--frame-muted)!important}
+.media-card,.shared-media-card,.tool-card,.settings-panel,.settings-card,.data-tool-card,.friend-card,.notification-card,.call-card,.social-card,.modal,.dialog,.command-palette,.popup-panel{
+ background:linear-gradient(145deg,#151619,#0e0f11)!important;border:1px solid var(--frame-line)!important;border-radius:var(--frame-radius)!important;box-shadow:0 14px 44px #0002!important
+}
+.media-card{padding:7px!important;overflow:hidden!important}
+.media-card:hover,.shared-media-card:hover,.tool-card:hover,.friend-card:hover{
+ border-color:#d9bd8b66!important;transform:translateY(-3px)!important;box-shadow:0 22px 52px #0005!important
+}
+.media-poster,.media-poster img,.poster-wrap,.poster-frame{border-radius:13px!important;overflow:hidden!important}
+.media-copy b,.media-card h3,.media-card h2,.settings-panel b{color:#f3f0e9!important}
+.media-copy small,.media-card small,.personal-line{color:#a3a09a!important}
+.card-progress,.progress-track,.progress-bar{background:#ffffff14!important;border-radius:999px!important;overflow:hidden}
+.card-progress i,.progress-track i,.progress-fill{background:linear-gradient(90deg,#b08d5b,#f0d9ad)!important;border-radius:999px!important}
+.medium-pill,.score-pill,.badge,.status-pill{border:1px solid #d9bd8b35!important;background:#d9bd8b12!important;color:#ead5b1!important;border-radius:999px!important}
+.filter-scroll button,.tab-list button,.segmented button,.settings-tabs button{
+ border-radius:999px!important;border:1px solid transparent!important
+}
+.filter-scroll button.active,.tab-list button.active,.segmented button.active,.settings-tabs button.active{
+ background:#e7d5b5!important;color:#171512!important;border-color:#e7d5b5!important
+}
+input,textarea,select,.field input,.field select,.field textarea{
+ background:#0d0e10!important;color:var(--frame-text)!important;border:1px solid #ffffff20!important;border-radius:12px!important
+}
+input::placeholder,textarea::placeholder{color:#77756f!important}
+hr,.divider{border-color:var(--frame-line)!important}
+.empty-state,.home-empty,.empty,.loading-panel{
+ border:1px dashed #ffffff25!important;border-radius:20px!important;background:#ffffff03!important;color:var(--frame-muted)!important
+}
+.modal-backdrop,.overlay{background:#000b!important;backdrop-filter:blur(12px)!important}
+.detail-drawer,.detail-panel,.settings-panel,.settings-page .panel{
+ background:#101114!important;border-color:var(--frame-line)!important;color:var(--frame-text)!important
+}
+.vinland-feature{
+ border:1px solid #d9bd8b2e!important;border-radius:24px!important;overflow:hidden!important;
+ box-shadow:0 26px 80px #0005!important
+}
+.vinland-feature:after{border-color:#d9bd8b55!important}
+.vinland-feature h2{color:#f3f0e9!important}
+.vinland-feature-meta,.vinland-feature-content>small{color:#e1c99e!important}
+.home-overview>div,.home-tools,.home-tool-grid>button{
+ background:linear-gradient(145deg,#151619,#0d0e10)!important;border:1px solid var(--frame-line)!important;border-radius:17px!important
+}
+.home-overview strong,.home-overview b{color:#f0d9ad!important}
+.home-tool-grid>button:hover{border-color:#d9bd8b66!important}
+.logo-choice,.avatar-setting-preview,.profile-avatar{border-radius:16px!important;border-color:var(--frame-line)!important}
+.logo-choice.selected{border-color:#d9bd8b!important;background:#d9bd8b12!important}
+.frame-app-message{background:#171512!important;border:1px solid #d9bd8b55!important;color:var(--frame-text)!important}
+@media(max-width:850px){
+ .top,.frame-topbar,.topbar{padding-inline:14px!important}
+ .media-grid{gap:12px!important}
+ .media-card{border-radius:15px!important}
+ .page{padding-inline:15px!important}
+ .settings-panel,.tool-card,.social-card{padding:16px!important}
+}
