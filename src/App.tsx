@@ -286,15 +286,30 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const arcs=[
    {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},{name:'Syrup Village',start:9,end:18},
    {name:'Baratie',start:19,end:30},{name:'Arlong Park',start:31,end:44},{name:'Loguetown',start:45,end:53},
-   {name:'Reverse Mountain',start:62,end:63},{name:'Whisky Peak',start:64,end:67},{name:'Little Garden',start:70,end:77},
-   {name:'Drum Island',start:78,end:91},{name:'Arabasta',start:92,end:130},{name:'Jaya',start:144,end:152},
-   {name:'Skypiea',start:153,end:195},{name:'Long Ring Long Land',start:207,end:219},{name:'Water 7',start:229,end:263},
-   {name:'Enies Lobby',start:264,end:312},{name:'Post-Enies Lobby',start:313,end:325},{name:'Thriller Bark',start:337,end:381},
-   {name:'Sabaody Archipelago',start:385,end:405},{name:'Amazon Lily',start:408,end:417},{name:'Impel Down',start:422,end:452},
-   {name:'Marineford',start:457,end:489},{name:'Post-War',start:490,end:516},{name:'Return to Sabaody',start:517,end:522},
-   {name:'Fish-Man Island',start:523,end:574},{name:'Punk Hazard',start:579,end:625},{name:'Dressrosa',start:629,end:746},
-   {name:'Zou',start:751,end:779},{name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:889},
-   {name:'Wano Country',start:890,end:1085},{name:'Egghead',start:1086,end:2000}
+   {name:'Warship Island (Filler)',start:54,end:61},{name:'Reverse Mountain',start:62,end:63},{name:'Whisky Peak',start:64,end:67},
+   {name:'Koby and Helmeppo',start:68,end:69},{name:'Little Garden',start:70,end:77},{name:'Drum Island',start:78,end:91},
+   {name:'Arabasta',start:92,end:130},{name:'Post-Arabasta',start:131,end:135},{name:'Goat Island (Filler)',start:136,end:138},
+   {name:'Ruluka Island (Filler)',start:139,end:143},{name:'Jaya',start:144,end:152},{name:'Skypiea',start:153,end:195},
+   {name:'G-8 (Filler)',start:196,end:206},{name:'Long Ring Long Land',start:207,end:219},
+   {name:'Ocean’s Dream (Filler)',start:220,end:224},{name:'Foxy’s Return (Filler)',start:225,end:226},
+   {name:'Aokiji Encounter',start:227,end:228},{name:'Water 7',start:229,end:263},{name:'Enies Lobby',start:264,end:312},
+   {name:'Post-Enies Lobby',start:313,end:325},{name:'Ice Hunter (Filler)',start:326,end:335},
+   {name:'Chopper Man Special',start:336,end:336},{name:'Thriller Bark',start:337,end:381},
+   {name:'Spa Island (Filler)',start:382,end:384},{name:'Sabaody Archipelago',start:385,end:405},
+   {name:'Boss Luffy Historical Specials',start:406,end:407},{name:'Amazon Lily',start:408,end:417},
+   {name:'Straw Hat Separation',start:418,end:421},{name:'Impel Down',start:422,end:425},
+   {name:'Little East Blue (Filler)',start:426,end:429},{name:'Impel Down',start:430,end:452},
+   {name:'Ace Flashback Specials',start:453,end:456},{name:'Marineford',start:457,end:489},
+   {name:'Post-War',start:490,end:516},{name:'Return to Sabaody',start:517,end:522},
+   {name:'Fish-Man Island',start:523,end:574},{name:'Z’s Ambition (Filler)',start:575,end:578},
+   {name:'Punk Hazard',start:579,end:625},{name:'Caesar Retrieval (Filler)',start:626,end:628},
+   {name:'Dressrosa',start:629,end:746},{name:'Silver Mine (Filler)',start:747,end:750},
+   {name:'Zou',start:751,end:779},{name:'Marine Rookie (Filler)',start:780,end:782},
+   {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:889},
+   {name:'Wano Country',start:890,end:1085},{name:'Cidre Guild (Filler)',start:895,end:896},
+   {name:'Romance Dawn Anniversary Special',start:907,end:907},{name:'Uta’s Past',start:1029,end:1030},
+   {name:'Egghead',start:1086,end:2000}
+
   ];
   const rootId=root.id;
   const created:MediaItem[]=[{...root,total:included.length,customTotal:included.length,progress:Math.min(root.progress,included.length)}];
