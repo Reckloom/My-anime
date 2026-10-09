@@ -27,6 +27,21 @@ export interface MediaAvailability{
  play?:string[];
 }
 
+export interface EpisodeMetadata {
+ seasonNumber:number;
+ episodeNumber:number;
+ episodeCode:string;
+ airDate?:string;
+ runtimeMinutes?:number;
+ ratingSource?:string;
+ ratingCount?:number;
+ imdbId?:string;
+ directors?:string[];
+ writers?:string[];
+ cast?:string[];
+ synopsis?:string;
+}
+
 export interface MediaItem{
  id:string; parentId?:string; metadataId?:string; anilistId?:number; sourceProvider?:string; externalId?:string;
  title:string; alternativeTitles?:string[]; description:string; poster:string; backdrop:string;
@@ -37,5 +52,6 @@ export interface MediaItem{
  availability?:MediaAvailability;
  notificationsEnabled?:boolean;
  releaseRadarState?:Record<string,unknown>;
+ episode?:EpisodeMetadata;
  game?:GameDetails;
 }
