@@ -579,10 +579,27 @@ async function fetchOnePieceOfficialArchivePage(page:number){
  }finally{clearTimeout(timer)}
 }
 
+async function fetchEpisodeThumbnailPage(url:string){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),10000);
+ try{
+  const result=await fetch(url,{headers:{Accept:'text/html'},signal:controller.signal});
+  if(!result.ok)return '';
+  const html=await result.text();
+  const match=html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+    ||html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+  const image=String(match?.[1]||'').replace(/&amp;/g,'&').trim();
+  return /^https:\/\//i.test(image)&&/\.(?:jpe?g|png|webp)(?:\?|$)/i.test(image)?image:'';
+ }catch(error){
+  console.warn('[FRAME One Piece episode thumbnail]',url,error);
+  return '';
+ }finally{clearTimeout(timer)}
+}
+
 async function onePieceOfficialPosterCatalogue(){
  if(onePieceOfficialPosterCache&&onePieceOfficialPosterCache.expiresAt>Date.now())return {
   posters:onePieceOfficialPosterCache.posters,count:onePieceOfficialPosterCache.count,
-  uniqueImages:onePieceOfficialPosterCache.uniqueImages,source:'ONE PIECE.com'
+  uniqueImages:onePieceOfficialPosterCache.uniqueImages,source:'ONE PIECE.com + episode thumbnail sources'
  };
  const posters:Record<string,string>={};
  const first=await fetchOnePieceOfficialArchivePage(1);
@@ -596,9 +613,24 @@ async function onePieceOfficialPosterCatalogue(){
   }));
   for(const html of pages)if(html)addOfficialOnePiecePosterRows(html,posters);
  }
- const result={posters,count:Object.keys(posters).length,uniqueImages:new Set(Object.values(posters)).size,source:'ONE PIECE.com'};
+
+ // Some official archive entries combine episodes 6–8 into one special card.
+ // Use separate episode stills for those numbered entries so they remain distinct.
+ const thumbnailOverrides:Record<number,string>={
+  1179:'https://image.idn.media/post/20260921/asdasdasd_efed0e41-f61b-494e-b39d-3c1691fab779.jpg',
+  1180:'https://image.idn.media/post/20260928/asasadqwadaqwd_7c4ba1d5-9169-4c9a-b684-bffbe4346f26.jpg'
+ };
+ const fetchNumbers=[6,7,8,1172,1173,1174,1175,1176,1177,1178];
+ const fetched=await Promise.all(fetchNumbers.map(async(number)=>{
+  const url='https://www.vodanime.com/anime/xtkqbcxbez/one-piece/episode/'+number;
+  return [number,await fetchEpisodeThumbnailPage(url)] as const;
+ }));
+ for(const [number,url] of fetched)if(url)posters[String(number)]=url;
+ for(const [number,url] of Object.entries(thumbnailOverrides))posters[number]=url;
+
+ const result={posters,count:Object.keys(posters).length,uniqueImages:new Set(Object.values(posters)).size};
  onePieceOfficialPosterCache={...result,expiresAt:Date.now()+6*60*60*1000};
- return result;
+ return {...result,source:'ONE PIECE.com + episode thumbnail sources'};
 }
 
 type DiscoveryResultLike=Record<string,unknown>;
