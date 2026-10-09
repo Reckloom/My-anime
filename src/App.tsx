@@ -240,19 +240,21 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   return operation;
  };
  const buildOnePieceHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
-  const root=normalise({...rawRoot,
+  let root=normalise({...rawRoot,
    description:[rawRoot.description,'One Piece anime library: the main entry holds series-level details, while arc entries contain the episode catalogue with titles, synopses, air dates, available stills and episode scores. IMDb links are included for checking IMDb directly; scores displayed in FRAME are explicitly labelled with their actual source.'].filter(Boolean).join('\n\n'),
    availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/']},
    externalLinks:{...(rawRoot.externalLinks||{}),imdbId:'tt0388629',officialUrl:'https://one-piece.com/anime/',newsUrl:'https://one-piece.com/news/',malId:'21'},
    notes:[rawRoot.notes,'Official site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Netflix catalogue: https://www.netflix.com/title/80107103','News: https://one-piece.com/news/','Episode titles, synopses, air dates, stills and available episode scores are fetched from TMDB, with a Jikan / MyAnimeList fallback. IMDb episode search links are included; FRAME does not mislabel TMDB scores as IMDb ratings.'].filter(Boolean).join('\n\n')
   });
   let episodes:Array<any>=[];
+  let catalogueSeriesPoster='',catalogueSeriesBackdrop='';
   // Prefer FRAME's server-side TMDB catalogue for episode stills, summaries,
   // dates and episode-level community scores.
   if(supabase){
    try{
     const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'episodes',provider:'series',source:'tmdb-tv',externalId:'37854'}});
     if(!error&&Array.isArray(data?.episodes)){
+     catalogueSeriesPoster=String(data?.seriesPoster||'');catalogueSeriesBackdrop=String(data?.seriesBackdrop||'');
      episodes=data.episodes.map((e:any)=>({
       mal_id:Number(e.absoluteEpisode),title:e.title,aired:e.airDate,score:e.score,
       synopsis:e.synopsis,images:{jpg:{image_url:e.poster||'',large_image_url:e.backdrop||''}},
@@ -278,6 +280,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     episodes.push(...(payload.data||[]));
    }
   }
+  if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
   const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=2000).sort((a:any,b:any)=>Number(a.mal_id)-Number(b.mal_id));
   if(!included.length)throw new Error('The catalogue returned no usable episodes.');
   const arcs=[
