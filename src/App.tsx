@@ -107,18 +107,21 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
  }
  return dedupeMediaItems(merged);
 }
+const ONE_PIECE_CANON_RANGES:Array<[number,number]>=[
+ [1,44],[48,49],[52,53],[62,67],[70,92],[94,97],[100,100],[103,130],
+ [144,195],[207,212],[217,219],[227,278],[284,290],[293,302],[304,316],
+ [320,325],[337,353],[355,381],[385,405],[408,417],[422,425],[430,452],
+ [459,488],[490,491],[493,496],[500,505],[507,519],[521,541],[543,573],
+ [579,589],[591,624],[629,632],[634,652],[654,656],[658,678],[680,689],
+ [691,730],[732,736],[739,746],[752,774],[776,776],[779,779],[783,788],
+ [790,802],[804,806],[808,877],[880,880],[886,886],[891,894],[897,906],
+ [908,923],[925,987],[990,990],[992,1028],[1031,1083],[1085,1180]
+];
 function isOnePieceCanonEpisodeNumber(number:number){
- const ranges:Array<[number,number]>=[
-  [1,44],[48,49],[52,53],[62,67],[70,92],[94,97],[100,100],[103,130],
-  [144,195],[207,212],[217,219],[227,278],[284,290],[293,302],[304,316],
-  [320,325],[337,353],[355,381],[385,405],[408,417],[422,425],[430,452],
-  [459,488],[490,491],[493,496],[500,505],[507,519],[521,541],[543,573],
-  [579,589],[591,624],[629,632],[634,652],[654,656],[658,678],[680,689],
-  [691,730],[732,736],[739,746],[752,774],[776,776],[779,779],[783,788],
-  [790,802],[804,806],[808,877],[880,880],[886,886],[891,894],[897,906],
-  [908,923],[925,987],[990,990],[992,1028],[1031,1083],[1085,1180]
- ];
- return ranges.some(([start,end])=>number>=start&&number<=end);
+ return ONE_PIECE_CANON_RANGES.some(([start,end])=>number>=start&&number<=end);
+}
+function onePieceExpectedCanonCount(through=1180){
+ return ONE_PIECE_CANON_RANGES.reduce((sum,[start,end])=>sum+Math.max(0,Math.min(end,through)-start+1),0);
 }
 export default function App(){
  const {user,signOut}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
@@ -463,7 +466,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const rootId=root.id;
   const watchedThrough=1180;
   const seriesTotal=1180;
-  const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(watchedThrough,seriesTotal),status:'watching'}];
+  const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(watchedThrough,seriesTotal),status:'completed'}];
   const assigned=new Set<number>();
   for(let index=0;index<arcs.length;index++){
    const arc=arcs[index];
@@ -528,9 +531,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const arcIds=new Set(children.filter(x=>String(x.externalId||'').startsWith('one-piece-arc-')).map(x=>x.id));
   const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
   const hasOnlyCanonEpisodes=episodeChildren.length>0&&episodeChildren.every(x=>{const match=String(x.externalId||'').match(/^one-piece-episode-(\d+)$/);return Boolean(match&&isOnePieceCanonEpisodeNumber(Number(match[1])));});
-  const episodePosterUrls=episodeChildren.map(x=>String(x.poster||'').trim()).filter(Boolean);
-  const hasDistinctEpisodePosters=episodePosterUrls.length===episodeChildren.length&&new Set(episodePosterUrls).size===episodeChildren.length;
-  const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'))&&hasOnlyCanonEpisodes&&hasDistinctEpisodePosters&&episodeChildren.length>=Math.max(1,(Number(root.total)||1180)-150);
+  const expectedCanonEpisodes=onePieceExpectedCanonCount(1180);
+  const hasRealHierarchy=children.some(x=>String(x.externalId||'').startsWith('one-piece-arc-'))&&hasOnlyCanonEpisodes&&episodeChildren.length>=Math.floor(expectedCanonEpisodes*0.97);
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
   void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
