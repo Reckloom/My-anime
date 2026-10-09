@@ -528,12 +528,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(!user?.id||!cloudLibraryReady||!items.length||!supabase)return;
   const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
   if(!root)return;
-  const runKey=user.id+':'+root.id;
-  if(onePieceArcArtworkRef.current===runKey)return;
   const arcs=items.filter(x=>x.parentId===root.id&&String(x.externalId||'').startsWith('one-piece-arc-'));
-  if(!arcs.length)return;
+  const arcsNeedingArtwork=arcs.filter(x=>!String(x.notes||'').includes('FRAME_POSTER_VERSION=one-piece-arc-wiki-v1'));
+  if(!arcsNeedingArtwork.length)return;
+  const runKey=user.id+':'+root.id+':'+arcsNeedingArtwork.length;
+  if(onePieceArcArtworkRef.current===runKey)return;
   const episodeItems=items.filter(x=>String(x.externalId||'').startsWith('one-piece-episode-'));
-  const ranges=arcs.map(arc=>{
+  const ranges=arcsNeedingArtwork.map(arc=>{
    const children=episodeItems.filter(x=>x.parentId===arc.id);
    const numbers=children.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1]||0)).filter(n=>n>0);
    if(!numbers.length)return null;
@@ -580,7 +581,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      reserved.add(poster);
      const isDedicatedArcArtwork=chosen?.kind==='arc-artwork'||String(chosen?.artworkSource||'').toLowerCase().includes('arc-specific');
      const sourceNote='FRAME_ARC_ARTWORK='+(chosen?.artworkSource||chosen?.kind||'related-episode-still')+(isDedicatedArcArtwork?'; dedicated artwork for '+arc.title:'; representative episode '+String(chosen?.episodeNumber||'')+': '+String(chosen?.episodeTitle||chosen?.title||arc.title))+(chosen?.sourceUrl?'; '+chosen.sourceUrl:'');
-     updates.set(arc.id,{...arc,poster,backdrop:String(chosen?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\n\n')});
+     const baseNotes=String(arc.notes||'').split('\n\nFRAME_ARC_ARTWORK=')[0].replace('FRAME_POSTER_VERSION=one-piece-stills-v3','FRAME_POSTER_VERSION=one-piece-arc-wiki-v1');
+     updates.set(arc.id,{...arc,poster,backdrop:String(chosen?.backdrop||poster),notes:[baseNotes,sourceNote].filter(Boolean).join('\n\n')});
     }
     if(!updates.size){
      setAppMessage('No different usable image was found for these sub-parts. Episode entries and progress remain unchanged.');
