@@ -32,6 +32,11 @@ export function AuthGate({children}:{children:ReactNode}){
  if(!supabase)return <>{children}</>;
  if(loading)return <div className="auth-loading"><div className="auth-mark"><img src="/frame-logo.svg" alt="FRAME"/></div><span>Opening your library…</span></div>;
  if(session)return <>{children}</>;
+ // Test-only guest access is baked into the dedicated Playwright build, never production builds.
+ if(import.meta.env.VITE_FRAME_E2E==='true'){
+  localStorage.setItem('frame-guest','1');
+  return <>{children}</>;
+ }
  localStorage.removeItem('frame-guest');
  localStorage.removeItem('frame-force-auth');
  return <AuthScreen/>;
