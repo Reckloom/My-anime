@@ -620,7 +620,7 @@ async function onePieceOfficialPosterCatalogue(){
   1179:'https://image.idn.media/post/20260921/asdasdasd_efed0e41-f61b-494e-b39d-3c1691fab779.jpg',
   1180:'https://image.idn.media/post/20260928/asasadqwadaqwd_7c4ba1d5-9169-4c9a-b684-bffbe4346f26.jpg'
  };
- const fetchNumbers=[6,7,8,1172,1173,1174,1175,1176,1177,1178];
+ const fetchNumbers=[6,7,8,807,808,1172,1173,1174,1175,1176,1177,1178];
  const fetched=await Promise.all(fetchNumbers.map(async(number)=>{
   const url='https://www.vodanime.com/anime/xtkqbcxbez/one-piece/episode/'+number;
   return [number,await fetchEpisodeThumbnailPage(url)] as const;
