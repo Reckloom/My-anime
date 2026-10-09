@@ -38,7 +38,6 @@ export interface EpisodeMetadata {
  imdbEpisodeUrl?:string;
  googleImageSearchUrl?:string;
  posterSource?:string;
- posterSource?:string;
  imdbId?:string;
  directors?:string[];
  writers?:string[];
