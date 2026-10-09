@@ -568,11 +568,18 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const updates=new Map<string,MediaItem>();
     for(const arc of arcs){
      const art=posters[arc.id];
-     const poster=String(art?.poster||'').trim();
+     const arcRange=ranges.find(x=>x.id===arc.id);
+     const fallback=(arcRange?.candidates||[]).flatMap(candidate=>[
+      {url:String(candidate.poster||'').trim(),episodeNumber:candidate.absoluteEpisode,title:candidate.title,sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+candidate.absoluteEpisode+' '+candidate.title),kind:'related-episode-poster'},
+      {url:String(candidate.backdrop||'').trim(),episodeNumber:candidate.absoluteEpisode,title:candidate.title,sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+candidate.absoluteEpisode+' '+candidate.title),kind:'related-episode-still'}
+     ]).find(candidate=>candidate.url&&candidate.url!==String(arc.poster||'').trim()&&candidate.url!==String(root.poster||'').trim()&&!reserved.has(candidate.url));
+     let poster=String(art?.poster||'').trim();
+     let chosen=art;
+     if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster)){poster=String(fallback?.url||'').trim();chosen=fallback as any;}
      if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster))continue;
      reserved.add(poster);
-     const sourceNote='FRAME_ARC_ARTWORK='+(art?.artworkSource||'related-episode-still')+'; representative episode '+String(art?.episodeNumber||'')+': '+String(art?.episodeTitle||arc.title)+(art?.sourceUrl?'; '+art.sourceUrl:'');
-     updates.set(arc.id,{...arc,poster,backdrop:String(art?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\n\n')});
+     const sourceNote='FRAME_ARC_ARTWORK='+(chosen?.artworkSource||chosen?.kind||'related-episode-still')+'; representative episode '+String(chosen?.episodeNumber||'')+': '+String(chosen?.episodeTitle||chosen?.title||arc.title)+(chosen?.sourceUrl?'; '+chosen.sourceUrl:'');
+     updates.set(arc.id,{...arc,poster,backdrop:String(chosen?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\n\n')});
     }
     if(!updates.size){
      setAppMessage('No different usable image was found for these sub-parts. Episode entries and progress remain unchanged.');
