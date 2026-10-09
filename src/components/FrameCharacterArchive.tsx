@@ -1,4 +1,4 @@
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {ExternalLink,Search,Users,X,CalendarDays,Mic2} from 'lucide-react';
 
 type Character={id:number;name:string;alias:string;role:string;crew:string;bio:string;goal:string};
@@ -78,12 +78,28 @@ const rows=[
 [72,'Neptune','King of the Ryugu Kingdom','King','Ryugu Kingdom; Fish-Man Island','The king of Fish-Man Island and father of Shirahoshi, involved in the long-standing promise tied to Joy Boy.','Protect his people and family']
 ] as const;
 const characters:Character[]=rows.map(r=>({id:r[0],name:r[1],alias:r[2],role:r[3],crew:r[4],bio:r[5],goal:r[6]}));
-const portrait=(id:number,name?:string)=>name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':'https://opbr-en.bn-ent.net/assets/data/webp/character/'+String(id).padStart(4,'0')+'_2d.png.webp';
+const characterInitials=(name:string)=>name.split(/\\s+/).map(x=>x[0]).slice(0,2).join('');
+function CharacterPortrait({name,image,large=false}:{name:string;image?:string;large?:boolean}){
+ const [failed,setFailed]=useState(false);
+ useEffect(()=>setFailed(false),[image,name]);
+ if(image&&!failed)return <img src={image} alt={name} loading="lazy" onError={()=>setFailed(true)}/>;
+ return <div className="character-art-fallback" aria-label={name+' portrait unavailable'} style={{display:'grid',placeItems:'center',width:large?150:'100%',height:large?190:'100%',minHeight:large?190:170,flexShrink:0,borderRadius:large?14:0,background:'linear-gradient(145deg,#172a46,#30204b 58%,#0b111f)',color:'#f5f3ff',fontSize:large?'2.3rem':'2rem',fontWeight:850,letterSpacing:'.08em',textShadow:'0 2px 14px #0008'}}>{characterInitials(name)}</div>;
+}
 const google=(name:string)=>'https://www.google.com/search?q='+encodeURIComponent(name);
 
 export function FrameCharacterArchive(){
  const [query,setQuery]=useState('');
  const [selected,setSelected]=useState<Character|null>(null);
+ const [portraits,setPortraits]=useState<Record<string,string>>({});
+ useEffect(()=>{
+  let active=true;
+  const fields=characters.map((character,index)=>'c'+index+': Character(search: '+JSON.stringify(character.name)+', sort: SEARCH_MATCH) { name { full } image { large } }').join('\\n');
+  void fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+fields+' }'})})
+   .then(async response=>{if(!response.ok)throw new Error('AniList character art unavailable');return await response.json() as {data?:Record<string,{name?:{full?:string};image?:{large?:string}}|null>};})
+   .then(json=>{if(!active||!json.data)return;const exact:Record<string,string>={};const normalize=(v:string)=>v.toLowerCase().replace(/[^a-z0-9]/g,'');characters.forEach((character,index)=>{const result=json.data?.['c'+index];if(result?.image?.large&&result.name?.full&&normalize(result.name.full)===normalize(character.name))exact[character.name]=result.image.large;});setPortraits(exact);})
+   .catch(()=>{});
+  return()=>{active=false};
+ },[]);
  const visible=useMemo(()=>{const q=query.trim().toLowerCase();return characters.filter(c=>!q||[c.name,c.alias,c.role,c.crew,c.bio].join(' ').toLowerCase().includes(q)).sort((a,b)=>{const priority=['Sanji','Loki','Rocks D. Xebec','Joy Boy','King Harald','Imu','Davy D. Jones','Figarland Garling','Shiki','Scopper Gaban','Captain John','Ochoku','Buckingham Stussy','Gloriosa','Streusen','Kong','Shimotsuki Ryuma','Nefertari D. Lily','Nika','Zunesha'];const ai=priority.indexOf(a.name),bi=priority.indexOf(b.name);if(ai!==-1||bi!==-1)return (ai===-1?999:ai)-(bi===-1?999:bi);return a.id-b.id})},[query]);
  const profiles:Record<string,{birthday:string;jp:string;en:string;age:string;height:string;fruit:string;first:string;facts:string[]}>={
  'Sanji':{birthday:'March 2',jp:'Hiroaki Hirata (adult); Ikue Ōtani (young)',en:'Eric Vale (Funimation); regional dubs vary',age:'21 after timeskip',height:'180 cm',fruit:'No confirmed Devil Fruit; kick-based Black Leg Style',first:'Episode 20 / manga chapter 43',facts:['Born Vinsmoke Sanji, third son of the Vinsmoke family.','Cook of the Straw Hat Pirates; trained by Zeff at the Baratie.','Dreams of finding the All Blue.','Keeps his hands for cooking and primarily fights with kicks.']},
@@ -137,13 +153,13 @@ export function FrameCharacterArchive(){
   <div className="frame-character-head"><div><small>CHARACTER ARCHIVE</small><h3><Users size={18}/> One Piece characters</h3><p>Swipe sideways to browse · tap any card for the full profile</p></div><span className="frame-character-count">{visible.length} / {characters.length}</span></div>
   <label className="frame-character-search"><Search size={16}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search names, crews, roles…" aria-label="Search One Piece characters"/>{query&&<button type="button" onClick={()=>setQuery('')} aria-label="Clear character search"><X size={15}/></button>}</label>
   <div className="frame-character-rail" aria-label="Horizontally scrolling One Piece character profiles">{visible.map(c=><article className={'frame-character-card'+(c.name==='Sanji'?' sanji-featured':'')} key={c.id} role="button" tabIndex={0} onClick={()=>openProfile(c)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openProfile(c)}}} aria-label={'Open details for '+c.name}>
-   <div className="frame-character-portrait"><img src={portrait(c.id,c.name)} alt={c.name} loading={c.name==='Sanji'?'eager':'lazy'} onError={e=>{e.currentTarget.style.visibility='hidden';e.currentTarget.parentElement?.classList.add('portrait-unavailable')}}/><span className="frame-character-open"><Users size={13}/> View profile</span></div>
+   <div className="frame-character-portrait"><CharacterPortrait name={c.name} image={portraits[c.name]||(c.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)}/><span className="frame-character-open"><Users size={13}/> View profile</span></div>
    <div className="frame-character-copy"><a className="frame-character-name" href={google(c.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>{c.name}<ExternalLink size={13}/></a><span className="frame-character-alias">{c.alias}</span><div className="frame-character-role">{c.role}</div><p>{c.bio}</p><span className="frame-character-tap">Tap card for facts <span>↗</span></span></div>
   </article>)}</div><div className="frame-character-rail-hint"><span>← Swipe to explore →</span><span>{visible.length} profiles</span></div>
   <p className="frame-character-source">Portraits are linked from ONE PIECE Bounty Rush. Japanese and English cast fields identify common anime dub credits where available; other regional dubs may differ. Unknown values are labelled rather than guessed.</p>
   {selected&&<div className="frame-character-modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><section className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selected.name+' character details'}>
    <button className="frame-character-modal-close" type="button" onClick={()=>setSelected(null)} aria-label="Close character details"><X size={19}/></button>
-   <div className="frame-character-modal-hero"><img src={portrait(selected.id,selected.name)} alt={selected.name} onError={e=>{e.currentTarget.style.visibility='hidden'}}/><div><small>ONE PIECE · CHARACTER FILE</small><h2>{selected.name}</h2><p>{selected.alias} · {selected.role}</p><span className="frame-character-modal-affiliation">{selected.crew}</span><a className="frame-character-google" href={google(selected.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>Search exact character name on Google <ExternalLink size={13}/></a></div></div>
+   <div className="frame-character-modal-hero"><CharacterPortrait name={selected.name} image={portraits[selected.name]||(selected.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)} large/><div><small>ONE PIECE · CHARACTER FILE</small><h2>{selected.name}</h2><p>{selected.alias} · {selected.role}</p><span className="frame-character-modal-affiliation">{selected.crew}</span><a className="frame-character-google" href={google(selected.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>Search exact character name on Google <ExternalLink size={13}/></a></div></div>
    <div className="frame-character-fact-grid"><div><span><CalendarDays size={14}/> Birthday</span><b>{profiles[selected.name]?.birthday||'Not verified in this profile'}</b></div><div><span>Age</span><b>{profiles[selected.name]?.age||'Not verified / depends on story period'}</b></div><div><span>Height</span><b>{profiles[selected.name]?.height||'Not verified in this profile'}</b></div><div><span><Mic2 size={14}/> Japanese voice actor</span><b>{profiles[selected.name]?.jp||'Not yet verified for this profile'}</b></div><div><span><Mic2 size={14}/> English voice actor</span><b>{profiles[selected.name]?.en||'Dub-dependent / not yet verified'}</b></div><div><span>Devil Fruit / ability</span><b>{profiles[selected.name]?.fruit||'See character description; details not verified here'}</b></div><div><span>First appearance</span><b>{profiles[selected.name]?.first||'Not yet verified in this profile'}</b></div><div><span>Affiliation</span><b>{selected.crew}</b></div></div>
    <section className="frame-character-modal-section"><h3>About</h3><p>{selected.bio}</p><p><strong>Goal / dream:</strong> {selected.goal}</p><p><strong>Role:</strong> {selected.role}. <strong>Alias:</strong> {selected.alias}.</p></section>
    <section className="frame-character-modal-section"><h3>Facts</h3><ul>{(profiles[selected.name]?.facts||[selected.bio,'Affiliation: '+selected.crew,'Goal / dream: '+selected.goal]).map((fact,i)=><li key={i}>{fact}</li>)}</ul></section>
