@@ -26,7 +26,7 @@ const rows=[
 [21,'Monkey D. Garp','Hero of the Marines','Vice admiral','Marines','A famously powerful Marine and Luffy’s grandfather with an unconventional attitude.','Serve his own idea of justice'],
 [22,'Shanks','Red-Haired','Pirate captain','Red-Haired Pirates','The captain who inspired Luffy’s dream and entrusted him with the straw hat.','See the next generation shape the era'],
 [23,'Kaido','Strongest Creature','Pirate emperor','Beasts Pirates','A fearsome emperor known for extraordinary durability and a dragon form.','Create a world where the strong can live freely'],
-[24,'Charlotte Linlin','Big Mom','Pirate emperor','Big Mom Pirates','The ruler of Totto Land who can manipulate souls and leads a vast family.','Build a kingdom for every race'],
+[24,'Charlotte Linlin (Big Mom / Olin)','Big Mom','Pirate emperor','Big Mom Pirates','The ruler of Totto Land who can manipulate souls and leads a vast family.','Build a kingdom for every race'],
 [25,'Marshall D. Teach','Blackbeard','Pirate emperor','Blackbeard Pirates','A calculating pirate whose ambitions make him a major force in the New World.','Claim the freedom and power he seeks'],
 [26,'Silvers Rayleigh','Dark King','Former first mate','Roger Pirates','Roger’s former right-hand man, now retired, renowned for his Haki and wisdom.','Live freely after the crew’s journey'],
 [27,'Kozuki Oden','Lord of Kuri','Samurai and daimyo','Kozuki Family; Whitebeard and Roger Pirates','A bold samurai whose voyages shaped his vision for Wano’s future.','Open Wano’s borders'],
@@ -57,7 +57,7 @@ const rows=[
 ] as const;
 const characters:Character[]=rows.map(r=>({id:r[0],name:r[1],alias:r[2],role:r[3],crew:r[4],bio:r[5],goal:r[6]}));
 const portrait=(id:number)=>'https://opbr-en.bn-ent.net/assets/data/webp/character/'+String(id).padStart(4,'0')+'_2d.png.webp';
-const google=(name:string)=>'https://www.google.com/search?q='+encodeURIComponent(name+' One Piece character');
+const google=(name:string)=>'https://www.google.com/search?q='+encodeURIComponent(name);
 
 export function FrameCharacterArchive(){
  const [query,setQuery]=useState('');
