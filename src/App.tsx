@@ -269,8 +269,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   saveQueue.current=operation.catch(()=>true);
   return operation;
  };
+ const ONE_PIECE_SERIES_POSTER='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const buildOnePieceHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
-  let root=normalise({...rawRoot,
+  let root=normalise({...rawRoot,poster:ONE_PIECE_SERIES_POSTER,
    description:[rawRoot.description,'One Piece anime library: the main entry holds series-level details, while arc entries contain the episode catalogue with titles, synopses, air dates, available stills and episode scores. IMDb links are included for checking IMDb directly; scores displayed in FRAME are explicitly labelled with their actual source.'].filter(Boolean).join('\n\n'),
    availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/']},
    externalLinks:{...(rawRoot.externalLinks||{}),imdbId:'tt0388629',officialUrl:'https://one-piece.com/anime/',newsUrl:'https://one-piece.com/news/',malId:'21'},
@@ -412,7 +413,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     ratingSource:'Metadata unavailable',sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+(index+1))
    }));
   }
-  if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
+  root=normalise({...root,poster:ONE_PIECE_SERIES_POSTER,backdrop:catalogueSeriesBackdrop||root.backdrop});
   // Include every numbered episode, including filler and anime-original episodes.
   // Build a complete episode index from 1–1180, preserving real provider metadata wherever available.
   const catalogueByNumber=new Map<number,any>();
@@ -523,7 +524,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const episodeNumbers=new Set(episodeChildren.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1])).filter(Number.isInteger));
   const hasAllEpisodeNumbers=episodeNumbers.size===1180&&Array.from({length:1180},(_,index)=>episodeNumbers.has(index+1)).every(Boolean);
   const hasAllEpisodesCompleted=episodeChildren.length===1180&&new Set(episodeChildren.map(x=>x.poster)).size===1180&&episodeChildren.every(x=>x.status==='completed'&&x.progress>=1&&Boolean(x.poster)&&x.episode?.posterSource==='one-piece-official-catalogue');
-  const hasRealHierarchy=children.some(x=>String(x.externalId||'').startsWith('one-piece-arc-'))&&hasAllEpisodeNumbers&&hasAllEpisodesCompleted&&root.total===1180&&root.progress===1180&&root.status==='completed';
+  const hasRealHierarchy=children.some(x=>String(x.externalId||'').startsWith('one-piece-arc-'))&&hasAllEpisodeNumbers&&hasAllEpisodesCompleted&&root.total===1180&&root.progress===1180&&root.status==='completed'&&root.poster===ONE_PIECE_SERIES_POSTER;
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
   void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
