@@ -243,6 +243,12 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  },[user?.id]);
 
  const save=async(list:MediaItem[])=>{
+  // Never run a destructive cloud reconciliation against a partially loaded library.
+  if(supabase&&user?.id&&!cloudLibraryReady){
+   setAppMessage('Your full library is still loading. Please try that change again in a moment.');
+   window.setTimeout(()=>setAppMessage(''),4000);
+   return false;
+  }
   const next=dedupeMediaItems(list.map(normalise));setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
   const client=supabase;
   if(!client||!user?.id)return true;
