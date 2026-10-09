@@ -261,15 +261,24 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     }
     if(!episodes.length)throw new Error('No episode metadata was returned.');
     const arcs=[
-     {name:'East Blue Saga',start:1,end:61},{name:'Arabasta Saga',start:62,end:135},
-     {name:'Sky Island Saga',start:136,end:206},{name:'Water 7 Saga',start:207,end:325},
-     {name:'Thriller Bark Saga',start:326,end:384},{name:'Summit War Saga',start:385,end:516},
-     {name:'Fish-Man Island Saga',start:517,end:574},{name:'Dressrosa Saga',start:575,end:746},
-     {name:'Whole Cake Island Saga',start:747,end:889},{name:'Wano Country Saga',start:890,end:1085},
-     {name:'Final Saga · Egghead',start:1086,end:2000}
-    ];
-    const rootId=crypto.randomUUID();
-    const root:MediaItem={...item,id:rootId,total:episodes.length,progress:0,
+     {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},
+     {name:'Syrup Village',start:9,end:18},{name:'Baratie',start:19,end:30},
+     {name:'Arlong Park',start:31,end:44},{name:'Loguetown',start:45,end:53},
+     {name:'Reverse Mountain',start:62,end:63},{name:'Whisky Peak',start:64,end:67},
+     {name:'Little Garden',start:70,end:77},{name:'Drum Island',start:78,end:91},
+     {name:'Arabasta',start:92,end:130},{name:'Jaya',start:144,end:152},
+     {name:'Skypiea',start:153,end:195},{name:'Long Ring Long Land',start:207,end:219},
+     {name:'Water 7',start:229,end:263},{name:'Enies Lobby',start:264,end:312},
+     {name:'Post-Enies Lobby',start:313,end:325},{name:'Thriller Bark',start:337,end:381},
+     {name:'Sabaody Archipelago',start:385,end:405},{name:'Amazon Lily',start:408,end:417},
+     {name:'Impel Down',start:422,end:452},{name:'Marineford',start:457,end:489},
+     {name:'Post-War',start:490,end:516},{name:'Return to Sabaody',start:517,end:522},
+     {name:'Fish-Man Island',start:523,end:574},{name:'Punk Hazard',start:579,end:625},
+     {name:'Dressrosa',start:629,end:746},{name:'Zou',start:751,end:779},
+     {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:889},
+     {name:'Wano Country',start:890,end:1085},{name:'Egghead',start:1086,end:2000}
+    ];    const rootId=crypto.randomUUID();
+    const root:MediaItem={...item,id:rootId,total:episodes.filter((e:any)=>Number(e.mal_id)>0&&!e.filler&&!e.recap&&Number(e.mal_id)<=2000).length,progress:0,
     description:[item.description,'Follow the Grand Line through the anime’s saga and arc structure. Open a saga to browse individual episodes, air dates, ratings and synopses where the catalogue provides them.'].filter(Boolean).join('\n\n'),
     availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/'],buy:[]},
     notes:[item.notes,'Official series site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Streaming catalogue: https://www.netflix.com/title/80107103','News and announcements: https://www.animenewsnetwork.com/search/?q=One%20Piece','FRAME hierarchy: episodes are grouped under saga parts. Episode metadata comes from Jikan/MyAnimeList; episode-specific still images are not supplied consistently by that catalogue, so the series artwork is used as a fallback. Streaming availability changes by region.'].filter(Boolean).join('\n\n')};
@@ -279,7 +288,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      const arcEpisodes=included.filter((e:any)=>Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
      if(!arcEpisodes.length)continue;
      const arcId=crypto.randomUUID();
-     created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-saga-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' listed canon/non-filler episodes. Open a child episode for its available title, air date, rating and synopsis.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Arc boundaries are a practical anime guide; individual canon status can vary by episode/recap classification.'});
+     created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-saga-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' listed episodes in this arc. Open a child episode for its available title, air date, rating and synopsis.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Arc boundaries are a practical anime guide; individual canon status can vary by episode/recap classification.'});
      for(const e of arcEpisodes){
       const epNo=Number(e.mal_id);
       const title=String(e.title||e.title_romanji||('Episode '+epNo));
