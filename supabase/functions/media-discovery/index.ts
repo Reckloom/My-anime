@@ -711,7 +711,8 @@ Deno.serve(async(req:Request)=>{
       const allowedWiki=source.hostname==='static.wikia.nocookie.net'&&source.pathname.startsWith('/onepiece/images/');
       const allowedOfficialEpisode=source.hostname==='one-piece.com'&&(
         /^\/img\/anime\/story\/img_story_\d+\.jpg$/i.test(source.pathname)||
-        /^\/o\/assets\/images\/anime\/tvstory\/[a-z0-9_-]+\/story_img_\d+\.jpg$/i.test(source.pathname)
+        /^\/o\/assets\/images\/anime\/tvstory\/[a-z0-9_-]+\/story_img_\d+\.(?:jpe?g|png|webp)$/i.test(source.pathname)||
+        /^\/o\/assets\/uploads\/tvstory\/\d{8}\/[a-f0-9]{24,64}\.(?:jpe?g|png|webp)$/i.test(source.pathname)
       );
       const allowedVodAnime=source.hostname==='www.vodanime.com'&&/^\/media\/one-piece-episode-\d+-thumbnail-\d+\.jpg$/i.test(source.pathname);
       const allowedIdn=source.hostname==='image.idn.media'&&/\.(?:jpe?g|png|webp|avif)$/i.test(source.pathname);
