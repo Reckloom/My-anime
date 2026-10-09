@@ -365,6 +365,25 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     if(jikanEpisodes.length)episodes=jikanEpisodes;
    }catch(error){episodes=[];console.warn('[FRAME One Piece Jikan episode catalogue]',error)}
   }
+  // Enrich the catalogue with the official One Piece episode stills. The official archive
+  // provides per-episode artwork when TMDB credentials are absent.
+  if(supabase){
+   try{
+    const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'episode-posters',provider:'series',source:'one-piece-official'}});
+    const officialPosters=data?.posters&&typeof data.posters==='object'?data.posters as Record<string,string>:{};
+    if(!error&&Object.keys(officialPosters).length){
+     episodes=episodes.map((e:any)=>{
+      const episodeNumber=Number(e.mal_id);
+      const officialPoster=String(officialPosters[String(episodeNumber)]||'');
+      if(!officialPoster)return e;
+      const currentImages=e.images&&typeof e.images==='object'?e.images:{};
+      const currentJpg=currentImages.jpg&&typeof currentImages.jpg==='object'?currentImages.jpg:{};
+      return {...e,images:{...currentImages,jpg:{...currentJpg,image_url:officialPoster}}};
+     });
+     console.info('[FRAME One Piece posters]',{episodes:Object.keys(officialPosters).length,uniqueImages:Number(data?.uniqueImages)||0});
+    }else if(error)console.warn('[FRAME One Piece official poster catalogue]',error);
+   }catch(error){console.warn('[FRAME One Piece official poster catalogue]',error)}
+  }
   // Last-resort catalogue: never fail with an empty episode list. The title and
   // progress record are still real numbered episode entries; source metadata is
   // clearly marked unavailable rather than fabricated.
