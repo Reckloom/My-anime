@@ -12,7 +12,7 @@ const statuses=Object.entries(labels) as [Status,string][];
 const links=(m:MediaItem)=>{const q=encodeURIComponent(m.title);return [
  m.anilistId?{label:'AniList',url:'https://anilist.co/'+(['manga','manhwa','light-novel'].includes(m.medium)?'manga':'anime')+'/'+m.anilistId}:null,
  m.game?.storeUrl?{label:'Store',url:m.game.storeUrl}:null,
- {label:'IMDb',url:d.episode?.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent(d.title))},{label:'Google Images',url:d.episode?.googleImageSearchUrl||('https://www.google.com/search?tbm=isch&q='+encodeURIComponent(d.title+' official still'))},{label:'JustWatch',url:'https://www.justwatch.com/in/search?q='+q},{label:'Google',url:'https://www.google.com/search?q='+q+' official watch buy'}
+ {label:'IMDb',url:m.episode?.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent(d.title))},{label:'Google Images',url:m.episode?.googleImageSearchUrl||('https://www.google.com/search?tbm=isch&q='+encodeURIComponent(d.title+' official still'))},{label:'JustWatch',url:'https://www.justwatch.com/in/search?q='+q},{label:'Google',url:'https://www.google.com/search?q='+q+' official watch buy'}
  ].filter(Boolean) as {label:string;url:string}[]};
 
 function listValue(value?:string[]){return(value||[]).join(', ')}
