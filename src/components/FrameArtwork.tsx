@@ -7,6 +7,13 @@ type Props={
  sourceProvider?:string; externalId?:string; className?:string; alt?:string; loading?:'eager'|'lazy';
 };
 const cache=new Map<string,Promise<string>>();
+let activeArtworkRequests=0;
+const artworkRequestQueue:Array<()=>void>=[];
+async function withArtworkLimit<T>(job:()=>Promise<T>):Promise<T>{
+ if(activeArtworkRequests>=4)await new Promise<void>(resolve=>artworkRequestQueue.push(resolve));
+ activeArtworkRequests++;
+ try{return await job()}finally{activeArtworkRequests--;artworkRequestQueue.shift()?.();}
+}
 const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
 const isKitsuArtwork=(value?:string)=>{try{const host=new URL(String(value||'')).hostname.toLowerCase();return host==='kitsu.io'||host.endsWith('.kitsu.io')||host==='kitsu.app'||host.endsWith('.kitsu.app')}catch{return false}};
@@ -35,7 +42,7 @@ async function resolve(p:Props):Promise<string>{
  const type=p.medium==='anime'?'ANIME':'MANGA';
  const key=p.anilistId?'id:'+p.anilistId:type+':'+normal(p.title);
  const existing=cache.get(key);if(existing)return existing;
- const request=(async()=>{
+ const request=withArtworkLimit(async()=>{
   try{
    let media:AniListMedia|undefined;
    if(p.anilistId){
@@ -51,7 +58,7 @@ async function resolve(p:Props):Promise<string>{
   }catch{/* external metadata can be unavailable */}
   if(isSeriesMedia)return p.parentPoster||svgFallback(p.title,p.medium);
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
- })();
+ });
  cache.set(key,request);
  return request;
 }
