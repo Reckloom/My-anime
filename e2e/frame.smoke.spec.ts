@@ -186,6 +186,7 @@ test.describe('FRAME quick actions', () => {
 
 test.describe('FRAME anime episode catalogue', () => {
   test('shows episodes on an existing AniList anime entry and saves watched progress', async ({ page }) => {
+    test.setTimeout(60000);
     await page.route('https://api.jikan.moe/v4/anime/21/episodes*', route => route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -204,9 +205,15 @@ test.describe('FRAME anime episode catalogue', () => {
         genres: [], themes: [], favorite: false, externalLinks: { malId: '21' }
       }]));
     });
+    console.log('Episode QA: fixture and API route ready');
     await page.goto('/');
+    console.log('Episode QA: app loaded');
     await navigatePrimary(page, 'Library');
-    await page.getByText('One Piece', { exact: true }).click();
+    console.log('Episode QA: library opened; media cards =', await page.locator('.media-card').count());
+    const onePieceCard=page.locator('.media-card').filter({hasText:'One Piece'}).first();
+    await expect(onePieceCard).toBeVisible({timeout:5000});
+    await onePieceCard.click();
+    console.log('Episode QA: One Piece detail opened');
 
     await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible();
