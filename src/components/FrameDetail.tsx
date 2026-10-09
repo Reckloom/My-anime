@@ -5,6 +5,7 @@ import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
 import {supabase} from '../lib/supabase';
 import {posterImageSrc} from '../posterImage';
 import {FrameEpisodeList} from './FrameEpisodeList';
+import {FrameCharacterArchive} from './FrameCharacterArchive';
 
 const labels:Record<Status,string>={watching:'Watching',reading:'Reading',playing:'Playing',completed:'Completed',planned:'Planned',paused:'Paused',dropped:'Dropped'};
 const units={anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as const;
@@ -189,6 +190,8 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
     </div>
    </div>
+
+     {d.medium==='anime'&&!d.episode&&d.title.trim().toLowerCase()==='one piece'&&<FrameCharacterArchive/>}
 
      {d.medium==='anime'&&!d.episode&&!(/^one piece( \(tv\))?$/i.test(d.title.trim())&&library.some(x=>x.parentId===d.id&&String(x.sourceProvider)==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-')))&&(d.anilistId||d.sourceProvider==='anilist'||d.sourceProvider==='anilist-episode-subpart'||externalLinks.malId)&&<FrameEpisodeList malId={externalLinks.malId} title={d.title} currentProgress={d.progress} onMarkThrough={async episodeNumber=>{
       const nextTotal=Math.max(d.total||0,episodeNumber);
