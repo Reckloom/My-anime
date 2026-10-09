@@ -464,11 +464,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const arcId='one-piece-arc-'+arc.start;
    // Give each story arc a content-related still of its own and reserve it so
    // no episode in the hierarchy reuses that exact artwork.
-   const arcCandidates=arcEpisodes.flatMap((episode:any)=>[
-    String(onePiecePosterCatalogueRef.current[String(Number(episode?.mal_id))]||'').trim(),
-    String(episode?.images?.jpg?.image_url||'').trim(),
-    String(episode?.images?.jpg?.large_image_url||'').trim()
-   ]).filter((url:string,index:number,all:string[])=>Boolean(url)&&url!==root.poster&&all.indexOf(url)===index&&!usedEpisodePosterUrls.has(url));
+   const arcCandidates=arcEpisodes.flatMap((episode:any)=>{
+    const still=String(episode?.images?.jpg?.image_url||'').trim();
+    const official=String(onePiecePosterCatalogueRef.current[String(Number(episode?.mal_id))]||'').trim();
+    // Reserve archive artwork only when that same episode also has a separate
+    // episode still available, so the episode never loses its own poster.
+    return [still?official:'',still,String(episode?.images?.jpg?.large_image_url||'').trim()];
+   }).filter((url:string,index:number,all:string[])=>Boolean(url)&&url!==root.poster&&all.indexOf(url)===index&&!usedEpisodePosterUrls.has(url));
    const arcPoster=arcCandidates[0]||root.poster;
    if(arcPoster!==root.poster)usedEpisodePosterUrls.add(arcPoster);
    created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' episodes',poster:arcPoster,backdrop:root.backdrop,medium:'anime',status:arcEpisodes.every((e:any)=>Number(e.mal_id)<=watchedThrough)?'completed':'planned',progress:arcEpisodes.filter((e:any)=>Number(e.mal_id)<=watchedThrough).length,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'All numbered episodes in this arc are included, including filler and specials, and are marked completed per the library owner’s viewing status.'});
