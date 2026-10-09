@@ -178,14 +178,27 @@ export default function App(){
    const guestPrefsRaw=localStorage.getItem('frame-guest-preferences');
    let guestPrefs:Record<string,string>={};
    try{const parsed=guestPrefsRaw?JSON.parse(guestPrefsRaw):{};if(parsed&&typeof parsed==='object')guestPrefs=parsed as Record<string,string>}catch{}
-   const {data,error}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
-   if(error){
-    console.warn('[FRAME cloud library load]',error);
-    if(active){setItems([]);setCloudLibraryReady(true);try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify([]))}catch{}}
-    return;
+   // Supabase/PostgREST commonly caps each response at 1,000 rows. Page through
+   // the full account library so lower-scored records are never silently omitted.
+   const allCloudRows:any[]=[];
+   const pageSize=500;
+   let offset=0;
+   while(true){
+    const {data:pageData,error}=await client.from('media_items').select('*,media_metadata(*)')
+     .eq('user_id',user.id).order('score',{ascending:false}).order('id',{ascending:true})
+     .range(offset,offset+pageSize-1);
+    if(error){
+     console.warn('[FRAME cloud library load]',error);
+     // Keep the local cache on transient failures; never replace a library with [].
+     if(active)setCloudLibraryReady(true);
+     return;
+    }
+    allCloudRows.push(...(pageData||[]));
+    if(!pageData||pageData.length<pageSize)break;
+    offset+=pageSize;
    }
-   if(active&&data){
-    const cloudItems=dedupeMediaItems(data.map(dbToMedia));
+   if(active){
+    const cloudItems=dedupeMediaItems(allCloudRows.map(dbToMedia));
     // Authenticated cloud data is authoritative. Keep local values only when they
     // already correspond to a cloud record; never resurrect stale browser-only titles.
     const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
@@ -238,10 +251,20 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    if(next.length===0){const {error}=await client.from('media_items').delete().eq('user_id',user.id);if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}return true}
    const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});
    if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
-   const {data:cloudRows,error:cloudReadError}=await client.from('media_items').select('id').eq('user_id',user.id);
-   if(cloudReadError){setAppMessage('Cloud sync check failed: '+cloudReadError.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
+   // Verify all rows before cleanup; one select() would only see the first 1,000.
+   const cloudRows:any[]=[];
+   const verifyPageSize=500;
+   let verifyOffset=0;
+   while(true){
+    const {data:pageData,error:cloudReadError}=await client.from('media_items').select('id')
+     .eq('user_id',user.id).order('id',{ascending:true}).range(verifyOffset,verifyOffset+verifyPageSize-1);
+    if(cloudReadError){setAppMessage('Cloud sync check failed: '+cloudReadError.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
+    cloudRows.push(...(pageData||[]));
+    if(!pageData||pageData.length<verifyPageSize)break;
+    verifyOffset+=verifyPageSize;
+   }
    const keep=new Set(next.map(item=>item.id));
-   const stale=(cloudRows||[]).map(row=>String(row.id)).filter(id=>!keep.has(id));
+   const stale=cloudRows.map(row=>String(row.id)).filter(id=>!keep.has(id));
    if(stale.length){
     const {error:deleteError}=await client.from('media_items').delete().eq('user_id',user.id).in('id',stale);
     if(deleteError){setAppMessage('Cloud cleanup failed: '+deleteError.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
