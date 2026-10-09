@@ -109,12 +109,26 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     <div className="detail-main">
      <small>{types[d.medium]} · {labels[d.status]}</small>
      <h2 id="frame-detail-title">{d.title}</h2>
-     <div className="detail-rating"><span><Star size={13} fill="currentColor"/> Source {d.score==null?'—':d.score.toFixed(1)}</span><span>Your {d.personalRating==null?'—':d.personalRating.toFixed(1)}</span></div>
+     <div className="detail-rating"><span><Star size={13} fill="currentColor"/> {d.episode?.ratingSource||(d.sourceProvider==='imdb'?'IMDb':'Source')} {d.score==null?'—':d.score.toFixed(1)}{d.episode?.ratingCount?` · ${d.episode.ratingCount.toLocaleString()} ratings`:''}</span><span>Your {d.personalRating==null?'—':d.personalRating.toFixed(1)}</span></div>
      <div className="detail-refresh-row">
       {(d.anilistId||d.sourceProvider==='anilist')&&<button className="secondary" disabled={refreshing} onClick={()=>void refresh()}>{refreshing?<RefreshCw size={13} className="spin"/>:<RefreshCw size={13}/>}Refresh metadata</button>}
       {refreshMessage&&<small>{refreshMessage}</small>}
      </div>
-     <p>{d.description||'No description available.'}</p>
+     <p>{d.episode?.synopsis||d.description||'No description available.'}</p>
+     {d.episode&&<section className="episode-metadata-panel" aria-label="Episode details">
+      <div className="detail-section-head"><h3>Episode details</h3><span>{d.episode.episodeCode}</span></div>
+      <div className="episode-metadata-grid">
+       <span><small>Season</small><b>{d.episode.seasonNumber}</b></span>
+       <span><small>Episode</small><b>{d.episode.episodeNumber}</b></span>
+       <span><small>Air date</small><b>{d.episode.airDate||'Not listed'}</b></span>
+       <span><small>Runtime</small><b>{d.episode.runtimeMinutes?d.episode.runtimeMinutes+' min':'Not listed'}</b></span>
+       <span><small>IMDb ID</small><b>{d.episode.imdbId||'Not listed'}</b></span>
+      </div>
+      {Boolean(d.episode.directors?.length)&&<p><strong>Director(s):</strong> {d.episode.directors!.join(', ')}</p>}
+      {Boolean(d.episode.writers?.length)&&<p><strong>Writer(s):</strong> {d.episode.writers!.join(', ')}</p>}
+      {Boolean(d.episode.cast?.length)&&<p><strong>Cast:</strong> {d.episode.cast!.join(', ')}</p>}
+      <a className="episode-source-link" href={d.episode.imdbEpisodeUrl||(d.episode.imdbId?'https://www.imdb.com/title/'+d.episode.imdbId+'/':'https://www.imdb.com/find/?q='+encodeURIComponent(d.title))} target="_blank" rel="noreferrer">Open IMDb episode listing <ExternalLink size={13}/></a>
+     </section>}
      <div className="tags">{d.genres.slice(0,8).map(x=><span key={x}>{x}</span>)}</div>
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
     </div>
