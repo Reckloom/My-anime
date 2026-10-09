@@ -548,9 +548,22 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   onePieceArcArtworkRef.current=runKey;
   void (async()=>{
    try{
-    const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'arc-posters',provider:'series',source:'tmdb-tv',externalId:'37854',arcs:ranges}});
-    if(error)throw error;
-    const posters=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string}>;
+    const posters:Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string}>={};
+    let failedBatches=0;
+    // Keep each request small: sending every arc and all its episode metadata at
+    // once can exceed edge-function/proxy request limits and abort the whole refresh.
+    for(let offset=0;offset<ranges.length;offset+=4){
+     const batch=ranges.slice(offset,offset+4).map(arc=>({...arc,candidates:arc.candidates.slice(0,4)}));
+     try{
+      const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'arc-posters',provider:'series',source:'tmdb-tv',externalId:'37854',arcs:batch}});
+      if(error)throw error;
+      const found=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string}>;
+      Object.assign(posters,found);
+     }catch(error){
+      failedBatches++;
+      console.warn('[FRAME One Piece arc artwork batch]',offset/4+1,error);
+     }
+    }
     const reserved=new Set<string>([String(root.poster||''),...arcs.map(x=>String(x.poster||''))].filter(Boolean));
     const updates=new Map<string,MediaItem>();
     for(const arc of arcs){
@@ -569,7 +582,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const next=items.map(x=>updates.get(x.id)||x);
     const ok=await save(next);
     if(ok){
-     setAppMessage('Updated '+updates.size+' One Piece sub-part posters. Episode posters and completion progress were left unchanged.');
+     setAppMessage('Updated '+updates.size+' One Piece sub-part posters'+(failedBatches?' ('+failedBatches+' batch(es) could not refresh; retry to catch the rest)':'')+'. Episode posters and completion progress were left unchanged.');
      window.setTimeout(()=>setAppMessage(''),7000);
     }else onePieceArcArtworkRef.current='';
    }catch(error){
