@@ -26,5 +26,10 @@ jobs:
       - name: Build FRAME
         run: npm run build
 
+      - name: Use Cloudflare Workers Builds deployment
+        if: ${{ env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == '' }}
+        run: echo "::notice::GitHub Actions Cloudflare credentials are absent; the connected Cloudflare Workers Builds integration handles the production deployment."
+
       - name: Deploy to Cloudflare Workers
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         run: npx --yes wrangler@latest deploy --config wrangler.jsonc
