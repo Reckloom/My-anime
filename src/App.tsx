@@ -526,44 +526,57 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  useEffect(()=>{
   if(!user?.id||!cloudLibraryReady||!items.length||!supabase)return;
-  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
+  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
   if(!root)return;
   const runKey=user.id+':'+root.id;
   if(onePieceArcArtworkRef.current===runKey)return;
   const arcs=items.filter(x=>x.parentId===root.id&&String(x.externalId||'').startsWith('one-piece-arc-'));
   if(!arcs.length)return;
+  const episodeItems=items.filter(x=>String(x.externalId||'').startsWith('one-piece-episode-'));
   const ranges=arcs.map(arc=>{
-   const children=items.filter(x=>x.parentId===arc.id&&String(x.externalId||'').startsWith('one-piece-episode-'));
-   const numbers=children.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1]||0)).filter(n=>n>0);
-   return {id:arc.id,start:numbers.length?Math.min(...numbers):0,end:numbers.length?Math.max(...numbers):0};
-  }).filter(x=>x.start>0&&x.end>=x.start);
+   const children=episodeItems.filter(x=>x.parentId===arc.id);
+   const numbers=children.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\\d+)$/)?.[1]||0)).filter(n=>n>0);
+   if(!numbers.length)return null;
+   const midpoint=Math.floor((Math.min(...numbers)+Math.max(...numbers))/2);
+   const candidates=children.map(child=>{
+    const number=Number(String(child.externalId||'').match(/^one-piece-episode-(\\d+)$/)?.[1]||0);
+    return {absoluteEpisode:number,seasonNumber:Number(child.episode?.seasonNumber)||0,episodeNumber:Number(child.episode?.episodeNumber)||0,title:child.title,poster:child.poster||'',backdrop:child.backdrop||'',tmdbEpisode:String(child.sourceProvider||'').startsWith('tmdb')};
+   }).filter(candidate=>candidate.absoluteEpisode>0).sort((a,b)=>Math.abs(a.absoluteEpisode-midpoint)-Math.abs(b.absoluteEpisode-midpoint)).slice(0,4);
+   return {id:arc.id,title:arc.title,currentPoster:arc.poster||'',candidates};
+  }).filter((x):x is NonNullable<typeof x>=>Boolean(x));
   if(!ranges.length)return;
   onePieceArcArtworkRef.current=runKey;
   void (async()=>{
    try{
     const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'arc-posters',provider:'series',source:'tmdb-tv',externalId:'37854',arcs:ranges}});
     if(error)throw error;
-    const posters=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string}>;
-    const episodePosterUrls=new Set(items.filter(x=>String(x.externalId||'').startsWith('one-piece-episode-')).map(x=>String(x.poster||'').trim()).filter(Boolean));
-    const reserved=new Set<string>([String(root.poster||''),...episodePosterUrls].filter(Boolean));
+    const posters=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string}>;
+    const reserved=new Set<string>([String(root.poster||'')].filter(Boolean));
     const updates=new Map<string,MediaItem>();
     for(const arc of arcs){
      const art=posters[arc.id];
      const poster=String(art?.poster||'').trim();
-     if(!poster||reserved.has(poster))continue;
+     if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster))continue;
      reserved.add(poster);
-     const sourceNote='FRAME_ARC_ARTWORK=TMDB-alternative-still; representative episode '+String(art.episodeNumber||'')+': '+String(art.episodeTitle||arc.title);
-     updates.set(arc.id,{...arc,poster,backdrop:String(art?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\n\n')});
+     const sourceNote='FRAME_ARC_ARTWORK='+(art?.artworkSource||'related-episode-still')+'; representative episode '+String(art?.episodeNumber||'')+': '+String(art?.episodeTitle||arc.title)+(art?.sourceUrl?'; '+art.sourceUrl:'');
+     updates.set(arc.id,{...arc,poster,backdrop:String(art?.backdrop||poster),notes:[arc.notes?.split('\\n\\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\\n\\n')});
     }
-    if(!updates.size){setAppMessage('No verified alternative stills were available for the One Piece sub-parts; episode artwork and progress were left unchanged.');return}
+    if(!updates.size){
+     setAppMessage('No different usable image was found for these sub-parts. Episode entries and progress remain unchanged.');
+     window.setTimeout(()=>setAppMessage(''),7000);
+     return;
+    }
     const next=items.map(x=>updates.get(x.id)||x);
     const ok=await save(next);
-    if(ok)setAppMessage('Updated '+updates.size+' One Piece sub-part posters using alternative episode stills. Episode posters and completion progress were left unchanged.');
-    else onePieceArcArtworkRef.current='';
+    if(ok){
+     setAppMessage('Updated '+updates.size+' One Piece sub-part posters. Episode posters and completion progress were left unchanged.');
+     window.setTimeout(()=>setAppMessage(''),7000);
+    }else onePieceArcArtworkRef.current='';
    }catch(error){
     onePieceArcArtworkRef.current='';
     console.warn('[FRAME One Piece arc artwork]',error);
-    setAppMessage('Could not refresh One Piece sub-part artwork. Existing episode progress was left untouched.');
+    setAppMessage('Sub-part artwork refresh failed: '+(error instanceof Error?error.message:'please try again')+'. Episode progress was not changed.');
+    window.setTimeout(()=>setAppMessage(''),8000);
    }
   })();
  },[user?.id,cloudLibraryReady,items]);
