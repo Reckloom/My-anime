@@ -290,7 +290,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const original:MediaItem={
    id:previousOriginal?.id||originalId,parentId:rootId,sourceProvider:'frame-naruto-part',externalId:'naruto-part-original',
    title:'Naruto',description:'The original Naruto TV anime — 220 numbered episodes, including filler and anime-original episodes. Story arcs and individual episode entries are organised below.',
-   poster:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',backdrop:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+   poster:previousOriginal?.poster||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',backdrop:previousOriginal?.backdrop||previousOriginal?.poster||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
    medium:'anime',status:originalProgress>=220?'completed':originalProgress>0?'watching':'planned',progress:originalProgress,total:220,customTotal:220,year:2002,
    score:previousOriginal?.score,personalRating:previousOriginal?.personalRating,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],favorite:previousOriginal?.favorite??false,
    notes:'FRAME_NARUTO_PART=original-v2. Episode catalogue: MyAnimeList / Jikan (MAL ID 20), enriched with Kitsu episode thumbnails when available.',
@@ -299,7 +299,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const shippuden:MediaItem={
    id:previousShippuden?.id||shippudenId,parentId:rootId,sourceProvider:'frame-naruto-part',externalId:'naruto-part-shippuden',
    title:'Naruto Shippuden',description:'Naruto’s return and the next stage of the ninja world — 500 numbered episodes, including filler and anime-original episodes. Story arcs and individual episode entries are organised below.',
-   poster:'https://cdn.myanimelist.net/images/anime/5/17407.jpg',backdrop:'https://cdn.myanimelist.net/images/anime/5/17407.jpg',
+   poster:previousShippuden?.poster||'https://cdn.myanimelist.net/images/anime/5/17407.jpg',backdrop:previousShippuden?.backdrop||previousShippuden?.poster||'https://cdn.myanimelist.net/images/anime/5/17407.jpg',
    medium:'anime',status:shippudenProgress>=500?'completed':shippudenProgress>0?'watching':'planned',progress:shippudenProgress,total:500,customTotal:500,year:2007,
    score:previousShippuden?.score,personalRating:previousShippuden?.personalRating,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],favorite:previousShippuden?.favorite??false,
    notes:'FRAME_NARUTO_PART=shippuden-v2. Episode catalogue: MyAnimeList / Jikan (MAL ID 1735), enriched with Kitsu episode thumbnails when available.',
