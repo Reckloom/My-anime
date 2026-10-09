@@ -105,27 +105,34 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
   setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
  },[item.id]);
  useEffect(()=>{
-  // Wait until d.id matches the newly selected item, so the DOM has the correct
-  // content height before restoring a saved scroll position.
+  // Wait until d.id matches the newly selected item, then clamp restoration to
+  // the drawer's current scroll range. Reapply after layout settles so image
+  // loading or responsive reflow cannot pull the drawer away from its target.
   if(d.id!==item.id)return;
-  const frame=window.requestAnimationFrame(()=>{
+  let timer:number|undefined;
+  const restore=pendingScrollRestore.current;
+  const applyScroll=()=>{
    const overlay=document.querySelector<HTMLElement>('.detail-overlay');
    const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
    const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
-   const restore=pendingScrollRestore.current;
    if(restore&&restore.item.id===item.id){
-    if(overlay)overlay.scrollTop=restore.overlayScrollTop;
-    if(drawer)drawer.scrollTop=restore.drawerScrollTop;
-    if(body)body.scrollTop=restore.bodyScrollTop;
+    if(overlay)overlay.scrollTop=Math.min(restore.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
+    if(drawer)drawer.scrollTop=Math.min(restore.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
+    if(body)body.scrollTop=Math.min(restore.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
     window.scrollTo(0,restore.pageScrollTop);
-    pendingScrollRestore.current=null;
    }else{
     if(overlay)overlay.scrollTop=0;
     if(drawer)drawer.scrollTop=0;
     if(body)body.scrollTop=0;
    }
+  };
+  const frame=window.requestAnimationFrame(()=>{
+   applyScroll();
+   if(restore&&restore.item.id===item.id){
+    timer=window.setTimeout(()=>{applyScroll();if(pendingScrollRestore.current===restore)pendingScrollRestore.current=null},80);
+   }
   });
-  return()=>window.cancelAnimationFrame(frame);
+  return()=>{window.cancelAnimationFrame(frame);if(timer!==undefined)window.clearTimeout(timer)};
  },[item.id,d.id]);
  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[]);
  const progress=(n:number)=>setD(game?{...d,progress:n,game:d.game?{...d.game,storyProgress:n}:undefined}:{...d,progress:Math.max(0,Math.min(max,n))});
