@@ -14,7 +14,7 @@ const themes = [
 
 assert.doesNotMatch(app, /importVinlandSaga|Add Vinland Saga guide|VINLAND_SAGA_SEASONS/,
   'No anime should have a one-off special importer or dedicated Home button');
-assert.match(app, /Loading One Piece canon arcs and episode metadata/,
+assert.match(app, /Loading One Piece arcs and episode catalogue/,
   'One Piece must use the normal anime import flow for its arc/episode hierarchy');
 assert.match(app, /one-piece-episode-/,
   'One Piece episodes must be stored as individual child media entries');
