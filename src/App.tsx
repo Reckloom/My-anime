@@ -425,7 +425,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
   // Manga-canon episodes only. Pure filler, mixed canon/filler and anime-original
   // episodes are deliberately excluded until the user asks to include them.
-  const included=[...new Map(episodes.filter((e:any)=>{const episodeNumber=Number(e.mal_id);const title=String(e.title||'').trim();return episodeNumber>0&&episodeNumber<=1180&&isOnePieceCanonEpisodeNumber(episodeNumber)&&Boolean(title)&&!/^episode\\s*\\d+$/i.test(title)&&title.toLowerCase()!=='episode '+episodeNumber;}).sort((a:any,b:any)=>{
+  const included=[...new Map(episodes.filter((e:any)=>{const episodeNumber=Number(e.mal_id);const title=String(e.title||'').trim();return episodeNumber>0&&episodeNumber<=1180&&isOnePieceCanonEpisodeNumber(episodeNumber)&&Boolean(title)&&!/^episode\s*\d+$/i.test(title)&&title.toLowerCase()!=='episode '+episodeNumber;}).sort((a:any,b:any)=>{
    const aHasMetadata=Boolean(String(a.title||'').trim()&&String(a.title||'').trim()!=='Episode '+Number(a.mal_id))||Boolean(a.synopsis)||Boolean(a.aired)||Boolean(a.images?.jpg?.image_url);
    const bHasMetadata=Boolean(String(b.title||'').trim()&&String(b.title||'').trim()!=='Episode '+Number(b.mal_id))||Boolean(b.synopsis)||Boolean(b.aired)||Boolean(b.images?.jpg?.image_url);
    return Number(bHasMetadata)-Number(aHasMetadata);
