@@ -2,10 +2,10 @@ import type {MediaItem} from '../types';
 
 type EpisodeRow={title:string;rating:number;date?:string;summary?:string;ratingCount?:number};
 const seasonOne:EpisodeRow[]=[
- {title:'Somewhere Not Here',rating:8.2,ratingCount:9400,date:'2019-07-06',summary:"In Iceland, young Thorfinn dreams of adventure while Thors helps a runaway slave.",summary:'Thorfinn longs for adventure in Iceland while his father becomes involved with a runaway slave.'},
- {title:'Sword',rating:8.2,ratingCount:8600,date:'2019-07-08',summary:"Jomsvikings arrive in Thorfinn's village and demand that Thors return to war.",summary:'Jomsvikings arrive in Thorfinn’s village and pressure Thors to return to battle.'},
- {title:'Troll',rating:8.6,ratingCount:8500,date:'2019-07-08',summary:"Askeladd accepts Floki's order to kill Thors as Thors and his young crew set sail.",summary:'Askeladd accepts a mission against Thors as Thorfinn joins the voyage.'},
- {title:'A True Warrior',rating:9.6,ratingCount:15000,date:'2019-07-29',summary:"Askeladd's pirates surround the ships, forcing Thors to act to protect his crew and son.",summary:'Surrounded by pirates, Thors acts to protect his crew and son.'},
+ {title:'Somewhere Not Here',rating:8.2,ratingCount:9400,date:'2019-07-06',summary:'Thorfinn longs for adventure in Iceland while his father becomes involved with a runaway slave.'},
+ {title:'Sword',rating:8.2,ratingCount:8600,date:'2019-07-08',summary:'Jomsvikings arrive in Thorfinn’s village and pressure Thors to return to battle.'},
+ {title:'Troll',rating:8.6,ratingCount:8500,date:'2019-07-08',summary:'Askeladd accepts a mission against Thors as Thorfinn joins the voyage.'},
+ {title:'A True Warrior',rating:9.6,ratingCount:15000,date:'2019-07-29',summary:'Surrounded by pirates, Thors acts to protect his crew and son.'},
  {title:"The Troll's Son",rating:8.5,ratingCount:8100,date:'2019-08-05',summary:"Thorfinn pursues revenge while Leif carries news back to Thorfinn's family."},
  {title:'The Journey Begins',rating:9.4,ratingCount:11000,date:'2019-08-12',summary:"After his first battle, Thorfinn is wounded and cared for by an English woman and her daughter."},
  {title:'Normanni',rating:8.7,ratingCount:8000,date:'2019-08-19',summary:"Askeladd joins a Frankish conflict for treasure and sends Thorfinn to negotiate."},
