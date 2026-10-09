@@ -40,7 +40,7 @@ function dbToMedia(raw:unknown):MediaItem{
   title:String(v('title')??''),alternativeTitles:Array.isArray(meta.alternative_titles)?meta.alternative_titles.map(String):[],
   description:String(v('description')??''),poster:String(v('poster')??''),backdrop:String(v('backdrop')??''),
   medium:String(r.medium) as Medium,status:String(r.status) as MediaItem['status'],progress:Number(r.progress??0),
-  total:data.customTotal==null?(r.total==null?(v('episodes')==null?undefined:Number(v('episodes'))):Number(r.total)):Number(data.customTotal),
+  total:r.total==null?(data.customTotal==null?(v('episodes')==null?undefined:Number(v('episodes'))):Number(data.customTotal)):Number(r.total),
   year:v('year')==null?undefined:Number(v('year')),score:v('score')==null?undefined:Number(v('score')),
   personalRating:data.personalRating==null?undefined:Number(data.personalRating),progressUnit:data.progressUnit?String(data.progressUnit):undefined,
   customTotal:data.customTotal==null?undefined:Number(data.customTotal),
