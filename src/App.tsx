@@ -363,7 +363,20 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    }));
   }
   if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
-  const included=[...new Map(episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=2000).sort((a:any,b:any)=>{
+  // Manga-canon episodes only. Pure filler, mixed canon/filler and anime-original
+  // episodes are deliberately excluded until the user asks to include them.
+  const canonRanges:Array<[number,number]>=[
+   [1,44],[48,49],[52,53],[62,67],[70,92],[94,97],[100,100],[103,130],
+   [144,195],[207,212],[217,219],[227,278],[284,290],[293,302],[304,316],
+   [320,325],[337,353],[355,381],[385,405],[408,417],[422,425],[430,452],
+   [459,488],[490,491],[493,496],[500,505],[507,519],[521,541],[543,573],
+   [579,589],[591,624],[629,632],[634,652],[654,656],[658,678],[680,689],
+   [691,730],[732,736],[739,746],[752,774],[776,776],[779,779],[783,788],
+   [790,802],[804,806],[808,877],[880,880],[886,886],[891,894],[897,906],
+   [908,923],[925,987],[990,990],[992,1028],[1031,1083],[1085,1180]
+  ];
+  const isMangaCanonEpisode=(episodeNumber:number)=>canonRanges.some(([start,end])=>episodeNumber>=start&&episodeNumber<=end);
+  const included=[...new Map(episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=1180&&isMangaCanonEpisode(Number(e.mal_id))).sort((a:any,b:any)=>{
    const aHasMetadata=Boolean(String(a.title||'').trim()&&String(a.title||'').trim()!=='Episode '+Number(a.mal_id))||Boolean(a.synopsis)||Boolean(a.aired)||Boolean(a.images?.jpg?.image_url);
    const bHasMetadata=Boolean(String(b.title||'').trim()&&String(b.title||'').trim()!=='Episode '+Number(b.mal_id))||Boolean(b.synopsis)||Boolean(b.aired)||Boolean(b.images?.jpg?.image_url);
    return Number(bHasMetadata)-Number(aHasMetadata);
@@ -398,14 +411,16 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
   ];
   const rootId=root.id;
-  const created:MediaItem[]=[{...root,total:included.length,customTotal:included.length,progress:Math.min(root.progress,included.length)}];
+  const watchedThrough=1180;
+  const seriesTotal=Math.max(1180,Number(root.total)||0);
+  const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(watchedThrough,seriesTotal),status:'watching'}];
   const assigned=new Set<number>();
   for(let index=0;index<arcs.length;index++){
    const arc=arcs[index];
    const arcEpisodes=included.filter((e:any)=>!e.special&&Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
    if(!arcEpisodes.length)continue;
    const arcId='one-piece-arc-'+arc.start;
-   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Episodes are grouped by the commonly used story-arc episode ranges. Some filler, recap and special episodes may fall into the Other episodes group.'});
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' canon episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:arcEpisodes.every((e:any)=>Number(e.mal_id)<=watchedThrough)?'completed':'planned',progress:arcEpisodes.filter((e:any)=>Number(e.mal_id)<=watchedThrough).length,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Canon episodes only. Filler and non-canon episodes are excluded.'});
    for(const e of arcEpisodes){assigned.add(Number(e.mal_id));created.push(makeOnePieceEpisode(e,arc, index+1,arcId,root));}
   }
   const ungrouped=included.filter((e:any)=>!assigned.has(Number(e.mal_id)));
@@ -419,7 +434,16 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   while(changed){changed=false;for(const item of items){if(item.parentId&&descendantIds.has(item.parentId)&&!descendantIds.has(item.id)){descendantIds.add(item.id);changed=true}}}
   const remaining=items.filter(x=>!descendantIds.has(x.id));
   const existingByExternalId=new Map(items.filter(x=>x.externalId&&String(x.externalId).startsWith('one-piece-')).map(x=>[String(x.externalId),x] as const));
-  const reconciled=created.map(next=>{const prior=next.externalId?existingByExternalId.get(String(next.externalId)):undefined;if(!prior)return next;return {...next,progress:Math.min(prior.progress,next.total??prior.total??0),status:prior.status,personalRating:prior.personalRating??next.personalRating,favorite:prior.favorite,notes:prior.notes??next.notes,customTotal:prior.customTotal??next.customTotal}});
+  const reconciled=created.map(next=>{
+   const prior=next.externalId?existingByExternalId.get(String(next.externalId)):undefined;
+   const episodeMatch=String(next.externalId||'').match(/^one-piece-episode-(\d+)$/);
+   if(episodeMatch){
+    const number=Number(episodeMatch[1]);
+    return {...next,progress:number<=watchedThrough?1:Math.min(prior?.progress??next.progress,1),status:number<=watchedThrough?'completed':(prior?.status??next.status),personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
+   }
+   if(!prior)return next;
+   return {...next,progress:Math.min(prior.progress,next.total??prior.total??0),status:prior.status,personalRating:prior.personalRating??next.personalRating,favorite:prior.favorite,notes:prior.notes??next.notes,customTotal:prior.customTotal??next.customTotal};
+  });
   const ok=await save([...reconciled,...remaining]);
   if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(created[0])}
   return ok;
@@ -429,7 +453,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const score=Number(e.score);
   const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
   const synopsis=cleanDescription(String(e.synopsis||''))||'Synopsis not supplied by the catalogue.';
-  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:'Episode '+epNo+' · '+String(e.title||('Episode '+epNo)),description:synopsis,poster:String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||root.poster),backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:'planned',progress:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),synopsis}};
+  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:String(epNo)+'. '+String(e.title||('Episode '+epNo)).replace(/^(?:episode|ep)\s*\d+\s*[:·.—-]?\s*/i,'').trim(),description:synopsis,poster:String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||root.poster),backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:epNo<=1180?'completed':'planned',progress:epNo<=1180?1:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),synopsis}};
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
