@@ -76,12 +76,12 @@ Deno.serve(async req=>{
 
   const {data:tracked,error:trackedError}=await admin
     .from('media_items')
-    .select('id,user_id,metadata_id,anilist_id,title,progress')
+    .select('id,user_id,metadata_id,anilist_id,title,progress,total')
     .not('anilist_id','is',null)
     .not('metadata_id','is',null);
   if(trackedError)return json({error:trackedError.message},500);
 
-  const items=(tracked||[]) as Array<{id:string;user_id:string;metadata_id:string;anilist_id:number;title:string;progress:number}>;
+  const items=(tracked||[]) as Array<{id:string;user_id:string;metadata_id:string;anilist_id:number;title:string;progress:number;total:number|null}>;
   const ids=[...new Set(items.map(x=>Number(x.anilist_id)).filter(x=>Number.isInteger(x)&&x>0))];
   if(!ids.length)return json({ok:true,checked:0,upserted:0,notifications:0,reminders:0});
 
@@ -128,15 +128,18 @@ Deno.serve(async req=>{
 
   // Keep each user's "next release" fields current.
   for(const item of items){
-    const next=schedules
-      .filter(s=>s.mediaId===Number(item.anilist_id)&&s.airingAt>now)
-      .sort((a,b)=>a.airingAt-b.airingAt)[0];
+    const matching=schedules.filter(s=>s.mediaId===Number(item.anilist_id));
+    const next=matching.filter(s=>s.airingAt>now).sort((a,b)=>a.airingAt-b.airingAt)[0];
+    const latestReleased=matching.filter(s=>s.airingAt<=now).reduce((max,s)=>Math.max(max,Number(s.episode||0)),0);
+    const update:{next_release:string|null;next_release_number:number|null;updated_at:string;total?:number}={
+      next_release:next?new Date(next.airingAt*1000).toISOString():null,
+      next_release_number:next?Number(next.episode):null,
+      updated_at:nowIso
+    };
+    // Keep the episode total in sync when a newly aired episode is detected.
+    if(latestReleased>Number(item.total||0))update.total=latestReleased;
     await admin.from('media_items')
-      .update({
-        next_release:next?new Date(next.airingAt*1000).toISOString():null,
-        next_release_number:next?Number(next.episode):null,
-        updated_at:nowIso
-      })
+      .update(update)
       .eq('id',item.id)
       .eq('user_id',item.user_id);
   }
