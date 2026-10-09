@@ -530,10 +530,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const children=items.filter(x=>x.parentId===root.id);
   const arcIds=new Set(children.filter(x=>String(x.externalId||'').startsWith('one-piece-arc-')).map(x=>x.id));
   const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
-  const hasOnlyCanonEpisodes=episodeChildren.length>0&&episodeChildren.every(x=>{const match=String(x.externalId||'').match(/^one-piece-episode-(\d+)$/);return Boolean(match&&isOnePieceCanonEpisodeNumber(Number(match[1])));});
-  const expectedCanonEpisodes=onePieceExpectedCanonCount(1180);
-  const hasMeaningfulEpisodeTitles=episodeChildren.every(x=>Boolean(x.title.trim())&&!/^episode\s*\d+$/i.test(x.title.trim()));
-  const hasRealHierarchy=children.some(x=>String(x.externalId||'').startsWith('one-piece-arc-'))&&hasOnlyCanonEpisodes&&hasMeaningfulEpisodeTitles&&root.total===1180&&root.progress===1180&&root.status==='completed'&&episodeChildren.length>=Math.floor(expectedCanonEpisodes*0.97);
+  const episodeNumbers=new Set(episodeChildren.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1])).filter(Number.isInteger));
+  const hasAllEpisodeNumbers=episodeNumbers.size===1180&&Array.from({length:1180},(_,index)=>episodeNumbers.has(index+1)).every(Boolean);
+  const hasAllEpisodesCompleted=episodeChildren.length===1180&&episodeChildren.every(x=>x.status==='completed'&&x.progress>=1&&Boolean(x.poster));
+  const hasRealHierarchy=children.some(x=>String(x.externalId||'').startsWith('one-piece-arc-'))&&hasAllEpisodeNumbers&&hasAllEpisodesCompleted&&root.total===1180&&root.progress===1180&&root.status==='completed';
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
   void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
@@ -650,7 +650,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   </header>
   {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['friends','Friends'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
-   {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
+   {page==='home'&&<Home items={shown} total={items.filter(x=>!x.parentId).length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
    {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
