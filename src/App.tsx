@@ -257,7 +257,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
       mal_id:Number(e.absoluteEpisode),title:e.title,aired:e.airDate,score:e.score,
       synopsis:e.synopsis,images:{jpg:{image_url:e.poster||'',large_image_url:e.backdrop||''}},
       ratingCount:e.ratingCount,ratingSource:e.ratingSource||'TMDB',runtimeMinutes:e.runtimeMinutes,
-      tmdbId:e.tmdbId,seasonNumber:e.seasonNumber,episodeNumber:e.episodeNumber,
+      tmdbId:e.tmdbId,seasonNumber:e.seasonNumber,episodeNumber:e.episodeNumber,special:e.special===true,
       imdbEpisodeUrl:e.imdbEpisodeUrl,sourceUrl:e.sourceUrl
      }));
     }
@@ -298,7 +298,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const assigned=new Set<number>();
   for(let index=0;index<arcs.length;index++){
    const arc=arcs[index];
-   const arcEpisodes=included.filter((e:any)=>Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
+   const arcEpisodes=included.filter((e:any)=>!e.special&&Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
    if(!arcEpisodes.length)continue;
    const arcId='one-piece-arc-'+arc.start;
    created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Episodes are grouped by the commonly used story-arc episode ranges. Some filler, recap and special episodes may fall into the Other episodes group.'});
@@ -325,7 +325,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const score=Number(e.score);
   const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
   const synopsis=cleanDescription(String(e.synopsis||''))||'Synopsis not supplied by the catalogue.';
-  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:'Episode '+epNo+' · '+String(e.title||('Episode '+epNo)),description:synopsis,poster:String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||root.poster),backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:'planned',progress:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:Number(e.seasonNumber)||arcNumber,episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),synopsis}};
+  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:'Episode '+epNo+' · '+String(e.title||('Episode '+epNo)),description:synopsis,poster:String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||root.poster),backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:'planned',progress:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),synopsis}};
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
