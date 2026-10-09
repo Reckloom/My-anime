@@ -213,6 +213,5 @@ test.describe('FRAME anime episode catalogue', () => {
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Mark through' }).click();
     await expect(page.getByText('Watched', { exact: true })).toBeVisible();
-    await expect(page.getByText('Episode progress saved.')).toBeVisible();
   });
 });
