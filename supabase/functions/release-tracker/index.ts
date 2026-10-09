@@ -77,8 +77,7 @@ Deno.serve(async req=>{
   const {data:tracked,error:trackedError}=await admin
     .from('media_items')
     .select('id,user_id,metadata_id,anilist_id,title,progress,total')
-    .not('anilist_id','is',null)
-    .not('metadata_id','is',null);
+    .not('anilist_id','is',null);
   if(trackedError)return json({error:trackedError.message},500);
 
   const items=(tracked||[]) as Array<{id:string;user_id:string;metadata_id:string;anilist_id:number;title:string;progress:number;total:number|null}>;
@@ -95,7 +94,7 @@ Deno.serve(async req=>{
   }
 
   const metadataByAni=new Map<number,string>();
-  for(const item of items)if(!metadataByAni.has(Number(item.anilist_id)))metadataByAni.set(Number(item.anilist_id),item.metadata_id);
+  for(const item of items)if(item.metadata_id&&!metadataByAni.has(Number(item.anilist_id)))metadataByAni.set(Number(item.anilist_id),item.metadata_id);
 
   const nowIso=new Date().toISOString();
   const rows=schedules.map(s=>({
@@ -111,7 +110,7 @@ Deno.serve(async req=>{
     source_key:'airing:'+s.id,
     raw:s,
     last_seen_at:nowIso
-  })).filter(x=>x.media_metadata_id);
+  }));
 
   let upserted=0;
   if(rows.length){
