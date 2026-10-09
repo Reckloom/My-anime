@@ -279,6 +279,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
 
  const buildNarutoHierarchy=async(rawRoot:MediaItem)=>{
+  setAppMessage('Building the Naruto and Naruto Shippuden episode catalogue…');
   const rootId=rawRoot.id;
   const originalId='naruto-part-original-'+rootId;
   const shippudenId='naruto-part-shippuden-'+rootId;
@@ -320,12 +321,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    if(!response.ok)throw new Error('Kitsu search HTTP '+response.status);
    const search=await response.json() as any;
    const matches=Array.isArray(search.data)?search.data:[];
-   const anime=matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase()===title.toLowerCase())
-    ||matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase().includes(title.toLowerCase()));
+   const normalizedTitle=title.toLowerCase().replace(/[^a-z0-9]/g,'');
+   const anime=matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'')===normalizedTitle)
+    ||matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'').includes(normalizedTitle));
    if(!anime?.id)throw new Error('Kitsu did not identify '+title);
    const result:any[]=[];
    const limit=20;
-   const total=Math.min(Number(search.meta?.count||expected),expected);
+   const total=Math.min(Number(first.meta?.count||expected),expected);
    const fetchPage=async(offset:number)=>{
     const r=await fetch('https://kitsu.io/api/edge/anime/'+encodeURIComponent(String(anime.id))+'/episodes?page[limit]='+limit+'&page[offset]='+offset);
     if(!r.ok)throw new Error('Kitsu episode page HTTP '+r.status);
@@ -421,13 +423,12 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      notes:'FRAME_NARUTO_ARC=v1. Grouped by the Naruto episode catalogue. Numbering is relative to '+part.title+'.'
     };
     created.push(arcItem);
-    const usedEpisodePosters=new Set<string>();
     for(const e of arcEpisodes){
      const episodeId='naruto-episode-'+partKey+'-'+e.number+'-'+rootId;
      const prior=priorById.get(episodeId);
      let episodePoster=String(e.poster||'').trim();
-     if(episodePoster&&usedEpisodePosters.has(episodePoster))episodePoster='';
-     if(episodePoster)usedEpisodePosters.add(episodePoster);
+     if(episodePoster&&usedPosters.has(episodePoster))episodePoster='';
+     if(episodePoster)usedPosters.add(episodePoster);
      const aired=String(e.aired||'');
      const airDate=aired?aired.slice(0,10):undefined;
      const googleImageSearchUrl='https://www.google.com/search?tbm=isch&q='+encodeURIComponent(part.title+' episode '+e.number+' '+e.title+' official still');
