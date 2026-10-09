@@ -21,6 +21,7 @@ export function FrameEpisodeList({malId,currentProgress,onMarkThrough}:{malId:st
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState('');
   const [savingEpisode,setSavingEpisode]=useState<number|null>(null);
+  const [attempt,setAttempt]=useState(0);
 
   useEffect(()=>{
     const controller=new AbortController();
@@ -38,7 +39,7 @@ export function FrameEpisodeList({malId,currentProgress,onMarkThrough}:{malId:st
       .catch(e=>{if(alive&&!(e instanceof DOMException&&e.name==='AbortError'))setError(e instanceof Error?e.message:'Episode list could not be loaded.')})
       .finally(()=>{if(alive)setLoading(false)});
     return()=>{alive=false;controller.abort()};
-  },[malId,page]);
+  },[malId,page,attempt]);
 
   const markThrough=async(episode:number)=>{
     setSavingEpisode(episode);
@@ -51,7 +52,7 @@ export function FrameEpisodeList({malId,currentProgress,onMarkThrough}:{malId:st
       <a href={'https://myanimelist.net/anime/'+encodeURIComponent(malId)+'/'} target="_blank" rel="noreferrer">Source <RefreshCw size={12}/></a>
     </div>
     <p className="frame-episode-list-summary">Watched through episode {currentProgress}. Episodes are loaded in pages from the MyAnimeList episode catalogue via Jikan.</p>
-    {loading?<div className="frame-episode-list-state"><LoaderCircle size={17} className="spin"/> Loading episode list…</div>:error?<div className="frame-episode-list-state error">{error}<button type="button" className="secondary" onClick={()=>setPage(p=>p)}>Retry</button></div>:episodes.length===0?<div className="frame-episode-list-state">No episodes were listed by the source.</div>:<>
+    {loading?<div className="frame-episode-list-state"><LoaderCircle size={17} className="spin"/> Loading episode list…</div>:error?<div className="frame-episode-list-state error">{error}<button type="button" className="secondary" onClick={()=>setAttempt(v=>v+1)}>Retry</button></div>:episodes.length===0?<div className="frame-episode-list-state">No episodes were listed by the source.</div>:<>
       <div className="frame-episode-list-rows">
         {episodes.map(ep=><div className={'frame-episode-row '+(ep.mal_id<=currentProgress?'watched':'')} key={ep.mal_id}>
           <span className="frame-episode-number">{ep.mal_id}</span>
@@ -59,7 +60,7 @@ export function FrameEpisodeList({malId,currentProgress,onMarkThrough}:{malId:st
           {ep.mal_id<=currentProgress?<span className="frame-episode-watched">Watched</span>:<button type="button" className="secondary frame-episode-mark" disabled={savingEpisode!==null} onClick={()=>void markThrough(ep.mal_id)}>{savingEpisode===ep.mal_id?'Saving…':'Mark through'}</button>}
         </div>)}
       </div>
-      <div className="frame-episode-pagination"><button className="secondary" type="button" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1)}><ChevronLeft size={15}/> Previous</button><span>Page {page} of {lastPage}</span><button className="secondary" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(p=>Math.min(lastPage,p+1))}>Next <ChevronRight size={15}/></button></div>
+      <div className="frame-episode-pagination"><button className="secondary" type="button" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page} of {lastPage}</span><button className="secondary" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(p=>Math.min(lastPage,p+1))}>Next <ChevronRight size={15}/></button></div>
     </>}
     <div className="frame-episode-list-foot"><CalendarDays size={13}/> Episode titles and dates are supplied by the external catalogue and may be incomplete or revised.</div>
   </section>;
