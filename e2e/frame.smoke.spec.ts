@@ -216,3 +216,85 @@ test.describe('FRAME anime episode catalogue', () => {
     await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
   });
 });
+
+test.describe('FRAME detail navigation and scroll', () => {
+  test('opens a sub-part at the top and Back restores the previous item and scroll position', async ({ page }) => {
+    const arcs = Array.from({ length: 18 }, (_, index) => ({
+      id: 'one-piece-arc-' + (index + 1),
+      parentId: 'qa-one-piece',
+      sourceProvider: 'jikan',
+      externalId: 'one-piece-arc-' + (index + 1),
+      title: 'Arc ' + (index + 1),
+      description: 'Story arc ' + (index + 1),
+      poster: '/frame-logo.svg',
+      backdrop: '',
+      medium: 'anime',
+      status: 'watching',
+      progress: 0,
+      total: 10,
+      genres: [],
+      themes: [],
+      favorite: false,
+      notes: 'FRAME_POSTER_VERSION=one-piece-arc-wiki-v1',
+    }));
+    arcs.push({
+      id: 'one-piece-episode-18',
+      parentId: 'one-piece-arc-18',
+      sourceProvider: 'jikan',
+      externalId: 'one-piece-episode-18',
+      title: 'Episode 18',
+      description: 'A test episode',
+      poster: '/frame-logo.svg',
+      backdrop: '',
+      medium: 'anime',
+      status: 'completed',
+      progress: 1,
+      total: 1,
+      genres: [],
+      themes: [],
+      favorite: false,
+      notes: '',
+    });
+    await page.addInitScript((fixture) => {
+      localStorage.setItem('frame-guest', '1');
+      localStorage.setItem('frame-library:guest', JSON.stringify(fixture));
+    }, [{
+      id: 'qa-one-piece',
+      sourceProvider: 'anilist',
+      externalId: '21',
+      anilistId: 21,
+      title: 'One Piece',
+      description: 'QA hierarchy fixture',
+      poster: '/frame-logo.svg',
+      backdrop: '',
+      medium: 'anime',
+      status: 'watching',
+      progress: 0,
+      total: 1180,
+      genres: [],
+      themes: [],
+      favorite: false,
+      externalLinks: { malId: '21' },
+    }, ...arcs]);
+
+    await page.goto('/');
+    await navigatePrimary(page, 'Library');
+    const card = page.locator('.media-card').filter({ hasText: 'One Piece' }).first();
+    await expect(card).toBeVisible();
+    await card.click();
+    await expect(page.getByRole('heading', { name: 'One Piece', exact: true })).toBeVisible();
+
+    const drawer = page.locator('.detail-overlay .detail-drawer');
+    await drawer.evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    const before = await drawer.evaluate((el) => el.scrollTop);
+    expect(before).toBeGreaterThan(0);
+
+    await page.locator('.hierarchy-part-card').filter({ hasText: 'Arc 18' }).click();
+    await expect(page.getByRole('heading', { name: 'Arc 18', exact: true })).toBeVisible();
+    await expect.poll(() => drawer.evaluate((el) => el.scrollTop)).toBe(0);
+
+    await page.getByRole('button', { name: 'Go back', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'One Piece', exact: true })).toBeVisible();
+    await expect.poll(() => drawer.evaluate((el) => el.scrollTop)).toBe(before);
+  });
+});
