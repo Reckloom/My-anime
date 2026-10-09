@@ -478,7 +478,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const ungrouped=included.filter((e:any)=>!assigned.has(Number(e.mal_id)));
   if(ungrouped.length){
    const arcId='one-piece-arc-other';
-   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other episodes',description:'Episodes outside the predefined arc ranges.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted.'});
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other episodes',description:'Episodes outside the predefined arc ranges.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'completed',progress:ungrouped.length,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted.'});
    for(const e of ungrouped)created.push(makeOnePieceEpisode(e,{name:'Other episodes',start:0,end:0},arcs.length+1,arcId,root,usedEpisodePosterUrls));
   }
   const descendantIds=new Set<string>([rootId]);
