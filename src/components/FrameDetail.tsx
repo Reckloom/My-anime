@@ -109,7 +109,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     <div className="detail-main">
      <small>{types[d.medium]} · {labels[d.status]}</small>
      <h2 id="frame-detail-title">{d.title}</h2>
-     <div className="detail-rating"><span><Star size={13} fill="currentColor"/> {d.episode?.ratingSource||'Source'} {d.score==null?'—':d.score.toFixed(1)}{d.episode?.ratingCount?` · ${d.episode.ratingCount.toLocaleString()} ratings`:''}</span><span>Your {d.personalRating==null?'—':d.personalRating.toFixed(1)}</span></div>
+     <div className="detail-rating"><span><Star size={13} fill="currentColor"/> {d.episode?.ratingSource||(d.sourceProvider==='imdb'?'IMDb':'Source')} {d.score==null?'—':d.score.toFixed(1)}{d.episode?.ratingCount?` · ${d.episode.ratingCount.toLocaleString()} ratings`:''}</span><span>Your {d.personalRating==null?'—':d.personalRating.toFixed(1)}</span></div>
      <div className="detail-refresh-row">
       {(d.anilistId||d.sourceProvider==='anilist')&&<button className="secondary" disabled={refreshing} onClick={()=>void refresh()}>{refreshing?<RefreshCw size={13} className="spin"/>:<RefreshCw size={13}/>}Refresh metadata</button>}
       {refreshMessage&&<small>{refreshMessage}</small>}
