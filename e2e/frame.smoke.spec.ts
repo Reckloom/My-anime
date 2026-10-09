@@ -21,8 +21,8 @@ test.describe('FRAME core smoke flow', () => {
   test('opens manual entry, adds a title, and shows it in the library', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Search', exact: true }).first().click();
-    await expect(page.getByText('Find media')).toBeVisible();
-    await page.getByRole('button', { name: /manual/i }).click();
+    await expect(page.getByRole('heading', { name: 'Find anything for FRAME' })).toBeVisible();
+    await page.getByRole('button', { name: /can't find it\? add manually/i }).click();
     await expect(page.getByText('Add anything to FRAME.')).toBeVisible();
 
     await page.getByLabel('Title').fill('FRAME QA Test Title');
