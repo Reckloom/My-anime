@@ -103,21 +103,26 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  };
  useEffect(()=>{
   setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
-  const overlay=document.querySelector<HTMLElement>('.detail-overlay');
-  const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
-  const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
-  const restore=pendingScrollRestore.current;
-  if(restore&&restore.item.id===item.id){
-   if(overlay)overlay.scrollTop=restore.overlayScrollTop;
-   if(drawer)drawer.scrollTop=restore.drawerScrollTop;
-   if(body)body.scrollTop=restore.bodyScrollTop;
-   window.scrollTo(0,restore.pageScrollTop);
-   pendingScrollRestore.current=null;
-  }else{
-   if(overlay)overlay.scrollTop=0;
-   if(drawer)drawer.scrollTop=0;
-   if(body)body.scrollTop=0;
-  }
+  // Restore after React has committed the newly selected item's content; restoring
+  // immediately can clamp scrollTop to the previous item's shorter height.
+  const frame=window.requestAnimationFrame(()=>{
+   const overlay=document.querySelector<HTMLElement>('.detail-overlay');
+   const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
+   const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
+   const restore=pendingScrollRestore.current;
+   if(restore&&restore.item.id===item.id){
+    if(overlay)overlay.scrollTop=restore.overlayScrollTop;
+    if(drawer)drawer.scrollTop=restore.drawerScrollTop;
+    if(body)body.scrollTop=restore.bodyScrollTop;
+    window.scrollTo(0,restore.pageScrollTop);
+    pendingScrollRestore.current=null;
+   }else{
+    if(overlay)overlay.scrollTop=0;
+    if(drawer)drawer.scrollTop=0;
+    if(body)body.scrollTop=0;
+   }
+  });
+  return()=>window.cancelAnimationFrame(frame);
  },[item.id]);
  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[]);
  const progress=(n:number)=>setD(game?{...d,progress:n,game:d.game?{...d.game,storyProgress:n}:undefined}:{...d,progress:Math.max(0,Math.min(max,n))});
