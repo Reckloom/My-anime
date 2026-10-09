@@ -240,9 +240,11 @@ export default function App(){
  };
  const seedVinlandDemo=async()=>{
   const demo=makeVinlandSagaDemo();
-  if(items.some(x=>x.id.startsWith('vinland-demo-'))){setAppMessage('Vinland Saga episode demo is already in your library.');window.setTimeout(()=>setAppMessage(''),3500);return}
-  const next=await save([...items,...demo]);
-  if(next){setAppMessage('Added Vinland Saga demo: 2 seasons and 48 episode entries.');window.setTimeout(()=>setAppMessage(''),5000)}
+  const existingAnime=items.filter(x=>x.medium==='anime');
+  if(!window.confirm('Replace all anime entries in your FRAME library with Vinland Saga (2 seasons, 48 episodes)? Other media such as books and games will be kept. This cannot be undone.'))return;
+  const retained=items.filter(x=>x.medium!=='anime');
+  const ok=await save([...retained,...demo]);
+  if(ok){setAppMessage('Replaced '+existingAnime.length+' anime entries with Vinland Saga: 2 seasons and 48 episodes. Other media was kept.');window.setTimeout(()=>setAppMessage(''),6000)}
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
@@ -438,7 +440,7 @@ function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add,see
  };
  const allMediaActive=!mediaFilters.slice(1).some(([key])=>filters.includes(key));
  return <div className="page library-page">
-  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><div className="library-heading-actions"><button className="secondary" type="button" onClick={seedDemo}>Add Vinland Saga demo</button><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div></div>
+  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><div className="library-heading-actions"><button className="secondary" type="button" onClick={seedDemo}>Replace anime library with Vinland Saga</button><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div></div>
   <div className="library-controls">
    <div className="filter-groups">
     <div className="filter-group">
