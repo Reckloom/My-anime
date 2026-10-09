@@ -133,6 +133,7 @@ export default function App(){
  const [density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('cinematic-archive'),[appearanceMode,setAppearanceMode]=useState<'light'|'dark'|'system'>('dark');
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
  const saveQueue=useRef(Promise.resolve(true));
+ const onePieceAutoRef=useRef('');
 
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
 
@@ -236,79 +237,94 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   saveQueue.current=operation.catch(()=>true);
   return operation;
  };
+ const buildOnePieceHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
+  const root=normalise({...rawRoot,
+   description:[rawRoot.description,'Follow the Grand Line through canon arc groups and individual episodes. Episode titles, air dates and ratings are refreshed from Jikan / MyAnimeList where available.'].filter(Boolean).join('\\n\\n'),
+   availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/']},
+   externalLinks:{...(rawRoot.externalLinks||{}),officialUrl:'https://one-piece.com/anime/',newsUrl:'https://one-piece.com/news/',malId:'21'},
+   notes:[rawRoot.notes,'Official site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Netflix catalogue: https://www.netflix.com/title/80107103','News: https://one-piece.com/news/','Episode metadata: Jikan / MyAnimeList. Episode still images are not consistently provided, so the series poster is used as fallback.'].filter(Boolean).join('\\n\\n')
+  });
+  const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page=1');
+  if(!response.ok)throw new Error('The One Piece episode catalogue is temporarily unavailable.');
+  const first=await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number}};
+  const episodes:Array<any>=[...(first.data||[])];
+  const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
+  for(let page=2;page<=pages;page++){
+   await new Promise(resolve=>window.setTimeout(resolve,420));
+   const next=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
+   if(!next.ok)throw new Error('The catalogue stopped responding on page '+page+'.');
+   const payload=await next.json() as {data?:Array<any>};
+   episodes.push(...(payload.data||[]));
+  }
+  const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&!e.filler&&!e.recap&&Number(e.mal_id)<=2000);
+  if(!included.length)throw new Error('The catalogue returned no usable episodes.');
+  const arcs=[
+   {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},{name:'Syrup Village',start:9,end:18},
+   {name:'Baratie',start:19,end:30},{name:'Arlong Park',start:31,end:44},{name:'Loguetown',start:45,end:53},
+   {name:'Reverse Mountain',start:62,end:63},{name:'Whisky Peak',start:64,end:67},{name:'Little Garden',start:70,end:77},
+   {name:'Drum Island',start:78,end:91},{name:'Arabasta',start:92,end:130},{name:'Jaya',start:144,end:152},
+   {name:'Skypiea',start:153,end:195},{name:'Long Ring Long Land',start:207,end:219},{name:'Water 7',start:229,end:263},
+   {name:'Enies Lobby',start:264,end:312},{name:'Post-Enies Lobby',start:313,end:325},{name:'Thriller Bark',start:337,end:381},
+   {name:'Sabaody Archipelago',start:385,end:405},{name:'Amazon Lily',start:408,end:417},{name:'Impel Down',start:422,end:452},
+   {name:'Marineford',start:457,end:489},{name:'Post-War',start:490,end:516},{name:'Return to Sabaody',start:517,end:522},
+   {name:'Fish-Man Island',start:523,end:574},{name:'Punk Hazard',start:579,end:625},{name:'Dressrosa',start:629,end:746},
+   {name:'Zou',start:751,end:779},{name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:889},
+   {name:'Wano Country',start:890,end:1085},{name:'Egghead',start:1086,end:2000}
+  ];
+  const rootId=root.id;
+  const created:MediaItem[]=[root];
+  const assigned=new Set<number>();
+  for(let index=0;index<arcs.length;index++){
+   const arc=arcs[index];
+   const arcEpisodes=included.filter((e:any)=>Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
+   if(!arcEpisodes.length)continue;
+   const arcId=crypto.randomUUID();
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' canon-catalogue episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Arc grouping uses a practical episode-range guide; filler and recap entries are excluded.'});
+   for(const e of arcEpisodes){assigned.add(Number(e.mal_id));created.push(makeOnePieceEpisode(e,arc, index+1,arcId,root));}
+  }
+  const ungrouped=included.filter((e:any)=>!assigned.has(Number(e.mal_id)));
+  if(ungrouped.length){
+   const arcId=crypto.randomUUID();
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other canon episodes',description:'Canon-catalogue episodes outside the predefined arc ranges.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted.'});
+   for(const e of ungrouped)created.push(makeOnePieceEpisode(e,{name:'Other canon episodes',start:0,end:0},arcs.length+1,arcId,root));
+  }
+  const descendantIds=new Set<string>([rootId]);
+  let changed=true;
+  while(changed){changed=false;for(const item of items){if(item.parentId&&descendantIds.has(item.parentId)&&!descendantIds.has(item.id)){descendantIds.add(item.id);changed=true}}}
+  const remaining=items.filter(x=>!descendantIds.has(x.id));
+  const ok=await save([...created,...remaining]);
+  if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(root)}
+  return ok;
+ };
+ const makeOnePieceEpisode=(e:any,arc:{name:string;start:number;end:number},arcNumber:number,parentId:string,root:MediaItem):MediaItem=>{
+  const epNo=Number(e.mal_id);
+  const score=Number(e.score);
+  const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
+  const synopsis=cleanDescription(String(e.synopsis||''))||'Synopsis not supplied by the catalogue.';
+  return {id:crypto.randomUUID(),parentId,sourceProvider:'jikan',externalId:'one-piece-episode-'+epNo,title:'Episode '+epNo+' · '+String(e.title||('Episode '+epNo)),description:synopsis,poster:root.poster,backdrop:'',medium:'anime',status:'planned',progress:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,episode:{seasonNumber:arcNumber,episodeNumber:epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:'MyAnimeList / Jikan',imdbEpisodeUrl:String(e.url||'https://myanimelist.net/anime/21/One_Piece/episode'),synopsis}};
+ };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
+  if(item.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(item.title.trim())){
+   const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
+   if(existing)return await buildOnePieceHierarchy(existing,true);
+   setAppMessage('Loading One Piece arcs and episode catalogue…');
+   try{return await buildOnePieceHierarchy(item)}catch(error){setAppMessage('Could not load One Piece episodes: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
+  }
   const duplicate=items.find(x=>(item.anilistId&&x.anilistId===item.anilistId)||(item.sourceProvider&&item.externalId&&x.sourceProvider===item.sourceProvider&&x.externalId===item.externalId));
-  if(duplicate){
-   setAppMessage('This title is already in your library.');
-   window.setTimeout(()=>setAppMessage(''),3000);
-   return false;
-  }
-  if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
-   setAppMessage('Loading One Piece canon arcs and episode metadata…');
-   try{
-    const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page=1');
-    if(!response.ok)throw new Error('The episode catalogue is temporarily unavailable.');
-    const first=await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number;has_next_page?:boolean}};
-    const episodes:Array<any>=[...(first.data||[])];
-    const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
-    for(let page=2;page<=pages;page++){
-     await new Promise(resolve=>window.setTimeout(resolve,420));
-     const next=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
-     if(!next.ok)break;
-     const payload=await next.json() as {data?:Array<any>};
-     episodes.push(...(payload.data||[]));
-    }
-    if(!episodes.length)throw new Error('No episode metadata was returned.');
-    const arcs=[
-     {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},
-     {name:'Syrup Village',start:9,end:18},{name:'Baratie',start:19,end:30},
-     {name:'Arlong Park',start:31,end:44},{name:'Loguetown',start:45,end:53},
-     {name:'Reverse Mountain',start:62,end:63},{name:'Whisky Peak',start:64,end:67},
-     {name:'Little Garden',start:70,end:77},{name:'Drum Island',start:78,end:91},
-     {name:'Arabasta',start:92,end:130},{name:'Jaya',start:144,end:152},
-     {name:'Skypiea',start:153,end:195},{name:'Long Ring Long Land',start:207,end:219},
-     {name:'Water 7',start:229,end:263},{name:'Enies Lobby',start:264,end:312},
-     {name:'Post-Enies Lobby',start:313,end:325},{name:'Thriller Bark',start:337,end:381},
-     {name:'Sabaody Archipelago',start:385,end:405},{name:'Amazon Lily',start:408,end:417},
-     {name:'Impel Down',start:422,end:452},{name:'Marineford',start:457,end:489},
-     {name:'Post-War',start:490,end:516},{name:'Return to Sabaody',start:517,end:522},
-     {name:'Fish-Man Island',start:523,end:574},{name:'Punk Hazard',start:579,end:625},
-     {name:'Dressrosa',start:629,end:746},{name:'Zou',start:751,end:779},
-     {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:889},
-     {name:'Wano Country',start:890,end:1085},{name:'Egghead',start:1086,end:2000}
-    ];    const rootId=crypto.randomUUID();
-    const root:MediaItem={...item,id:rootId,total:episodes.filter((e:any)=>Number(e.mal_id)>0&&!e.filler&&!e.recap&&Number(e.mal_id)<=2000).length,progress:0,
-    description:[item.description,'Follow the Grand Line through the anime’s saga and arc structure. Open a saga to browse individual episodes, air dates, ratings and synopses where the catalogue provides them.'].filter(Boolean).join('\n\n'),
-    availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/'],buy:[]},
-    notes:[item.notes,'Official series site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Streaming catalogue: https://www.netflix.com/title/80107103','News and announcements: https://www.animenewsnetwork.com/search/?q=One%20Piece','FRAME hierarchy: episodes are grouped under saga parts. Episode metadata comes from Jikan/MyAnimeList; episode-specific still images are not supplied consistently by that catalogue, so the series artwork is used as a fallback. Streaming availability changes by region.'].filter(Boolean).join('\n\n')};
-    const created:MediaItem[]=[root];
-    const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&!e.filler&&!e.recap&&Number(e.mal_id)<=2000);
-    for(const arc of arcs){
-     const arcEpisodes=included.filter((e:any)=>Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
-     if(!arcEpisodes.length)continue;
-     const arcId=crypto.randomUUID();
-     created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-saga-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' listed episodes in this arc. Open a child episode for its available title, air date, rating and synopsis.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Arc boundaries are a practical anime guide; individual canon status can vary by episode/recap classification.'});
-     for(const e of arcEpisodes){
-      const epNo=Number(e.mal_id);
-      const title=String(e.title||e.title_romanji||('Episode '+epNo));
-      const score=Number(e.score);
-      const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
-      const synopsis=cleanDescription(String(e.synopsis||''))||'No episode synopsis is available from the catalogue yet.';
-      created.push({id:crypto.randomUUID(),parentId:arcId,sourceProvider:'jikan',externalId:'one-piece-episode-'+epNo,title:'Episode '+epNo+' · '+title,description:synopsis,poster:root.poster,backdrop:'',medium:'anime',status:'planned',progress:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,episode:{seasonNumber:arcs.findIndex(a=>a.name===arc.name)+1,episodeNumber:epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:'MyAnimeList / Jikan',imdbEpisodeUrl:String(e.url||'https://myanimelist.net/anime/21/One_Piece/episode') ,synopsis}});
-     }
-    }
-    const ok=await save([...created,...items]);
-    if(ok){setAppMessage('Added One Piece with '+(created.length-1)+' arc and episode entries. Episode artwork uses the series poster where episode-specific stills are not provided by the catalogue.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(root)}
-    return ok;
-   }catch(error){
-    setAppMessage('Could not load the full One Piece episode guide: '+(error instanceof Error?error.message:'Please try again.'));
-    window.setTimeout(()=>setAppMessage(''),6000);
-    return false;
-   }
-  }
+  if(duplicate){setAppMessage('This title is already in your library.');window.setTimeout(()=>setAppMessage(''),3000);return false}
   return await save([item,...items]);
  };
+ useEffect(()=>{
+  if(!user?.id||!items.length)return;
+  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
+  if(!root||onePieceAutoRef.current===user.id+':'+root.id)return;
+  const children=items.filter(x=>x.parentId===root.id);
+  const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'));
+  if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
+  onePieceAutoRef.current=user.id+':'+root.id;
+  void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
+ },[user?.id,items]);
  const addSteamGame=(game:{appId?:string;name:string;header?:string;storeUrl?:string})=>{
   if(!game.name.trim())return;
   importItem({id:crypto.randomUUID(),sourceProvider:'steam',externalId:game.appId,title:game.name,description:'Imported from your Steam library.',poster:game.header||'',backdrop:game.header||'',medium:'game',status:'planned',progress:0,total:100,progressUnit:'%',year:undefined,score:undefined,genres:[],themes:[],favorite:false,game:{storeUrl:game.storeUrl||undefined}});
