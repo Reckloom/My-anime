@@ -3310,3 +3310,7 @@ hr,.divider{border-color:var(--frame-line)!important}
   .detail-section{margin-inline:12px!important}
   .detail-actions{margin-inline:12px!important}
 }
+
+.frame-episode-pagination{flex-wrap:wrap}
+.frame-episode-jump{font-size:.72rem!important;padding-inline:9px!important}
+@media(max-width:480px){.frame-episode-pagination{justify-content:space-between}.frame-episode-pagination span{order:5;width:100%;text-align:center}.frame-episode-jump{flex:1}.frame-episode-pagination>button:not(.frame-episode-jump){flex:1;justify-content:center}}
