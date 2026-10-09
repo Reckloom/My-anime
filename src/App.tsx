@@ -135,6 +135,7 @@ export default function App(){
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
  const saveQueue=useRef(Promise.resolve(true));
  const onePieceAutoRef=useRef('');
+ const onePieceArcArtworkRef=useRef('');
  const onePiecePosterCatalogueRef=useRef<Record<string,string>>({});
 
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
@@ -525,21 +526,47 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  useEffect(()=>{
   if(!user?.id||!cloudLibraryReady||!items.length)return;
-  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
-  if(!root||onePieceAutoRef.current===user.id+':'+root.id)return;
-  const children=items.filter(x=>x.parentId===root.id);
-  const arcIds=new Set(children.filter(x=>String(x.externalId||'').startsWith('one-piece-arc-')).map(x=>x.id));
-  const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
-  const episodeNumbers=new Set(episodeChildren.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1])).filter(Number.isInteger));
-  const hasAllEpisodeNumbers=episodeNumbers.size===1180&&Array.from({length:1180},(_,index)=>episodeNumbers.has(index+1)).every(Boolean);
-  const arcChildren=children.filter(x=>String(x.externalId||'').startsWith('one-piece-arc-'));
-  const posterItems=[...arcChildren,...episodeChildren];
-  const hasDistinctContentArtwork=posterItems.length===arcChildren.length+1180&&new Set(posterItems.map(x=>x.poster)).size===posterItems.length&&posterItems.every(x=>Boolean(x.poster)&&x.poster!==root.poster);
-  const hasAllEpisodesCompleted=episodeChildren.length===1180&&episodeChildren.every(x=>x.status==='completed'&&x.progress>=1&&Boolean(x.poster)&&x.episode?.posterVersion==='one-piece-stills-v3'&&['tmdb-episode-still-v3','episode-catalogue-still-v3','one-piece-archive-v3','catalogue-still-v3'].includes(String(x.episode?.posterSource||'')))&&arcChildren.every(x=>Boolean(x.poster)&&x.poster!==root.poster&&String(x.notes||'').includes('FRAME_POSTER_VERSION=one-piece-stills-v3'))&&hasDistinctContentArtwork;
-  const hasRealHierarchy=arcChildren.length>0&&hasAllEpisodeNumbers&&hasAllEpisodesCompleted&&root.total===1180&&root.progress===1180&&root.status==='completed'&&root.poster===ONE_PIECE_SERIES_POSTER;
-  if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
-  onePieceAutoRef.current=user.id+':'+root.id;
-  void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
+  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
+  if(!root)return;
+  const runKey=user.id+':'+root.id;
+  if(onePieceArcArtworkRef.current===runKey)return;
+  const arcs=items.filter(x=>x.parentId===root.id&&String(x.externalId||'').startsWith('one-piece-arc-'));
+  if(!arcs.length)return;
+  const episodesByArc=new Map<string,MediaItem[]>();
+  for(const arc of arcs)episodesByArc.set(arc.id,items.filter(x=>x.parentId===arc.id&&String(x.externalId||'').startsWith('one-piece-episode-')).sort((a,b)=>{
+   const n=(x:MediaItem)=>Number(String(x.externalId||'').match(/^one-piece-episode-(\\d+)$/)?.[1]||0);
+   return n(a)-n(b);
+  }));
+  // Keep every episode's poster untouched. Only assign arc/sub-part artwork,
+  // using a still/backdrop from an episode belonging to that exact arc.
+  const episodePosterUrls=new Set(items.filter(x=>String(x.externalId||'').startsWith('one-piece-episode-')).map(x=>String(x.poster||'').trim()).filter(Boolean));
+  const reserved=new Set<string>([String(root.poster||''),...episodePosterUrls].filter(Boolean));
+  const updates=new Map<string,MediaItem>();
+  for(const arc of arcs){
+   const children=episodesByArc.get(arc.id)||[];
+   if(!children.length)continue;
+   const middle=Math.floor((children.length-1)/2);
+   const ordered=[...children].sort((a,b)=>{
+    const score=(x:MediaItem)=>Math.abs(children.indexOf(x)-middle);
+    return score(a)-score(b);
+   });
+   let chosen='';
+   for(const episode of ordered){
+    const candidates=[String(episode.backdrop||'').trim(),String(episode.poster||'').trim()];
+    const candidate=candidates.find(url=>url&&url!==root.poster&&!reserved.has(url));
+    if(candidate){chosen=candidate;break}
+   }
+   if(!chosen)continue;
+   reserved.add(chosen);
+   if(arc.poster!==chosen)updates.set(arc.id,{...arc,poster:chosen,backdrop:chosen});
+  }
+  onePieceArcArtworkRef.current=runKey;
+  if(!updates.size)return;
+  const next=items.map(x=>updates.get(x.id)||x);
+  void save(next).then(ok=>{
+   if(ok)setAppMessage('One Piece sub-part artwork updated. Episode posters and completion progress were left unchanged.');
+   else onePieceArcArtworkRef.current='';
+  }).catch(error=>{onePieceArcArtworkRef.current='';console.warn('[FRAME One Piece arc artwork]',error)});
  },[user?.id,cloudLibraryReady,items]);
  const addSteamGame=(game:{appId?:string;name:string;header?:string;storeUrl?:string})=>{
   if(!game.name.trim())return;
