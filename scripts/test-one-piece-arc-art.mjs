@@ -49,7 +49,7 @@ console.log('One Piece poster proxy test passed: image response is ' + imageByte
 const episodeSamples = [
   'https://one-piece.com/img/anime/story/img_story_001.jpg',
   'https://www.vodanime.com/media/one-piece-episode-6-thumbnail-3419070.jpg?v=1787086569',
-  'https://image.idn.media/one-piece/episode-1180.jpg'
+  'https://image.idn.media/post/20260928/asasadqwadaqwd_7c4ba1d5-9169-4c9a-b684-bffbe4346f26.jpg'
 ];
 for (const source of episodeSamples) {
   const episodeUrl = projectUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(source);
