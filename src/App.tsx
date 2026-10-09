@@ -578,7 +578,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster)){poster=String(fallback?.url||'').trim();chosen=fallback as any;}
      if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster))continue;
      reserved.add(poster);
-     const sourceNote='FRAME_ARC_ARTWORK='+(chosen?.artworkSource||chosen?.kind||'related-episode-still')+'; representative episode '+String(chosen?.episodeNumber||'')+': '+String(chosen?.episodeTitle||chosen?.title||arc.title)+(chosen?.sourceUrl?'; '+chosen.sourceUrl:'');
+     const isDedicatedArcArtwork=chosen?.kind==='arc-artwork'||String(chosen?.artworkSource||'').toLowerCase().includes('arc-specific');
+     const sourceNote='FRAME_ARC_ARTWORK='+(chosen?.artworkSource||chosen?.kind||'related-episode-still')+(isDedicatedArcArtwork?'; dedicated artwork for '+arc.title:'; representative episode '+String(chosen?.episodeNumber||'')+': '+String(chosen?.episodeTitle||chosen?.title||arc.title))+(chosen?.sourceUrl?'; '+chosen.sourceUrl:'');
      updates.set(arc.id,{...arc,poster,backdrop:String(chosen?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\n\n')});
     }
     if(!updates.size){
