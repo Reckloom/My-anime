@@ -34,4 +34,15 @@ assert.ok(urls.every(Boolean), 'One or more arc results had no poster URL.');
 assert.equal(new Set(urls).size, urls.length, 'Arc artwork returned duplicate poster URLs.');
 const wikiCount = urls.filter(url => url.startsWith('https://static.wikia.nocookie.net/onepiece/images/')).length;
 assert.equal(wikiCount, arcs.length, 'Expected dedicated One Piece Wiki arc artwork for all four test arcs; received ' + wikiCount + '/4. Results: ' + JSON.stringify(result));
+const samplePoster = 'https://static.wikia.nocookie.net/onepiece/images/5/5a/Orange_Town_Arc.png/revision/latest/scale-to-width-down/1000?cb=20130206004236';
+const proxiedImageUrl = projectUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(samplePoster);
+const imageResponse = await fetch(proxiedImageUrl, {
+  headers: { apikey: publishableKey, Authorization: 'Bearer ' + publishableKey },
+  signal: AbortSignal.timeout(45000)
+});
+assert.equal(imageResponse.status, 200, 'Poster image proxy returned HTTP ' + imageResponse.status + '.');
+assert.match(imageResponse.headers.get('content-type') || '', /^image\//i, 'Poster proxy did not return an image MIME type.');
+const imageBytes = await imageResponse.arrayBuffer();
+assert.ok(imageBytes.byteLength > 1000, 'Poster proxy returned an empty or suspiciously small image (' + imageBytes.byteLength + ' bytes).');
+console.log('One Piece poster proxy test passed: image response is ' + imageBytes.byteLength + ' bytes (' + imageResponse.headers.get('content-type') + ').');
 console.log('One Piece arc artwork integration test passed: ' + posters.length + ' arcs, ' + new Set(urls).size + ' unique posters, ' + wikiCount + ' dedicated arc artworks.');
