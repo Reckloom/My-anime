@@ -31,4 +31,4 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install chromium
       - name: Run browser smoke tests
-        run: npx playwright test
+        run: npx playwright test --project=chromium --max-failures=1
