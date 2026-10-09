@@ -241,10 +241,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const buildOnePieceHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
   const root=normalise({...rawRoot,
-   description:[rawRoot.description,'Follow the Grand Line through canon arc groups and individual episodes. Episode titles, air dates and ratings are refreshed from Jikan / MyAnimeList where available.'].filter(Boolean).join('\\n\\n'),
+   description:[rawRoot.description,'Follow the Grand Line through canon arc groups and individual episodes. Episode titles, air dates and ratings are refreshed from Jikan / MyAnimeList where available.'].filter(Boolean).join('\n\n'),
    availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/']},
    externalLinks:{...(rawRoot.externalLinks||{}),officialUrl:'https://one-piece.com/anime/',newsUrl:'https://one-piece.com/news/',malId:'21'},
-   notes:[rawRoot.notes,'Official site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Netflix catalogue: https://www.netflix.com/title/80107103','News: https://one-piece.com/news/','Episode metadata: Jikan / MyAnimeList. Episode still images are not consistently provided, so the series poster is used as fallback.'].filter(Boolean).join('\\n\\n')
+   notes:[rawRoot.notes,'Official site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Netflix catalogue: https://www.netflix.com/title/80107103','News: https://one-piece.com/news/','Episode metadata: Jikan / MyAnimeList. Episode still images are not consistently provided, so the series poster is used as fallback.'].filter(Boolean).join('\n\n')
   });
   const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page=1');
   if(!response.ok)throw new Error('The One Piece episode catalogue is temporarily unavailable.');
@@ -307,8 +307,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
-  if(item.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(item.title.trim())){
-   const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
+  if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
+   const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
    if(existing)return await buildOnePieceHierarchy(existing,true);
    setAppMessage('Loading One Piece arcs and episode catalogue…');
    try{return await buildOnePieceHierarchy(item)}catch(error){setAppMessage('Could not load One Piece episodes: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
@@ -319,7 +319,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  useEffect(()=>{
   if(!user?.id||!cloudLibraryReady||!items.length)return;
-  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
+  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
   if(!root||onePieceAutoRef.current===user.id+':'+root.id)return;
   const children=items.filter(x=>x.parentId===root.id);
   const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'));
