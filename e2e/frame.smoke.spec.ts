@@ -287,6 +287,7 @@ test.describe('FRAME detail navigation and scroll', () => {
     const drawer = page.locator('.detail-overlay .detail-drawer');
     await drawer.evaluate((el) => { el.scrollTop = el.scrollHeight; });
     const before = await drawer.evaluate((el) => el.scrollTop);
+    const originalArcCount = await drawer.locator('.hierarchy-part-card').count();
     expect(before).toBeGreaterThan(0);
 
     await page.locator('.hierarchy-part-card').filter({ hasText: 'Arc 18' }).click();
@@ -295,6 +296,10 @@ test.describe('FRAME detail navigation and scroll', () => {
 
     await page.getByRole('button', { name: 'Go back', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'One Piece', exact: true })).toBeVisible();
-    await expect.poll(() => drawer.evaluate((el) => el.scrollTop)).toBe(before);
+    await expect.poll(() => drawer.locator('.hierarchy-part-card').count()).toBe(originalArcCount);
+    // If the restored layout has a smaller scroll range, the browser clamps to
+    // its maximum. Assert that Back restores as far as the current drawer allows.
+    const maximumRestoredScroll = await drawer.evaluate((el) => el.scrollHeight - el.clientHeight);
+    await expect.poll(() => drawer.evaluate((el) => el.scrollTop)).toBe(Math.min(before, maximumRestoredScroll));
   });
 });
