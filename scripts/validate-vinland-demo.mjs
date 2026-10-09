@@ -1,22 +1,28 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
-const source = readFileSync(new URL('../src/data/vinlandSagaDemo.ts', import.meta.url), 'utf8');
-const sectionOne = source.split('const seasonTwo:EpisodeRow[]=[')[0].split('const seasonOne:EpisodeRow[]=[')[1];
-const sectionTwo = source.split('const seasonTwo:EpisodeRow[]=[')[1].split('];')[0];
-const countRows = text => (text.match(/\{title:/g) || []).length;
-const countSummaries = text => (text.match(/^\s*\{title:.*summary:/gm) || []).length;
+const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
+const themes = [
+  'cinematic-archive',
+  'midnight-glass',
+  'clean-editorial',
+  'full-screen-epic',
+  'collectors-archive',
+  'modern-media-hub',
+];
 
-assert.equal(countRows(sectionOne), 24, 'Season 1 should have 24 episodes');
-assert.equal(countRows(sectionTwo), 24, 'Season 2 should have 24 episodes');
-assert.equal(countSummaries(sectionOne), 24, 'Every Season 1 episode should have a synopsis');
-assert.equal(countSummaries(sectionTwo), 24, 'Every Season 2 episode should have a synopsis');
-assert.match(source, /return \[root,s1,s2,\.\.\.seasonOne\.map/);
-assert.match(source, /imdbEpisodeUrl:'https:\/\/www\.imdb\.com\/title\/tt10233448\/episodes\/\?season='\+seasonNumber/);
-assert.match(source, /source:'IMDb episode-rating average \(computed from listed episode scores\)'/);
+assert.doesNotMatch(app, /Vinland Saga|vinlandSagaDemo|vinland-feature|seedVinlandDemo/i,
+  'The retired Vinland Saga demo must not be part of the app');
+assert.match(app, /dataset\.frameTheme=theme/, 'Selected theme must be applied to the document');
+assert.match(app, /setTheme\(id\);void persistSetting\('theme',id\)/,
+  'Theme picker must apply and persist the selected theme');
+assert.equal((app.match(/from\('user_preferences'\)\.select\('\*'\)\.eq\('user_id',user\.id\)\.maybeSingle\(\)/g) || []).length, 1,
+  'User preferences should only be loaded once to avoid stale settings overwriting changes');
 
-const scores = [...source.matchAll(/\{title:[^\n]*?rating:([0-9.]+)/g)].map(match => Number(match[1]));
-assert.equal(scores.length, 48, 'Should contain exactly 48 episode ratings');
-assert.ok(scores.every(score => score >= 0 && score <= 10), 'Episode ratings must be between 0 and 10');
+for (const theme of themes) {
+  assert.ok(app.includes(theme), `Theme picker is missing ${theme}`);
+  assert.ok(css.includes(`data-frame-theme="${theme}"`), `Theme styles are missing ${theme}`);
+}
 
-console.log('Vinland Saga fixture checks passed: 24 episodes per season, 48 ratings, 48 synopses, IMDb links present.');
+console.log('FRAME appearance checks passed: Vinland demo removed, six themes styled, theme changes applied/persisted, no duplicate preference reload.');
