@@ -188,11 +188,11 @@ async function runRadar(admin:any){
               dedupe_key:'release:available:'+row.anilist_id+':'+episode
             });
             animeReleases++;
-          }else if(airing>now&&airing<=now+24*3600&&episode>row.progress){
+          }else if(airing>now&&airing<=to&&episode>row.progress){
             notices.push({
               user_id:userId,type:'release',
               title:titleOf(s.media||m)+' · Episode '+episode,
-              body:'A tracked episode is scheduled within 24 hours.',
+              body:'A tracked episode is scheduled for '+new Date(airing*1000).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})+'.',
               href:'radar',
               dedupe_key:'release:upcoming:'+row.anilist_id+':'+episode
             });
@@ -243,17 +243,26 @@ async function runRadar(admin:any){
     }
   }
 
+  const {data:preferenceRows,error:preferenceError}=await admin.from('user_preferences').select('user_id,release_notifications_enabled').in('user_id',[...users.keys()]);
+  if(preferenceError)throw preferenceError;
+  const globalEnabled=new Map<string,boolean>((preferenceRows||[]).map((p:any)=>[String(p.user_id),p.release_notifications_enabled!==false]));
+  const perMediaEnabled=new Map<string,boolean>(tracked.map((r:any)=>[String(r.user_id)+':'+String(r.anilist_id),r.data?.frameReleaseRadar?.enabled!==false]));
+  const deliverableNotices=notices.filter((n:any)=>{
+    if(globalEnabled.get(String(n.user_id))===false)return false;
+    const match=String(n.dedupe_key||'').match(/^(?:update:(?:score|count)|release:(?:chapter|available|upcoming|related)):(\d+):/);
+    return !match||perMediaEnabled.get(String(n.user_id)+':'+match[1])!==false;
+  });
   let inserted=0;
-  if(notices.length){
-    for(let i=0;i<notices.length;i+=200){
+  if(deliverableNotices.length){
+    for(let i=0;i<deliverableNotices.length;i+=200){
       const {data,error}=await admin.from('frame_notifications')
-        .upsert(notices.slice(i,i+200),{onConflict:'user_id,dedupe_key',ignoreDuplicates:true})
+        .upsert(deliverableNotices.slice(i,i+200),{onConflict:'user_id,dedupe_key',ignoreDuplicates:true})
         .select('id');
       if(error)throw error;
       inserted+=(data||[]).length;
     }
   }
-  return {users:users.size,checked:tracked.length,notifications:inserted,animeReleases,related,chapters,metadataUpdates};
+  return {users:users.size,checked:tracked.length,notifications:inserted,animeReleases,related,chapters,metadataUpdates,notificationsEnabled:deliverableNotices.length};
 }
 
 export default {

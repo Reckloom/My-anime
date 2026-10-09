@@ -288,7 +288,7 @@ function externalToMedia(r:DiscoveryResult):MediaItem{
 export function AniListSearch({close,onImported,onManual,initialQuery='',guest=false,library=[]}:{close:()=>void;onImported:(item:MediaItem)=>void|Promise<void|boolean>;onManual?:()=>void;initialQuery?:string;guest?:boolean;library?:MediaItem[]}){
  const[tab,setTab]=useState<Tab>('anime'),[query,setQuery]=useState(initialQuery),[results,setResults]=useState<(AniListMedia|DiscoveryResult)[]>([]),[selected,setSelected]=useState<AniListMedia|DiscoveryResult|null>(null);
  const[loading,setLoading]=useState(false),[detailLoading,setDetailLoading]=useState(false),[importing,setImporting]=useState(false),[added,setAdded]=useState(false),[error,setError]=useState('');
- const[status,setStatus]=useState<MediaItem['status']>('planned'),[progress,setProgress]=useState(0),[total,setTotal]=useState(0),[personalRating,setPersonalRating]=useState<number|undefined>(undefined),[favorite,setFavorite]=useState(false),[notes,setNotes]=useState(''),[parentId,setParentId]=useState('');
+ const[status,setStatus]=useState<MediaItem['status']>('planned'),[progress,setProgress]=useState(0),[total,setTotal]=useState(0),[personalRating,setPersonalRating]=useState<number|undefined>(undefined),[favorite,setFavorite]=useState(false),[notes,setNotes]=useState(''),[parentId,setParentId]=useState(''),[notificationsEnabled,setNotificationsEnabled]=useState(true);
  const current=tabs.find(x=>x.id===tab)!;
  const isAni=tab==='anime'||tab==='manga';
  const catalogType:CatalogType=tab==='anime'?'ANIME':'MANGA';
@@ -323,6 +323,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
   setPersonalRating(undefined);
   setFavorite(false);
   setNotes('');
+  setNotificationsEnabled(true);
   setParentId('');
  },[selected,isAni]);
 
@@ -351,7 +352,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
    const resolvedTotal=total>0?Math.min(2000,total):(base.total||undefined);
    const resolvedMax=base.medium==='movie'?1:(base.medium==='game'||base.medium==='visual-novel'?100:(resolvedTotal||2000));
    const resolvedProgress=Math.max(0,Math.min(resolvedMax,status==='completed'&&resolvedTotal?resolvedTotal:progress));
-   const candidate={...base,status,progress:resolvedProgress,total:resolvedTotal,customTotal:total>0?resolvedTotal:base.customTotal,personalRating,favorite,notes:notes.trim()||undefined,parentId:parentId||undefined};
+   const candidate={...base,status,progress:resolvedProgress,total:resolvedTotal,customTotal:total>0?resolvedTotal:base.customTotal,personalRating,favorite,notes:notes.trim()||undefined,parentId:parentId||undefined,notificationsEnabled};
    const result=await onImported(candidate);
    if(result!==false)setAdded(true);
    else setError('This title is already in your library.');
@@ -411,6 +412,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
        <label>Your rating<input type="number" min="0" max="10" step=".1" value={personalRating??''} placeholder="0–10" onChange={e=>setPersonalRating(e.target.value===''?undefined:Math.max(0,Math.min(10,Number(e.target.value)||0)))} /></label>
        <label>Parent entry<select value={parentId} onChange={e=>setParentId(e.target.value)}><option value="">None — top level</option>{parentOptions.map(x=><option key={x.id} value={x.id}>{x.parentId?'↳ ':''}{x.title}</option>)}</select></label>
        <label>Favorite<select value={favorite?'yes':'no'} onChange={e=>setFavorite(e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label>
+       <label className="release-notifications-option"><input type="checkbox" checked={notificationsEnabled} onChange={e=>setNotificationsEnabled(e.target.checked)}/><span><b>Enable notifications for this media</b><small>Upcoming episodes, release announcements and AniList metadata changes. You can change this later in your library.</small></span></label>
        <label className="finder-add-details-wide">Notes<textarea rows={3} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything you want to remember about this entry…" /></label>
       </div>
      </section>

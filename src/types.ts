@@ -35,5 +35,7 @@ export interface MediaItem{
  genres:string[]; themes:string[]; studio?:string; source?:string; season?:string; duration?:number;
  airStart?:string; airEnd?:string; favorite:boolean; notes?:string; nextRelease?:string; nextReleaseNumber?:number;
  availability?:MediaAvailability;
+ notificationsEnabled?:boolean;
+ releaseRadarState?:Record<string,unknown>;
  game?:GameDetails;
 }

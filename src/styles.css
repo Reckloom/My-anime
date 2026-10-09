@@ -2717,3 +2717,7 @@ button,a{color:inherit}
 .detail-modal .detail-poster{display:block!important}
 .detail-modal .detail-main{padding-top:0!important}
 @media(max-width:760px){.detail-modal .detail-body{margin-top:0!important;grid-template-columns:90px minmax(0,1fr)!important}.detail-modal .detail-poster{display:block!important;width:90px;height:135px}}
+
+
+/* Release notification controls */
+.release-notifications-option{display:flex;align-items:flex-start;gap:12px;padding:14px 15px;border:1px solid var(--line,rgba(127,127,127,.22));border-radius:16px;background:var(--surface-2,rgba(127,127,127,.06));cursor:pointer;grid-column:1/-1}.release-notifications-option input{width:18px;height:18px;min-width:18px;margin:2px 0 0;accent-color:var(--accent,#7c6cff)}.release-notifications-option span{display:grid;gap:4px}.release-notifications-option b{font-size:.9rem}.release-notifications-option small{font-size:.78rem;line-height:1.45;opacity:.72}.release-notifications-setting{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 0}.release-notifications-setting-copy{display:grid;gap:5px}.release-notifications-setting-copy b{font-size:.98rem}.release-notifications-setting-copy small{max-width:680px;line-height:1.5;opacity:.72}.release-notifications-setting input{width:20px;height:20px;accent-color:var(--accent,#7c6cff)}

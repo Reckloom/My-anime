@@ -7,7 +7,7 @@ type Filter='all'|'release'|'update';
 
 export function FrameNotifications({uid,onNavigate}:{uid:string;onNavigate:(href?:string|null)=>void}){
  const[open,setOpen]=useState(false),[items,setItems]=useState<Notice[]>([]),[filter,setFilter]=useState<Filter>('all'),[error,setError]=useState('');
- const load=async()=>{if(!supabase||uid==='guest')return;const {data,error:e}=await supabase.from('frame_notifications').select('*').eq('user_id',uid).order('created_at',{ascending:false}).limit(60);if(e){setError('Notifications could not be loaded.');return}setError('');if(data)setItems(data as Notice[])};
+ const load=async()=>{if(!supabase||uid==='guest')return;const {data,error:e}=await supabase.from('frame_notifications').select('*').eq('user_id',uid).order('created_at',{ascending:false}).limit(200);if(e){setError('Notifications could not be loaded.');return}setError('');if(data)setItems(data as Notice[])};
  useEffect(()=>{void load()},[uid]);
  useEffect(()=>{if(!supabase||uid==='guest')return;const ch=supabase.channel('frame-notifications:'+uid).on('postgres_changes',{event:'*',schema:'public',table:'frame_notifications',filter:'user_id=eq.'+uid},()=>void load()).subscribe();return()=>{void supabase?.removeChannel(ch)}},[uid]);
  const unread=useMemo(()=>items.filter(x=>!x.read_at).length,[items]);
