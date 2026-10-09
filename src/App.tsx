@@ -277,7 +277,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   return operation;
  };
 
- const buildNarutoHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
+ const buildNarutoHierarchy=async(rawRoot:MediaItem)=>{
   const rootId=rawRoot.id;
   const originalId='naruto-part-original-'+rootId;
   const shippudenId='naruto-part-shippuden-'+rootId;
@@ -575,7 +575,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const item=normalise(raw);
   if(item.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(item.title.trim())){
    const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(x.title.trim()));
-   try{return await buildNarutoHierarchy(existing||item,Boolean(existing))}catch(error){setAppMessage('Could not load Naruto hierarchy: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
+   try{return await buildNarutoHierarchy(existing||item)}catch(error){setAppMessage('Could not load Naruto hierarchy: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
   }
   if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
    const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
@@ -596,7 +596,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const key=root.id+':'+parts.length;
   if(narutoAutoRef.current===key||narutoAutoRef.current===root.id+':ready')return;
   narutoAutoRef.current=key;
-  void buildNarutoHierarchy(root,true).then(ok=>{if(!ok)narutoAutoRef.current=''}).catch(error=>{narutoAutoRef.current='';console.warn('[FRAME Naruto hierarchy]',error)});
+  void buildNarutoHierarchy(root).then(ok=>{if(!ok)narutoAutoRef.current=''}).catch(error=>{narutoAutoRef.current='';console.warn('[FRAME Naruto hierarchy]',error)});
  },[cloudLibraryReady,items]);
  useEffect(()=>{
   if(!user?.id||!cloudLibraryReady||!items.length||!supabase)return;
