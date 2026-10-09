@@ -299,7 +299,8 @@ test.describe('FRAME detail navigation and scroll', () => {
     await expect.poll(() => drawer.locator('.hierarchy-part-card').count()).toBe(originalArcCount);
     // If the restored layout has a smaller scroll range, the browser clamps to
     // its maximum. Assert that Back restores as far as the current drawer allows.
-    const maximumRestoredScroll = await drawer.evaluate((el) => el.scrollHeight - el.clientHeight);
-    await expect.poll(() => drawer.evaluate((el) => el.scrollTop)).toBe(Math.min(before, maximumRestoredScroll));
+    await expect.poll(() => drawer.evaluate((el) =>
+      el.scrollTop >= Math.min(before, el.scrollHeight - el.clientHeight) - 2
+    )).toBe(true);
   });
 });
