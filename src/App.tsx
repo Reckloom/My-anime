@@ -104,7 +104,11 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
   const index=merged.findIndex(x=>sameMedia(x,incoming));
   if(index<0){merged.push(incoming);continue}
   const current=merged[index];
-  merged[index]=normalise({...current,id:current.id,parentId:incoming.parentId??current.parentId,metadataId:current.metadataId??incoming.metadataId,status:incoming.status||current.status,progress:incoming.progress??current.progress,total:incoming.total??current.total,customTotal:incoming.customTotal??current.customTotal,personalRating:incoming.personalRating??current.personalRating,favorite:incoming.favorite??current.favorite,notes:incoming.notes??current.notes});
+  // One Piece episode-to-arc assignments are database-authoritative. Older
+  // browser caches can hold stale parent links and make entire arcs look empty.
+  const isOnePieceEpisode=String(current.externalId||current.id).startsWith('one-piece-episode-');
+  const mergedParentId=isOnePieceEpisode?(current.parentId??incoming.parentId):(incoming.parentId??current.parentId);
+  merged[index]=normalise({...current,id:current.id,parentId:mergedParentId,metadataId:current.metadataId??incoming.metadataId,status:incoming.status||current.status,progress:incoming.progress??current.progress,total:incoming.total??current.total,customTotal:incoming.customTotal??current.customTotal,personalRating:incoming.personalRating??current.personalRating,favorite:incoming.favorite??current.favorite,notes:incoming.notes??current.notes});
  }
  return dedupeMediaItems(merged);
 }
