@@ -20,6 +20,15 @@ const svgFallback=(title:string,medium:Medium)=>{
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 async function resolve(p:Props):Promise<string>{
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
+ if(isNarutoHierarchy(p)){
+  if(p.parentTitle&&p.parentMedium)return await resolve({title:p.parentTitle,medium:p.parentMedium,poster:p.parentPoster,anilistId:p.parentAnilistId});
+  return p.parentPoster||svgFallback(p.title,p.medium);
+ }
+ if(isHierarchyNode(p)){
+  if(p.poster)return p.poster;
+  if(p.parentTitle&&p.parentMedium)return await resolve({title:p.parentTitle,medium:p.parentMedium,poster:p.parentPoster,anilistId:p.parentAnilistId});
+  return p.parentPoster||svgFallback(p.title,p.medium);
+ }
  if(!isSeriesMedia)return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  const type=p.medium==='anime'?'ANIME':'MANGA';
  const key=p.anilistId?'id:'+p.anilistId:type+':'+normal(p.title);
@@ -38,12 +47,7 @@ async function resolve(p:Props):Promise<string>{
    const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
   if(image&&media?.type===type&&titleMatches)return image;
   }catch{/* external metadata can be unavailable */}
-  if(isNarutoHierarchy(p)){
-   if(p.parentTitle&&p.parentMedium)return await resolve({title:p.parentTitle,medium:p.parentMedium,poster:p.parentPoster,anilistId:p.parentAnilistId});
-   return p.parentPoster||svgFallback(p.title,p.medium);
-  }
-  if(isHierarchyNode(p))return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
-  if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
+  if(isSeriesMedia)return p.parentPoster||svgFallback(p.title,p.medium);
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  })();
  cache.set(key,request);
