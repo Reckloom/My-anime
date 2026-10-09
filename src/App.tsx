@@ -528,7 +528,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
   const hasOnlyCanonEpisodes=episodeChildren.length>0&&episodeChildren.every(x=>{const match=String(x.externalId||'').match(/^one-piece-episode-(\d+)$/);return Boolean(match&&isOnePieceCanonEpisodeNumber(Number(match[1])));});
   const expectedCanonEpisodes=onePieceExpectedCanonCount(1180);
-  const hasMeaningfulEpisodeTitles=episodeChildren.every(x=>{const number=Number(String(x.externalId||'').match(/^one-piece-episode-(\\d+)$/)?.[1]);return Boolean(x.title.trim())&&!new RegExp('^episode\\\\s*'+number+'
+  const hasMeaningfulEpisodeTitles=episodeChildren.every(x=>Boolean(x.title.trim())&&!/^episode\s*\d+$/i.test(x.title.trim()));
+  const hasRealHierarchy=children.some(x=>String(x.externalId||'').startsWith('one-piece-arc-'))&&hasOnlyCanonEpisodes&&hasMeaningfulEpisodeTitles&&root.total===1180&&root.progress===1180&&root.status==='completed'&&episodeChildren.length>=Math.floor(expectedCanonEpisodes*0.97);
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
   void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
