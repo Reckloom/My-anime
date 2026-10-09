@@ -288,13 +288,15 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(ungrouped.length){
    const arcId='one-piece-arc-other';
    created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other episodes',description:'Catalogue episodes outside the predefined arc ranges, including filler, recap and specials where listed.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted; episode classification can differ between guides.'});
-   for(const e of ungrouped)created.push(makeOnePieceEpisode(e,{name:'Other canon episodes',start:0,end:0},arcs.length+1,arcId,root));
+   for(const e of ungrouped)created.push(makeOnePieceEpisode(e,{name:'Other episodes',start:0,end:0},arcs.length+1,arcId,root));
   }
   const descendantIds=new Set<string>([rootId]);
   let changed=true;
   while(changed){changed=false;for(const item of items){if(item.parentId&&descendantIds.has(item.parentId)&&!descendantIds.has(item.id)){descendantIds.add(item.id);changed=true}}}
   const remaining=items.filter(x=>!descendantIds.has(x.id));
-  const ok=await save([...created,...remaining]);
+  const existingByExternalId=new Map(items.filter(x=>x.sourceProvider==='jikan'&&x.externalId).map(x=>[String(x.externalId),x]));
+  const reconciled=created.map(next=>{const prior=next.externalId?existingByExternalId.get(String(next.externalId)):undefined;if(!prior)return next;return {...next,progress:Math.min(prior.progress,next.total??prior.total??0),status:prior.status,personalRating:prior.personalRating??next.personalRating,favorite:prior.favorite,notes:prior.notes??next.notes,customTotal:prior.customTotal??next.customTotal}});
+  const ok=await save([...reconciled,...remaining]);
   if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(created[0])}
   return ok;
  };
