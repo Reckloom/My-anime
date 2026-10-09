@@ -294,7 +294,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   let changed=true;
   while(changed){changed=false;for(const item of items){if(item.parentId&&descendantIds.has(item.parentId)&&!descendantIds.has(item.id)){descendantIds.add(item.id);changed=true}}}
   const remaining=items.filter(x=>!descendantIds.has(x.id));
-  const existingByExternalId=new Map(items.filter(x=>x.sourceProvider==='jikan'&&x.externalId).map(x=>[String(x.externalId),x]));
+  const existingByExternalId=new Map(items.filter(x=>x.sourceProvider==='jikan'&&x.externalId).map(x=>[String(x.externalId),x] as const));
   const reconciled=created.map(next=>{const prior=next.externalId?existingByExternalId.get(String(next.externalId)):undefined;if(!prior)return next;return {...next,progress:Math.min(prior.progress,next.total??prior.total??0),status:prior.status,personalRating:prior.personalRating??next.personalRating,favorite:prior.favorite,notes:prior.notes??next.notes,customTotal:prior.customTotal??next.customTotal}});
   const ok=await save([...reconciled,...remaining]);
   if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(created[0])}
