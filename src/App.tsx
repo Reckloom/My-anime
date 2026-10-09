@@ -252,7 +252,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const episodes:Array<any>=[...(first.data||[])];
   const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
   for(let page=2;page<=pages;page++){
-   await new Promise(resolve=>window.setTimeout(resolve,420));
+   await new Promise(resolve=>window.setTimeout(resolve,1100));
    const next=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
    if(!next.ok)throw new Error('The catalogue stopped responding on page '+page+'.');
    const payload=await next.json() as {data?:Array<any>};
@@ -281,13 +281,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const arcEpisodes=included.filter((e:any)=>Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
    if(!arcEpisodes.length)continue;
    const arcId=crypto.randomUUID();
-   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' canon-catalogue episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Arc grouping uses a practical episode-range guide; filler and recap entries are excluded.'});
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'Episodes are grouped by the commonly used story-arc episode ranges. Some filler, recap and special episodes may fall into the Other episodes group.'});
    for(const e of arcEpisodes){assigned.add(Number(e.mal_id));created.push(makeOnePieceEpisode(e,arc, index+1,arcId,root));}
   }
   const ungrouped=included.filter((e:any)=>!assigned.has(Number(e.mal_id)));
   if(ungrouped.length){
    const arcId=crypto.randomUUID();
-   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other canon episodes',description:'Canon-catalogue episodes outside the predefined arc ranges.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted.'});
+   created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-other',title:'Other episodes',description:'Catalogue episodes outside the predefined arc ranges, including filler, recap and specials where listed.',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres,themes:root.themes,favorite:false,notes:'Grouped here rather than silently omitted; episode classification can differ between guides.'});
    for(const e of ungrouped)created.push(makeOnePieceEpisode(e,{name:'Other canon episodes',start:0,end:0},arcs.length+1,arcId,root));
   }
   const descendantIds=new Set<string>([rootId]);
@@ -295,7 +295,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   while(changed){changed=false;for(const item of items){if(item.parentId&&descendantIds.has(item.parentId)&&!descendantIds.has(item.id)){descendantIds.add(item.id);changed=true}}}
   const remaining=items.filter(x=>!descendantIds.has(x.id));
   const ok=await save([...created,...remaining]);
-  if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(root)}
+  if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(created[0])}
   return ok;
  };
  const makeOnePieceEpisode=(e:any,arc:{name:string;start:number;end:number},arcNumber:number,parentId:string,root:MediaItem):MediaItem=>{
