@@ -27,6 +27,8 @@ test.describe('FRAME core smoke flow', () => {
 
     await page.getByLabel('Title').fill('FRAME QA Test Title');
     await page.getByRole('button', { name: 'Add to my library' }).click();
+    // Adding a title opens its detail overlay; close it before navigating to Library.
+    await page.keyboard.press('Escape');
 
     await navigatePrimary(page, 'Library');
     await expect(page.getByText('FRAME QA Test Title', { exact: true })).toBeVisible();
@@ -39,6 +41,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: /manual/i }).click();
     await page.getByLabel('Title').fill('FRAME Guest Persistence Test');
     await page.getByRole('button', { name: 'Add to my library' }).click();
+    await page.keyboard.press('Escape');
     await navigatePrimary(page, 'Library');
     await expect(page.getByText('FRAME Guest Persistence Test', { exact: true })).toBeVisible();
 
