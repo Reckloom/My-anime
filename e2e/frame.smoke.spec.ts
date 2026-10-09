@@ -182,3 +182,36 @@ test.describe('FRAME quick actions', () => {
     await expect(page.getByTitle('Call')).toBeVisible();
   });
 });
+
+
+test.describe('FRAME anime episode catalogue', () => {
+  test('shows episodes on the main AniList anime entry and saves watched progress', async ({ page }) => {
+    await page.route('https://api.jikan.moe/v4/anime/21/episodes*', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [{ mal_id: 1, title: 'Romance Dawn', aired: '1999-10-20', filler: false, recap: false }],
+        pagination: { last_visible_page: 1, has_next_page: false }
+      })
+    }));
+    await page.route('https://api.jikan.moe/v4/anime?q=*', route => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: [{ mal_id: 21, title: 'One Piece', title_english: 'One Piece', title_japanese: 'ワンピース', episodes: 1 }] })
+    }));
+
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+    await page.getByLabel('Search media').fill('One Piece');
+    const result = page.getByRole('button', { name: /One Piece/ }).first();
+    await expect(result).toBeVisible({ timeout: 15000 });
+    await result.click();
+    await expect(page.getByRole('button', { name: 'Add with these details' })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: 'Add with these details' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Mark through' }).click();
+    await expect(page.getByText('Watched', { exact: true })).toBeVisible();
+  });
+});
