@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, CircleAlert, LoaderCircle, Play, RefreshCw } from 'lucide-react';
 import type { AniListMedia } from '../anilist';
 import { aniList, cleanDescription, titleOf } from '../anilist';
@@ -112,7 +112,7 @@ const queryAniList = async (query: string, variables: Record<string, unknown>) =
 
 function excludedTitle(task: Task, title: string) {
   const t = normalizeText(title);
-  if (!t || /\b(rec ap|recap|summary|digest|compilation)\b/.test(t)) return true;
+  if (!t || /\b(recap|summary|digest|compilation)\b/.test(t)) return true;
   if (task.key === 'dragon-ball') {
     if (/^dragon ball gt\b/.test(t) || /^dragon ball daima\b/.test(t)) return true;
     // Kai is an alternate recut of Z, not an additional story to count twice.
@@ -126,6 +126,7 @@ function isEligibleRelation(task: Task, edge: { relationType?: string; node?: Ca
   const node = edge.node;
   if (!node || node.type !== 'ANIME' || !Number(node.id) || !ALLOWED_RELATIONS.has(String(edge.relationType || ''))) return false;
   if (!ALLOWED_FORMATS.has(String(node.format || ''))) return false;
+  if (String(node.status || '') === 'NOT_YET_RELEASED') return false;
   if (excludedTitle(task, preferredTitle(node))) return false;
   return true;
 }
@@ -336,7 +337,7 @@ function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: 
   if (existing) return existing.id;
   if (isRoot) return rootId;
   const scope = userId.replace(/-/g, '').slice(0, 12);
-  return 'frame-anime-' + task.key + '-part-' + Number(media.id) + '-' + scope;
+  return 'frame-anime-media-' + Number(media.id) + '-' + scope;
 }
 
 function mapMediaItem(media: CatalogueMedia, opts: {
@@ -436,7 +437,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
 
   const rootExisting = library.find(x => !x.parentId && x.medium === 'anime' && (x.anilistId === Number(rootDetails.id) || titleVariants(rootDetails).includes(normalizeText(x.title))));
   const scope = userId.replace(/-/g, '').slice(0, 12);
-  const rootId = rootExisting?.id || ('frame-anime-' + task.key + '-main-' + Number(rootDetails.id) + '-' + scope);
+  const rootId = rootExisting?.id || ('frame-anime-media-' + Number(rootDetails.id) + '-' + scope);
   const itemIds = new Map<number, string>();
   for (let index = 0; index < chosen.length; index++) {
     const media = chosen[index];
@@ -475,7 +476,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
         const episodeId = existingEpisode?.id || ('frame-anime-episode-' + Number(media.id) + '-' + episode.number + '-' + scope);
         const code = 'EP ' + pad(episode.number);
         const episodeMeta: EpisodeMetadata = {
-          seasonNumber: Number(media.seasonYear) > 0 ? Number(media.seasonYear) : 1,
+          seasonNumber: 1,
           episodeNumber: episode.number,
           episodeCode: code,
           airDate: episode.airDate,
@@ -525,7 +526,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     rootRow.customTotal = rootRow.total;
     rootRow.progress = rootRow.total;
     rootRow.status = allFinished ? 'completed' : (rootRow.total > 0 ? 'watching' : 'planned');
-    rootRow.description = clean(rootDetails.description) + '\n\nFranchise catalogue: ' + chosen.length + ' related animated entries; ' + franchiseEpisodes + ' titled released episodes were retrieved.';
+    rootRow.description = clean(rootDetails.description);
   }
   const missingPosterTitles = chosen.filter(media => !String(media.coverImage?.extraLarge || '').trim()).map(preferredTitle);
   if (missingPosterTitles.length) warnings.push('Cover artwork unavailable from AniList for: ' + missingPosterTitles.join(', ') + '.');
@@ -553,15 +554,18 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
   const [running, setRunning] = useState(false);
   const [current, setCurrent] = useState('');
   const [processed, setProcessed] = useState(0);
-  const [completedKeys, setCompletedKeys] = useState<string[]>(() => {
-    if (!userId) return [];
+  const storedProgress = useState<StoredProgress>(() => {
+    if (!userId) return { completedKeys: [], warnings: {} };
     try {
       const raw = localStorage.getItem('frame-anime-catalogue:v1:' + userId);
       const parsed = raw ? JSON.parse(raw) as StoredProgress : null;
-      return Array.isArray(parsed?.completedKeys) ? parsed!.completedKeys : [];
-    } catch { return []; }
-  });
-  const [warningsByTask, setWarningsByTask] = useState<Record<string, string[]>>({});
+      return parsed && Array.isArray(parsed.completedKeys) ? { completedKeys: parsed.completedKeys, warnings: parsed.warnings || {}, updatedAt: parsed.updatedAt } : { completedKeys: [], warnings: {} };
+    } catch { return { completedKeys: [], warnings: {} }; }
+  })[0];
+  const [completedKeys, setCompletedKeys] = useState<string[]>(storedProgress.completedKeys);
+  const [warningsByTask, setWarningsByTask] = useState<Record<string, string[]>>(storedProgress.warnings);
+  const libraryRef = useRef<MediaItem[]>(library);
+  useEffect(() => { libraryRef.current = library; }, [library]);
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState('');
 
@@ -599,9 +603,20 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
         setCurrent(task.title);
         addLog('Starting ' + task.title + '…');
         try {
-          const built = await buildTask(task, userId, library, message => setCurrent(task.title + ' · ' + message));
+          const built = await buildTask(task, userId, libraryRef.current, message => setCurrent(task.title + ' · ' + message));
           const saved = await onImportBatch(built.items);
           if (!saved) throw new Error('FRAME could not save this batch. Existing entries were left in place; resume to retry.');
+          const localRows = [...libraryRef.current];
+          for (const imported of built.items) {
+            const match = localRows.findIndex(existing =>
+              Boolean(imported.anilistId && existing.anilistId === imported.anilistId && existing.medium === imported.medium) ||
+              Boolean(imported.sourceProvider && imported.externalId && existing.sourceProvider === imported.sourceProvider && existing.externalId === imported.externalId) ||
+              existing.id === imported.id
+            );
+            if (match < 0) localRows.push(imported);
+            else localRows[match] = { ...localRows[match], ...imported, id: localRows[match].id, parentId: imported.parentId === undefined && imported.sourceProvider === 'frame-anime-catalogue' ? undefined : (imported.parentId ?? localRows[match].parentId) };
+          }
+          libraryRef.current = localRows;
           warningMap[task.key] = built.warnings;
           setWarningsByTask({ ...warningMap });
           const hasVerificationWarning = built.warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing/i.test(w));
