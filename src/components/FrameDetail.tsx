@@ -47,10 +47,10 @@ function hierarchyPartOrder(item:MediaItem){
  return (season?Number(season[1])*100:10000)+(part?Number(part[1])*10:0)+(cour?Number(cour[1]):0);
 }
 function compareHierarchyParts(a:MediaItem,b:MediaItem){
- const arcStart=(item:MediaItem)=>{const match=String(item.externalId||'').match(/^one-piece-arc-(\\d+|other)$/);return match?(match[1]==='other'?Number.POSITIVE_INFINITY:Number(match[1])):null};
+ const arcStart=(item:MediaItem)=>{const match=String(item.externalId||'').match(/^one-piece-arc-(\d+|other)$/);return match?(match[1]==='other'?Number.POSITIVE_INFINITY:Number(match[1])):null};
  const aArc=arcStart(a),bArc=arcStart(b);
  if(aArc!==null&&bArc!==null&&aArc!==bArc)return aArc-bArc;
- const aEpisode=String(a.externalId||'').match(/^one-piece-episode-(\\d+)$/),bEpisode=String(b.externalId||'').match(/^one-piece-episode-(\\d+)$/);
+ const aEpisode=String(a.externalId||'').match(/^one-piece-episode-(\d+)$/),bEpisode=String(b.externalId||'').match(/^one-piece-episode-(\d+)$/);
  if(aEpisode&&bEpisode)return Number(aEpisode[1])-Number(bEpisode[1]);
  const ao=hierarchyPartOrder(a),bo=hierarchyPartOrder(b);
  if(ao!==bo)return ao-bo;
