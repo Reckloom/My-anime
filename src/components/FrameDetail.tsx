@@ -88,7 +88,22 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  };
  const goBack=()=>{
   const previous=navigationHistory.current.pop();
-  if(previous&&navigate){pendingScrollRestore.current=previous;navigate(previous.item);return}
+  if(previous&&navigate){
+   pendingScrollRestore.current=previous;
+   navigate(previous.item);
+   // A final post-commit restore covers browsers that reflow the drawer after
+   // the item-change effect has already run.
+   window.setTimeout(()=>{
+    const overlay=document.querySelector<HTMLElement>('.detail-overlay');
+    const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
+    const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
+    if(overlay)overlay.scrollTop=Math.min(previous.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
+    if(drawer)drawer.scrollTop=Math.min(previous.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
+    if(body)body.scrollTop=Math.min(previous.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
+    window.scrollTo(0,previous.pageScrollTop);
+   },120);
+   return;
+  }
   if(item.parentId){const parent=library.find(x=>x.id===item.parentId);if(parent&&navigate){navigate(parent);return}}
   close();
  };
