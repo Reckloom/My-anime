@@ -395,20 +395,27 @@ async function onePieceArcPosterCatalogue(id:string,rawArcs:any[]){
     })).filter((e:any)=>e.absoluteEpisode>0)
   })).filter((arc:any)=>arc.id&&arc.candidates.length);
 
-  const series=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
-  const seasons=(Array.isArray(series?.seasons)?series.seasons:[])
-    .filter((s:any)=>Number(s?.season_number)>=0&&Number(s?.episode_count)>0)
-    .sort((a:any,b:any)=>{
-      const an=Number(a.season_number),bn=Number(b.season_number);
-      return (an===0?9999:an)-(bn===0?9999:bn);
+  let seasonRanges:{seasonNumber:number;start:number;end:number}[]=[];
+  try{
+    const series=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
+    const seasons=(Array.isArray(series?.seasons)?series.seasons:[])
+      .filter((s:any)=>Number(s?.season_number)>=0&&Number(s?.episode_count)>0)
+      .sort((a:any,b:any)=>{
+        const an=Number(a.season_number),bn=Number(b.season_number);
+        return (an===0?9999:an)-(bn===0?9999:bn);
+      });
+    let cursor=0;
+    seasonRanges=seasons.map((season:any)=>{
+      const count=Number(season.episode_count)||0;
+      const range={seasonNumber:Number(season.season_number),start:cursor+1,end:cursor+count};
+      cursor+=count;
+      return range;
     });
-  let cursor=0;
-  const seasonRanges=seasons.map((season:any)=>{
-    const count=Number(season.episode_count)||0;
-    const range={seasonNumber:Number(season.season_number),start:cursor+1,end:cursor+count};
-    cursor+=count;
-    return range;
-  });
+  }catch(error){
+    // If TMDB is temporarily unavailable or not configured, preserve the local
+    // distinct-image fallback rather than failing the entire refresh request.
+    console.warn('[FRAME One Piece TMDB season map]',error);
+  }
   const locateEpisode=(absoluteEpisode:number)=>{
     const range=seasonRanges.find((s:any)=>absoluteEpisode>=s.start&&absoluteEpisode<=s.end);
     return range?{seasonNumber:range.seasonNumber,episodeNumber:absoluteEpisode-range.start+1}:null;
