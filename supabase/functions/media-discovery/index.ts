@@ -693,7 +693,8 @@ Deno.serve(async(req:Request)=>{
       provider:url.searchParams.get('provider')||'',
       query:url.searchParams.get('query')||'',
       externalId:url.searchParams.get('externalId')||'',
-      source:url.searchParams.get('source')||''
+      source:url.searchParams.get('source')||'',
+      url:url.searchParams.get('url')||''
     };
   }else if(req.method==='POST'){
     try{body=await req.json()}catch{return response({error:'Invalid JSON request.'},400)}
@@ -702,6 +703,39 @@ Deno.serve(async(req:Request)=>{
   try{
     const action=String(body?.action||'search');
     const provider=String(body?.provider||'');
+
+    if(action==='proxy-image'){
+      const rawUrl=String(body?.url||'').trim();
+      let source:URL;
+      try{source=new URL(rawUrl)}catch{return new Response('Invalid image URL.',{status:400,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}})}
+      if(source.protocol!=='https:'||source.hostname!=='static.wikia.nocookie.net'||!source.pathname.startsWith('/onepiece/images/')){
+        return new Response('Image host is not allowed.',{status:403,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
+      }
+      const cacheHeaders={...HEADERS,'Cache-Control':'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400','X-Content-Type-Options':'nosniff'};
+      let imageResponse:Response|undefined;
+      try{
+        imageResponse=await fetch(source.href,{headers:{
+          Accept:'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          Referer:'https://onepiece.fandom.com/',
+          'User-Agent':'Mozilla/5.0 (compatible; FRAME artwork proxy)'
+        },redirect:'follow'});
+      }catch(error){console.warn('[FRAME poster proxy upstream]',error)}
+      if(!imageResponse?.ok||!String(imageResponse.headers.get('content-type')||'').toLowerCase().startsWith('image/')){
+        // Some image hosts reject direct hotlinking. Retry through the public
+        // image transformer, but still validate that the result is an image.
+        try{
+          const proxyUrl='https://images.weserv.nl/?url='+encodeURIComponent(source.host+source.pathname+source.search);
+          const fallback=await fetch(proxyUrl,{headers:{Accept:'image/*','User-Agent':'Mozilla/5.0 (compatible; FRAME artwork proxy)'},redirect:'follow'});
+          if(fallback.ok&&String(fallback.headers.get('content-type')||'').toLowerCase().startsWith('image/'))imageResponse=fallback;
+        }catch(error){console.warn('[FRAME poster proxy fallback]',error)}
+      }
+      const contentType=String(imageResponse?.headers.get('content-type')||'').toLowerCase();
+      if(!imageResponse?.ok||!contentType.startsWith('image/')){
+        return new Response('Poster source could not deliver an image.',{status:502,headers:{...cacheHeaders,'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'}});
+      }
+      return new Response(imageResponse.body,{status:200,headers:{...cacheHeaders,'Content-Type':contentType}});
+    }
+
     if(!(['game','series','movie','book','visual-novel'].includes(provider)))return response({error:'Unsupported provider.'},400);
 
     if(action==='arc-posters'&&provider==='series'&&String(body?.source||'')==='tmdb-tv'){
