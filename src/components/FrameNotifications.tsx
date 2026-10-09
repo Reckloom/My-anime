@@ -21,7 +21,7 @@ export function FrameNotifications({uid,onNavigate,mediaItems=[]}:{uid:string;on
   let hops=0;
   while(linked?.parentId&&hops<100){linked=mediaItems.find(m=>m.id===linked?.parentId);hops++}
   if(linked)return linked.title.trim().toLocaleLowerCase();
-  const title=(n.title.split(/\\s+[·|—-]\\s+(?:episode|chapter|volume|part|season|new release|update)\\b/i)[0]||n.title).trim()||'Other notifications';
+  const title=(n.title.split(/\s+[·|—-]\s+(?:episode|chapter|volume|part|season|new release|update)\b/i)[0]||n.title).trim()||'Other notifications';
   const normalized=title.toLocaleLowerCase();
   const match=roots.find(m=>normalized===m.title.toLocaleLowerCase()||(m.alternativeTitles||[]).some(t=>t.toLocaleLowerCase()===normalized));
   return match?match.title.trim().toLocaleLowerCase():normalized;
@@ -31,7 +31,7 @@ export function FrameNotifications({uid,onNavigate,mediaItems=[]}:{uid:string;on
   const roots=mediaItems.filter(m=>!m.parentId);
   for(const media of roots){const key=media.title.trim().toLocaleLowerCase();map.set(key,{key,title:media.title,items:[],unread:0})}
   for(const n of items){
-   const title=(n.title.split(/\\s+[·|—-]\\s+(?:episode|chapter|volume|part|season|new release|update)\\b/i)[0]||n.title).trim()||'Other notifications';
+   const title=(n.title.split(/\s+[·|—-]\s+(?:episode|chapter|volume|part|season|new release|update)\b/i)[0]||n.title).trim()||'Other notifications';
    const key=groupKeyForNotice(n);
    const linkedId=n.href?.startsWith('media:')?n.href.slice(6):'';
    let linked=linkedId?mediaItems.find(m=>m.id===linkedId):undefined;
