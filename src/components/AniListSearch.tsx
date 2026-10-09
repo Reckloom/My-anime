@@ -91,7 +91,7 @@ function fromImportedRow(row:unknown):MediaItem{
    externalId:data.externalId?String(data.externalId):(r.anilist_id?String(r.anilist_id):undefined),title:String(value('title')??''),
    alternativeTitles:Array.isArray(meta.alternative_titles)?meta.alternative_titles.map(String):[],description:String(value('description')??''),
    poster:String(value('poster')??''),backdrop:String(value('backdrop')??''),medium:String(r.medium) as Medium,status:String(r.status) as MediaItem['status'],
-   progress:Number(r.progress??0),total:value('episodes')==null?(r.total==null?undefined:Number(r.total)):Number(value('episodes')),
+   progress:Number(r.progress??0),total:data.customTotal==null?(r.total==null?(value('episodes')==null?undefined:Number(value('episodes'))):Number(r.total)):Number(data.customTotal),
    year:value('year')==null?undefined:Number(value('year')),score:value('score')==null?undefined:Number(value('score')),
    genres:Array.isArray(value('genres'))?(value('genres') as unknown[]).map(String):[],themes:Array.isArray(value('themes'))?(value('themes') as unknown[]).map(String):[],
    studio:value('studio')?String(value('studio')):undefined,source:value('source')?String(value('source')):undefined,
