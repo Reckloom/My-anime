@@ -148,6 +148,15 @@ Deno.serve(async req=>{
         .update({total:latestReleased,updated_at:nowIso})
         .eq('parent_id',item.id)
         .eq('user_id',item.user_id);
+      // Make meaningful catalogue changes visible in FRAME's Updates tab.
+      await admin.from('frame_notifications').insert({
+        user_id:item.user_id,
+        type:'update',
+        title:item.title+' · Episode total updated',
+        body:'AniList now lists '+latestReleased+' aired episodes. FRAME updated this title and its episode sub-entry automatically.',
+        href:'media:'+item.id,
+        dedupe_key:'catalogue-total:'+item.anilist_id+':'+latestReleased
+      },{onConflict:'user_id,dedupe_key',ignoreDuplicates:true});
     }
   }
 
