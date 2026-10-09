@@ -28,7 +28,8 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByLabel('Title').fill('FRAME QA Test Title');
     await page.getByRole('button', { name: 'Add to my library' }).click();
 
-    await expect(page.getByRole('heading', { name: 'FRAME QA Test Title', exact: true })).toBeVisible();
+    await navigatePrimary(page, 'Library');
+    await expect(page.getByText('FRAME QA Test Title', { exact: true })).toBeVisible();
   });
 
   test('persists guest library changes across reloads', async ({ page }) => {
@@ -38,7 +39,8 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: /manual/i }).click();
     await page.getByLabel('Title').fill('FRAME Guest Persistence Test');
     await page.getByRole('button', { name: 'Add to my library' }).click();
-    await expect(page.getByRole('heading', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
+    await navigatePrimary(page, 'Library');
+    await expect(page.getByText('FRAME Guest Persistence Test', { exact: true })).toBeVisible();
 
     await page.reload();
     await navigatePrimary(page,'Library');
@@ -61,7 +63,7 @@ test.describe('FRAME core smoke flow', () => {
 
   test('makes Discover shortcuts useful', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Find media' }).click();
+    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
     await expect(page.getByText('Find anything for FRAME')).toBeVisible();
     await page.keyboard.press('Escape');
     await navigatePrimary(page,'Discover');
