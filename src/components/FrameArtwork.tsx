@@ -8,7 +8,8 @@ type Props={
 };
 const cache=new Map<string,Promise<string>>();
 const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const isEpisodeOrArc=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'')||/one-piece-(?:arc|episode)-/i.test(p.externalId||'');
+const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
+const isHierarchyNode=(p:Props)=>isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'');
 const svgFallback=(title:string,medium:Medium)=>{
  const hash=[...title].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,7);
  const hue=hash%360,second=(hue+62)%360;
@@ -34,12 +35,14 @@ async function resolve(p:Props):Promise<string>{
     if(response.ok){const json=await response.json() as {data?:{Page?:{media?:AniListMedia[]}}};const results=json.data?.Page?.media||[];const target=normal(p.title);media=results.find(m=>[m.title.english,m.title.romaji,m.title.native,m.title.userPreferred,...(m.synonyms||[])].some(v=>v&&normal(v)===target));}
    }
    const image=media?.coverImage?.extraLarge;
-   if(image&&media?.type===type)return image;
+   const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
+  if(image&&media?.type===type&&titleMatches)return image;
   }catch{/* external metadata can be unavailable */}
-  if(isEpisodeOrArc(p)){
+  if(isNarutoHierarchy(p)){
    if(p.parentTitle&&p.parentMedium)return await resolve({title:p.parentTitle,medium:p.parentMedium,poster:p.parentPoster,anilistId:p.parentAnilistId});
    return p.parentPoster||svgFallback(p.title,p.medium);
   }
+  if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  })();
  cache.set(key,request);
@@ -51,7 +54,7 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
   const parent=library.find(x=>x.id===current.parentId);
   if(!parent)break;
   current=parent;
-  if(!isEpisodeOrArc({sourceProvider:current.sourceProvider,externalId:current.externalId,title:current.title,medium:current.medium}))return current;
+  if(!isHierarchyNode({sourceProvider:current.sourceProvider,externalId:current.externalId,title:current.title,medium:current.medium}))return current;
  }
  return current;
 }
