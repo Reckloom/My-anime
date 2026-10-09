@@ -382,6 +382,43 @@ async function onePieceEpisodeCatalogue(id:string){
   };
 }
 
+async function onePieceArcPosterCatalogue(id:string,rawArcs:any[]){
+  const catalogue=await onePieceEpisodeCatalogue(id);
+  const byAbsolute=new Map<number,any>((catalogue.episodes||[]).map((e:any)=>[Number(e.absoluteEpisode),e]));
+  const ranges=(Array.isArray(rawArcs)?rawArcs:[]).map((a:any)=>({
+    id:String(a?.id||''),
+    start:Math.max(1,Math.min(1180,Number(a?.start)||1)),
+    end:Math.max(1,Math.min(1180,Number(a?.end)||1))
+  })).filter((a:any)=>a.id&&a.end>=a.start);
+  const usedPaths=new Set<string>();
+  const output:Record<string,{poster:string;backdrop:string;episodeNumber:number;episodeTitle:string;sourceUrl:string}>={};
+  for(let offset=0;offset<ranges.length;offset+=4){
+    const batch=ranges.slice(offset,offset+4);
+    await Promise.all(batch.map(async(arc:any)=>{
+      const midpoint=Math.floor((arc.start+arc.end)/2);
+      const candidates=Array.from({length:arc.end-arc.start+1},(_,i)=>byAbsolute.get(arc.start+i)).filter(Boolean)
+        .sort((a:any,b:any)=>Math.abs(Number(a.absoluteEpisode)-midpoint)-Math.abs(Number(b.absoluteEpisode)-midpoint))
+        .slice(0,3);
+      for(const episode of candidates){
+        try{
+          const url='https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'/season/'+encodeURIComponent(String(episode.seasonNumber))+'/episode/'+encodeURIComponent(String(episode.episodeNumber))+'/images';
+          const data=await getJson(url,tmdbHeaders());
+          const primary=String(episode.poster||'').split('/w500').pop()||'';
+          const stills=(Array.isArray(data?.stills)?data.stills:[]).filter((x:any)=>String(x?.file_path||'').trim()&&String(x.file_path)!==primary)
+            .sort((a:any,b:any)=>Number(b.vote_average||0)-Number(a.vote_average||0)||Number(b.width||0)-Number(a.width||0));
+          const still=stills.find((x:any)=>!usedPaths.has(String(x.file_path)));
+          if(!still)continue;
+          const path=String(still.file_path);
+          usedPaths.add(path);
+          output[arc.id]={poster:tmdbImage(path,'w500'),backdrop:tmdbImage(path,'original'),episodeNumber:Number(episode.absoluteEpisode),episodeTitle:String(episode.title||''),sourceUrl:'https://www.themoviedb.org/tv/'+id+'/season/'+Number(episode.seasonNumber)+'/episode/'+Number(episode.episodeNumber)};
+          break;
+        }catch(error){console.warn('[FRAME One Piece arc still]',arc.id,episode.absoluteEpisode,error)}
+      }
+    }));
+  }
+  return {source:'TMDB episode alternative stills',count:Object.keys(output).length,posters:output};
+}
+
 async function detailTmdbSeries(id:string){
   const data=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
   const seasons=Array.isArray(data?.seasons)?data.seasons.reduce((n:number,x:any)=>n+Number(x?.episode_count||0),0):undefined;
@@ -647,6 +684,10 @@ Deno.serve(async(req:Request)=>{
     const action=String(body?.action||'search');
     const provider=String(body?.provider||'');
     if(!(['game','series','movie','book','visual-novel'].includes(provider)))return response({error:'Unsupported provider.'},400);
+
+    if(action==='arc-posters'&&provider==='series'&&String(body?.source||'')==='tmdb-tv'){
+      return response(await onePieceArcPosterCatalogue(String(body?.externalId||'37854'),body?.arcs));
+    }
 
     if(action==='episodes'&&provider==='series'&&String(body?.source||'')==='tmdb-tv'){
       return response(await onePieceEpisodeCatalogue(String(body?.externalId||'37854')));
