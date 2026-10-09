@@ -278,7 +278,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
 
 
- const buildNarutoHierarchy=async(rawRoot:MediaItem)=>{
+ const buildNarutoHierarchy=async(rawRoot:MediaItem,openAfterSave=false)=>{
   setAppMessage('Building the Naruto and Naruto Shippuden episode catalogue…');
   const rootId=rawRoot.id;
   const originalId='naruto-part-original-'+rootId;
@@ -457,7 +457,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    narutoAutoRef.current=rootId+':ready';
    setAppMessage('Naruto library ready: 2 subparts, '+(originalArcs.length+shippudenArcs.length)+' story groups and 720 numbered episode entries.');
    window.setTimeout(()=>setAppMessage(''),8000);
-   setSelected(root);
+   if(openAfterSave)setSelected(root);
   }
   return ok;
  };
@@ -707,7 +707,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const item=normalise(raw);
   if(item.medium==='anime'&&/^naruto$/i.test(item.title.trim())){
    const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
-   try{return await buildNarutoHierarchy(existing||item)}catch(error){setAppMessage('Could not load Naruto hierarchy: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
+   try{return await buildNarutoHierarchy(existing||item,true)}catch(error){setAppMessage('Could not load Naruto hierarchy: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
   }
   if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
    const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
