@@ -219,6 +219,10 @@ test.describe('FRAME anime episode catalogue', () => {
     console.log('Episode QA: Episodes heading visible');
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
     console.log('Episode QA: episode row visible; mark buttons =', await page.getByRole('button', { name: 'Mark through' }).count());
+    await page.locator('.detail-modal').evaluate(modal => {
+      const panel = modal.querySelector('.frame-episode-list') as HTMLElement | null;
+      if (panel) modal.scrollTop = Math.max(0, panel.offsetTop - 20);
+    });
     await page.getByRole('button', { name: 'Mark through' }).evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'auto' }));
     await page.getByRole('button', { name: 'Mark through' }).click({timeout:5000});
     console.log('Episode QA: clicked mark-through');
