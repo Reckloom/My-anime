@@ -6,7 +6,7 @@ const seasonOne:EpisodeRow[]=[
  {title:'Sword',rating:8.2,date:'2019-07-08',summary:"Jomsvikings arrive in Thorfinn's village and demand that Thors return to war.",summary:'Jomsvikings arrive in Thorfinn’s village and pressure Thors to return to battle.'},
  {title:'Troll',rating:8.6,date:'2019-07-08',summary:"Askeladd accepts Floki's order to kill Thors as Thors and his young crew set sail.",summary:'Askeladd accepts a mission against Thors as Thorfinn joins the voyage.'},
  {title:'A True Warrior',rating:9.6,date:'2019-07-29',summary:"Askeladd's pirates surround the ships, forcing Thors to act to protect his crew and son.",summary:'Surrounded by pirates, Thors acts to protect his crew and son.'},
- {title:"The Troll's Son",rating:8.5,date:'2019-08-05'},
+ {title:"The Troll's Son",rating:8.5,date:'2019-08-05',summary:"Thorfinn pursues revenge while Leif carries news back to Thorfinn's family."},
  {title:'The Journey Begins',rating:9.4,date:'2019-08-12',summary:"After his first battle, Thorfinn is wounded and cared for by an English woman and her daughter."},
  {title:'Normanni',rating:8.7,date:'2019-08-19',summary:"Askeladd joins a Frankish conflict for treasure and sends Thorfinn to negotiate."},
  {title:'Beyond the Edge of the Sea',rating:8.4,date:'2019-08-26',summary:"After a raid, Thorfinn challenges Askeladd to a duel but finds himself outmatched."},
@@ -29,7 +29,7 @@ const seasonOne:EpisodeRow[]=[
 ];
 const seasonTwo:EpisodeRow[]=[
  {title:'Slave',rating:8.7,date:'2023-01-10',summary:"Einar's peaceful life is shattered by a Viking raid, sending him into slavery."},
- {title:"Ketil's Farm",rating:7.8,date:'2023-01-16'},
+ {title:"Ketil's Farm",rating:7.8,date:'2023-01-16',summary:"Thorfinn and Einar begin slave labour on Ketil's farm and meet the people who live there."},
  {title:'Snake',rating:8.4,date:'2023-01-23',summary:"Thorfinn is threatened by men claiming to be warriors, bringing him into conflict with Snake."},
  {title:'Awakening',rating:8.8,date:'2023-01-30',summary:"Einar challenges Thorfinn to confront the meaning of his past and his words."},
  {title:'The Path of Blood',rating:8.5,date:'2023-02-06',summary:"Canute must take responsibility for a weakened kingdom under attack."},
@@ -46,7 +46,7 @@ const seasonTwo:EpisodeRow[]=[
  {title:'Cause',rating:9.2,date:'2023-04-24',summary:"Thorfinn and Einar find Arnheid and decide to help her and Gardar escape."},
  {title:'Way Home',rating:9.5,date:'2023-05-01',summary:"Thorfinn breaks his oath to protect Gardar from Snake when circumstances leave him no alternative."},
  {title:'The First Measure',rating:9.0,date:'2023-05-08',summary:"Ketil returns to the farm and learns what has happened as Canute's forces approach."},
- {title:'War at Ketil’s Farm',rating:8.7,date:'2023-05-15'},
+ {title:'War at Ketil’s Farm',rating:8.7,date:'2023-05-15',summary:"Ketil gathers men to defend the farm while Thorfinn and his companions try to leave."},
  {title:'Pain',rating:9.6,date:'2023-05-22',summary:"As Thorfinn and Einar plan their escape, Arnheid wakes and asks whether another land can be free of war."},
  {title:'Courage',rating:8.9,date:'2023-05-29',summary:"After the battle, Canute demands surrender even as others want to continue fighting."},
  {title:'The King of Rebellion',rating:9.7,date:'2023-06-05',summary:"Thorfinn endures a punishing challenge to earn a conversation with Canute."},
