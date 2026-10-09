@@ -73,9 +73,22 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const[d,setD]=useState(item),[note,setNote]=useState(item.notes||''),[refreshing,setRefreshing]=useState(false),[refreshMessage,setRefreshMessage]=useState('');
  const[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[saveMessage,setSaveMessage]=useState('');
  const[hierarchyQuery,setHierarchyQuery]=useState('');
- const navigationHistory=useRef<MediaItem[]>([]);
- const openRelated=(next:MediaItem)=>{if(next.id!==item.id)navigationHistory.current.push(item);navigate?.(next)};
- const goBack=()=>{const previous=navigationHistory.current.pop();if(previous&&navigate){navigate(previous);return}if(item.parentId){const parent=library.find(x=>x.id===item.parentId);if(parent&&navigate){navigate(parent);return}}close()};
+ const navigationHistory=useRef<Array<{item:MediaItem;drawerScrollTop:number;bodyScrollTop:number}>>([]);
+ const pendingScrollRestore=useRef<{item:MediaItem;drawerScrollTop:number;bodyScrollTop:number}|null>(null);
+ const openRelated=(next:MediaItem)=>{
+  if(next.id!==item.id){
+   const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
+   const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
+   navigationHistory.current.push({item,drawerScrollTop:drawer?.scrollTop||0,bodyScrollTop:body?.scrollTop||0});
+  }
+  navigate?.(next);
+ };
+ const goBack=()=>{
+  const previous=navigationHistory.current.pop();
+  if(previous&&navigate){pendingScrollRestore.current=previous;navigate(previous.item);return}
+  if(item.parentId){const parent=library.find(x=>x.id===item.parentId);if(parent&&navigate){navigate(parent);return}}
+  close();
+ };
  const game=d.medium==='game',movie=d.medium==='movie';
  const max=game?100:movie?1:(d.total||500);
  const pct=game||movie?d.progress:(d.progress/(d.total||1)*100);
@@ -85,7 +98,20 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
   while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=library.find(x=>x.id===cursor?.parentId);hops++}
   return true;
  };
- useEffect(()=>{setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');const drawer=document.querySelector('.detail-overlay .detail-drawer');if(drawer)drawer.scrollTop=0;const body=document.querySelector('.detail-overlay .detail-body');if(body)body.scrollTop=0},[item.id]);
+ useEffect(()=>{
+  setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
+  const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
+  const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
+  const restore=pendingScrollRestore.current;
+  if(restore&&restore.item.id===item.id){
+   if(drawer)drawer.scrollTop=restore.drawerScrollTop;
+   if(body)body.scrollTop=restore.bodyScrollTop;
+   pendingScrollRestore.current=null;
+  }else{
+   if(drawer)drawer.scrollTop=0;
+   if(body)body.scrollTop=0;
+  }
+ },[item.id]);
  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[]);
  const progress=(n:number)=>setD(game?{...d,progress:n,game:d.game?{...d.game,storyProgress:n}:undefined}:{...d,progress:Math.max(0,Math.min(max,n))});
  const setTotal=(value:number)=>{const n=Math.max(1,Math.min(2000,value||1));setD({...d,total:n,customTotal:n,progress:Math.min(d.progress,n)})};
