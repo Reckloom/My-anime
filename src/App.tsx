@@ -469,7 +469,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const official=String(onePiecePosterCatalogueRef.current[String(Number(episode?.mal_id))]||'').trim();
     // Reserve archive artwork only when that same episode also has a separate
     // episode still available, so the episode never loses its own poster.
-    return [still?official:'',still,String(episode?.images?.jpg?.large_image_url||'').trim()];
+    return [still?official:'',still];
    }).filter((url:string,index:number,all:string[])=>Boolean(url)&&url!==root.poster&&all.indexOf(url)===index&&!usedEpisodePosterUrls.has(url));
    const arcPoster=arcCandidates[0]||root.poster;
    if(arcPoster!==root.poster)usedEpisodePosterUrls.add(arcPoster);
@@ -512,15 +512,14 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const synopsis=cleanDescription(String(e.synopsis||''))||'Synopsis not supplied by the catalogue.';
   const officialStill=String(onePiecePosterCatalogueRef.current[String(epNo)]||'').trim();
   const episodeStill=String(e.images?.jpg?.image_url||'').trim();
-  const episodeLargeStill=String(e.images?.jpg?.large_image_url||'').trim();
-  const posterCandidates=[episodeStill,episodeLargeStill,officialStill]
+  const posterCandidates=[episodeStill,officialStill]
    .filter((url:string,index:number,all:string[])=>Boolean(url)&&url!==root.poster&&all.indexOf(url)===index);
   // Never fall back to an already-used image: a repeated poster is worse than
   // using a different episode-specific source from the catalogue.
   const poster=posterCandidates.find((url:string)=>!usedPosters.has(url))||'';
   if(poster)usedPosters.add(poster);
   const googleImageSearchUrl='https://www.google.com/search?tbm=isch&q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')+' official still');
-  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:String(epNo)+'. '+String(e.title||('Episode '+epNo)).replace(/^(?:(?:episode|ep)\s*\d+\s*[:·.—-]?\s*)+/i,'').trim(),description:synopsis,poster,backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:epNo<=1180?'completed':'planned',progress:epNo<=1180?1:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),googleImageSearchUrl,posterSource:(poster===episodeStill&&Boolean(episodeStill))||(poster===episodeLargeStill&&Boolean(episodeLargeStill))?'tmdb-episode-still':poster===officialStill&&Boolean(officialStill)?'one-piece-official-catalogue':poster?'catalogue':'missing',synopsis},externalLinks:{officialUrl:String(e.sourceUrl||'https://one-piece.com/anime/'),newsUrl:googleImageSearchUrl}};
+  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:String(epNo)+'. '+String(e.title||('Episode '+epNo)).replace(/^(?:(?:episode|ep)\s*\d+\s*[:·.—-]?\s*)+/i,'').trim(),description:synopsis,poster,backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:epNo<=1180?'completed':'planned',progress:epNo<=1180?1:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),googleImageSearchUrl,posterSource:poster===episodeStill&&Boolean(episodeStill)?'tmdb-episode-still':poster===officialStill&&Boolean(officialStill)?'one-piece-official-catalogue':poster?'catalogue':'missing',synopsis},externalLinks:{officialUrl:String(e.sourceUrl||'https://one-piece.com/anime/'),newsUrl:googleImageSearchUrl}};
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
