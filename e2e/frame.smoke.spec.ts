@@ -53,7 +53,6 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
     await page.getByRole('button', { name: /6 · Modern Media Hub/ }).click();
-    await page.getByRole('button', { name: 'Dark', exact: true }).click();
 
     await page.reload();
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
@@ -88,7 +87,6 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: /6 · Modern Media Hub/ }).click();
     await expect(page.getByText('6 · Modern Media Hub is active.', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Dark', exact: true }).click();
     await page.getByRole('combobox').last().selectOption('compact');
   });
 
