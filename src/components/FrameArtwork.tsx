@@ -42,6 +42,7 @@ async function resolve(p:Props):Promise<string>{
    if(p.parentTitle&&p.parentMedium)return await resolve({title:p.parentTitle,medium:p.parentMedium,poster:p.parentPoster,anilistId:p.parentAnilistId});
    return p.parentPoster||svgFallback(p.title,p.medium);
   }
+  if(isHierarchyNode(p))return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
   if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  })();
