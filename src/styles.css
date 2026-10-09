@@ -3254,3 +3254,59 @@ hr,.divider{border-color:var(--frame-line)!important}
 
 /* Paginated episode catalogue inside a media subpart */
 .frame-episode-list{margin-top:16px;overflow:hidden}.frame-episode-list .detail-section-head a{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;text-decoration:none}.frame-episode-list-summary{font-size:.78rem;opacity:.75;margin:4px 0 12px}.frame-episode-list-state{display:flex;align-items:center;gap:8px;padding:18px 4px;font-size:.85rem}.frame-episode-list-state.error{align-items:flex-start;flex-wrap:wrap;color:var(--danger,#dc2626)}.frame-episode-list-rows{display:grid;gap:6px}.frame-episode-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px;border:1px solid var(--line,rgba(128,128,128,.16));border-radius:12px}.frame-episode-row.watched{background:var(--surface-soft,rgba(128,128,128,.05))}.frame-episode-number{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--surface,rgba(128,128,128,.09));font-size:.78rem;font-weight:700}.frame-episode-title{min-width:0;display:grid;gap:4px}.frame-episode-title b{font-size:.8rem;overflow-wrap:anywhere}.frame-episode-title small{font-size:.7rem;opacity:.7}.frame-episode-watched{font-size:.7rem;opacity:.75}.frame-episode-mark{font-size:.7rem!important;padding:6px 8px!important;white-space:nowrap}.frame-episode-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}.frame-episode-pagination span{font-size:.76rem;opacity:.75}.frame-episode-pagination button{display:inline-flex;align-items:center;gap:4px}.frame-episode-list-foot{display:flex;align-items:flex-start;gap:6px;font-size:.68rem;opacity:.65;margin-top:12px}.detail-external-links{margin:14px 0 8px;padding:12px;border:1px solid var(--line,rgba(128,128,128,.2));border-radius:14px;background:var(--surface-soft,rgba(128,128,128,.05))}.detail-external-links .detail-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}.detail-external-links .detail-section-head h3{margin:0;font-size:.9rem}.detail-external-links .detail-section-head span{font-size:.72rem;opacity:.7}.detail-external-link-list{display:flex;flex-wrap:wrap;gap:8px}.detail-external-link-list a,.detail-external-id{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;border:1px solid var(--line,rgba(128,128,128,.2));font-size:.78rem;text-decoration:none;color:var(--text,inherit)}.detail-external-link-list a:hover{border-color:var(--accent,#8b5cf6);background:var(--surface,rgba(128,128,128,.08))}@media(max-width:480px){.frame-episode-row{grid-template-columns:30px minmax(0,1fr);gap:8px}.frame-episode-mark,.frame-episode-watched{grid-column:2;justify-self:start}.frame-episode-pagination button{font-size:.75rem}}
+
+
+/* FRAME detail readability and library card sizing — responsive override */
+.media-grid,.library-page .media-grid{
+  grid-template-columns:repeat(auto-fill,minmax(155px,190px));
+  justify-content:start;
+  gap:18px;
+}
+.media-card .media-poster{width:100%;max-width:190px}
+.media-copy b{font-size:13px}
+.media-copy small{font-size:10px}
+.personal-line{font-size:9px}
+@media(max-width:760px){
+  .detail-overlay{padding:8px!important;overflow:hidden!important;place-items:center!important}
+  .detail-modal-shell{
+    width:calc(100vw - 16px)!important;
+    height:calc(100dvh - 16px)!important;
+    max-height:calc(100dvh - 16px)!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:0!important;
+  }
+  .detail-modal{
+    width:100%!important;height:100%!important;max-height:100%!important;
+    border-radius:20px!important;min-width:0!important;
+  }
+  .detail-nav-arrow{
+    position:absolute!important;top:10px!important;z-index:14!important;
+    width:36px!important;height:36px!important;
+    background:#11131bee!important;border-color:#ffffff24!important;
+  }
+  .detail-nav-prev{left:10px!important;justify-self:auto!important}
+  .detail-nav-next{right:58px!important;justify-self:auto!important}
+  .close-btn{right:12px!important;top:10px!important;width:36px!important;height:36px!important}
+  .detail-body{
+    grid-template-columns:84px minmax(0,1fr)!important;
+    gap:13px!important;padding:0 14px 16px!important;margin-top:-22px!important;
+  }
+  .detail-poster{width:84px!important;height:126px!important}
+  .detail-main{min-width:0!important;padding-top:42px!important}
+  .detail-main h2{font-size:clamp(22px,6vw,31px)!important;line-height:1.08!important;overflow-wrap:anywhere}
+  .detail-main>p{font-size:12px!important;overflow-wrap:anywhere}
+  .detail-section{margin-inline:14px!important}
+  .detail-actions{margin-inline:14px!important;flex-wrap:wrap!important}
+  .detail-editor-grid,.detail-editor-grid .detail-editor-wide{min-width:0}
+  .detail-external-link-list a{max-width:100%;overflow-wrap:anywhere}
+}
+@media(max-width:420px){
+  .media-grid,.library-page .media-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .media-card .media-poster{max-width:none}
+  .detail-body{grid-template-columns:74px minmax(0,1fr)!important;gap:11px!important;padding-inline:12px!important}
+  .detail-poster{width:74px!important;height:111px!important}
+  .detail-main{padding-top:38px!important}
+  .detail-main h2{font-size:22px!important}
+  .detail-section{margin-inline:12px!important}
+  .detail-actions{margin-inline:12px!important}
+}
