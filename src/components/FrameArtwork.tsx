@@ -59,9 +59,15 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
  }
  return current;
 }
+function safeInitialArtwork(p:Props){
+ if(isNarutoHierarchy(p))return p.parentPoster||svgFallback(p.title,p.medium);
+ if(isHierarchyNode(p))return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
+ if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
+ return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
+}
 export function FrameArtwork(p:Props){
- const [src,setSrc]=useState(()=>p.parentPoster||p.poster||svgFallback(p.title,p.medium));
+ const [src,setSrc]=useState(()=>safeInitialArtwork(p));
  useEffect(()=>{let active=true;void resolve(p).then(value=>{if(active)setSrc(value)});return()=>{active=false}},[p.title,p.medium,p.poster,p.anilistId,p.parentPoster,p.parentTitle,p.parentMedium,p.parentAnilistId,p.sourceProvider,p.externalId]);
- const fallback=p.parentPoster||p.poster||svgFallback(p.title,p.medium);
+ const fallback=safeInitialArtwork(p);
  return <img className={p.className} src={src} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=fallback!==src?fallback:svgFallback(p.title,p.medium)}}/>;
 }
