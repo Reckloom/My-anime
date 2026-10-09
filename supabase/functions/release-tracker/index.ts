@@ -142,6 +142,13 @@ Deno.serve(async req=>{
       .update(update)
       .eq('id',item.id)
       .eq('user_id',item.user_id);
+    if(latestReleased>Number(item.total||0)){
+      // Mirror the refreshed episode count into episode subparts beneath the main entry.
+      await admin.from('media_items')
+        .update({total:latestReleased,updated_at:nowIso})
+        .eq('parent_id',item.id)
+        .eq('user_id',item.user_id);
+    }
   }
 
   let notifications=0;
