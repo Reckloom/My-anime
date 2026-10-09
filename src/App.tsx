@@ -110,6 +110,7 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
 export default function App(){
  const {user,signOut}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
  const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
+ const [cloudLibraryReady,setCloudLibraryReady]=useState(false);
  const [items,setItems]=useState<MediaItem[]>(()=>{
   try{
    const scoped=localStorage.getItem(storageKey);
@@ -147,6 +148,7 @@ export default function App(){
   if(!client||!user?.id)return;
   let active=true;
   const load=async()=>{
+   setCloudLibraryReady(false);
    const cleanStartKey=`frame-clean-start-2026-10-08:${user.id}`;
    if(!localStorage.getItem(cleanStartKey)){
     localStorage.removeItem('frame-library:guest');
@@ -166,7 +168,7 @@ export default function App(){
    const {data,error}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',user.id).order('score',{ascending:false});
    if(error){
     console.warn('[FRAME cloud library load]',error);
-    if(active){setItems([]);try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify([]))}catch{}}
+    if(active){setItems([]);setCloudLibraryReady(true);try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify([]))}catch{}}
     return;
    }
    if(active&&data){
@@ -176,7 +178,7 @@ export default function App(){
     const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
     const localOverrides=guestItems.length?mergeMediaLists(syncedLocal,guestItems):syncedLocal;
     const merged=localOverrides.length?mergeMediaLists(cloudItems,localOverrides):cloudItems;
-    setItems(merged);
+    setItems(merged);setCloudLibraryReady(true);
     try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
     // Do not auto-import the guest cache after authentication; it can contain
     // obsolete browser-only records. The account library is the source of truth.
@@ -316,7 +318,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   return await save([item,...items]);
  };
  useEffect(()=>{
-  if(!user?.id||!items.length)return;
+  if(!user?.id||!cloudLibraryReady||!items.length)return;
   const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
   if(!root||onePieceAutoRef.current===user.id+':'+root.id)return;
   const children=items.filter(x=>x.parentId===root.id);
@@ -324,7 +326,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
   void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
- },[user?.id,items]);
+ },[user?.id,cloudLibraryReady,items]);
  const addSteamGame=(game:{appId?:string;name:string;header?:string;storeUrl?:string})=>{
   if(!game.name.trim())return;
   importItem({id:crypto.randomUUID(),sourceProvider:'steam',externalId:game.appId,title:game.name,description:'Imported from your Steam library.',poster:game.header||'',backdrop:game.header||'',medium:'game',status:'planned',progress:0,total:100,progressUnit:'%',year:undefined,score:undefined,genres:[],themes:[],favorite:false,game:{storeUrl:game.storeUrl||undefined}});
