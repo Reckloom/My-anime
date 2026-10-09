@@ -185,7 +185,7 @@ test.describe('FRAME quick actions', () => {
 
 
 test.describe('FRAME anime episode catalogue', () => {
-  test('shows episodes on the main AniList anime entry and saves watched progress', async ({ page }) => {
+  test('shows episodes on an existing AniList anime entry and saves watched progress', async ({ page }) => {
     await page.route('https://api.jikan.moe/v4/anime/21/episodes*', route => route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -194,24 +194,25 @@ test.describe('FRAME anime episode catalogue', () => {
         pagination: { last_visible_page: 1, has_next_page: false }
       })
     }));
-    await page.route('https://api.jikan.moe/v4/anime?q=*', route => route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [{ mal_id: 21, title: 'One Piece', title_english: 'One Piece', title_japanese: 'ワンピース', episodes: 1 }] })
-    }));
 
     await page.goto('/');
-    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
-    await page.getByLabel('Search media').fill('One Piece');
-    const result = page.getByRole('button', { name: /One Piece/ }).first();
-    await expect(result).toBeVisible({ timeout: 15000 });
-    await result.click();
-    await expect(page.getByRole('button', { name: 'Add with these details' })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('button', { name: 'Add with these details' }).click();
+    await page.evaluate(() => {
+      localStorage.setItem('frame-guest', '1');
+      localStorage.setItem('frame-library:guest', JSON.stringify([{
+        id: 'qa-one-piece', anilistId: 21, sourceProvider: 'anilist', externalId: '21',
+        title: 'One Piece', description: 'QA fixture', poster: '/frame-logo.svg', backdrop: '',
+        medium: 'anime', status: 'watching', progress: 0, total: 1180,
+        genres: [], themes: [], favorite: false, externalLinks: { malId: '21' }
+      }]));
+    });
+    await page.reload();
+    await navigatePrimary(page, 'Library');
+    await page.getByText('One Piece', { exact: true }).click();
 
-    await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Mark through' }).click();
     await expect(page.getByText('Watched', { exact: true })).toBeVisible();
+    await expect(page.getByText('Episode progress saved.')).toBeVisible();
   });
 });
