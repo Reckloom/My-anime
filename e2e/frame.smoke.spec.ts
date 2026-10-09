@@ -219,7 +219,14 @@ test.describe('FRAME anime episode catalogue', () => {
     console.log('Episode QA: Episodes heading visible');
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
     console.log('Episode QA: episode row visible; mark buttons =', await page.getByRole('button', { name: 'Mark through' }).count());
-    await page.getByRole('button', { name: 'Mark through' }).evaluate(el => (el as HTMLButtonElement).click());
+    await page.locator('.detail-modal').evaluate(modal => {
+      const button = modal.querySelector('.frame-episode-mark') as HTMLElement | null;
+      if (!button) return;
+      const buttonRect = button.getBoundingClientRect();
+      const modalRect = modal.getBoundingClientRect();
+      modal.scrollTop += Math.max(0, buttonRect.bottom - modalRect.bottom + 30);
+    });
+    await page.getByRole('button', { name: 'Mark through' }).click({timeout:5000});
     await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
   });
 });
