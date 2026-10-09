@@ -3230,3 +3230,19 @@ hr,.divider{border-color:var(--frame-line)!important}
 :root[data-frame-theme="cinematic-archive"] .settings-theme-swatch,:root[data-frame-theme="midnight-glass"] .settings-theme-swatch,:root[data-frame-theme="clean-editorial"] .settings-theme-swatch,:root[data-frame-theme="full-screen-epic"] .settings-theme-swatch,:root[data-frame-theme="collectors-archive"] .settings-theme-swatch,:root[data-frame-theme="modern-media-hub"] .settings-theme-swatch{outline:1px solid var(--frame-line-strong);outline-offset:2px}
 :root[data-frame-theme="clean-editorial"] .settings-theme-card{color:#29211d}
 :root[data-frame-theme="clean-editorial"] .settings-theme-card p,:root[data-frame-theme="clean-editorial"] .settings-theme-card small{color:#75645a}
+
+/* Tie the palette tokens used by existing components and make theme previews truthful. */
+:root[data-frame-theme="cinematic-archive"]{--frame-panel:#111319;--frame-panel-2:#191b22;--frame-glow:#d7b56d20;--frame-accent-ink:#17130b}
+:root[data-frame-theme="midnight-glass"]{--frame-panel:#10162b;--frame-panel-2:#18213c;--frame-glow:#a78bfa28;--frame-accent-ink:#0b1020}
+:root[data-frame-theme="clean-editorial"]{--frame-panel:#fffaf2;--frame-panel-2:#efe5d7;--frame-glow:#b9533816;--frame-accent-ink:#fff7ec}
+:root[data-frame-theme="full-screen-epic"]{--frame-panel:#1b100d;--frame-panel-2:#291712;--frame-glow:#ff713b26;--frame-accent-ink:#241006}
+:root[data-frame-theme="collectors-archive"]{--frame-panel:#102019;--frame-panel-2:#183127;--frame-glow:#8bd6a426;--frame-accent-ink:#0c2116}
+:root[data-frame-theme="modern-media-hub"]{--frame-panel:#0e1c2c;--frame-panel-2:#16283c;--frame-glow:#43d9ed22;--frame-accent-ink:#071521}
+:root[data-frame-theme="cinematic-archive"] .theme-preview.cinematic-archive{background:linear-gradient(135deg,#08090d 0 45%,#d7b56d 100%)!important}
+:root[data-frame-theme="midnight-glass"] .theme-preview.midnight-glass{background:linear-gradient(135deg,#070a18 0 42%,#a78bfa 70%,#67e8f9)!important}
+:root[data-frame-theme="clean-editorial"] .theme-preview.clean-editorial{background:linear-gradient(135deg,#f6f1e8 0 42%,#b95338 100%)!important}
+:root[data-frame-theme="full-screen-epic"] .theme-preview.full-screen-epic{background:linear-gradient(135deg,#100907 0 42%,#ff713b 72%,#ffc15b)!important}
+:root[data-frame-theme="collectors-archive"] .theme-preview.collectors-archive{background:linear-gradient(135deg,#08130f 0 42%,#8bd6a4 72%,#d4e7a5)!important}
+:root[data-frame-theme="modern-media-hub"] .theme-preview.modern-media-hub{background:linear-gradient(135deg,#07111e 0 42%,#43d9ed 72%,#74aaff)!important}
+:root[data-frame-theme="clean-editorial"] .theme-choice{color:#29211d}
+:root[data-frame-theme="clean-editorial"] .theme-choice small{color:#75645a}
