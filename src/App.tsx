@@ -107,22 +107,6 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
  }
  return dedupeMediaItems(merged);
 }
-const ONE_PIECE_CANON_RANGES:Array<[number,number]>=[
- [1,44],[48,49],[52,53],[62,67],[70,92],[94,97],[100,100],[103,130],
- [144,195],[207,212],[217,219],[227,278],[284,290],[293,302],[304,316],
- [320,325],[337,353],[355,381],[385,405],[408,417],[422,425],[430,452],
- [459,488],[490,491],[493,496],[500,505],[507,519],[521,541],[543,573],
- [579,589],[591,624],[629,632],[634,652],[654,656],[658,678],[680,689],
- [691,730],[732,736],[739,746],[752,774],[776,776],[779,779],[783,788],
- [790,802],[804,806],[808,877],[880,880],[886,886],[891,894],[897,906],
- [908,923],[925,987],[990,990],[992,1028],[1031,1083],[1085,1180]
-];
-function isOnePieceCanonEpisodeNumber(number:number){
- return ONE_PIECE_CANON_RANGES.some(([start,end])=>number>=start&&number<=end);
-}
-function onePieceExpectedCanonCount(through=1180){
- return ONE_PIECE_CANON_RANGES.reduce((sum,[start,end])=>sum+Math.max(0,Math.min(end,through)-start+1),0);
-}
 export default function App(){
  const {user,signOut}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
  const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
@@ -151,6 +135,7 @@ export default function App(){
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
  const saveQueue=useRef(Promise.resolve(true));
  const onePieceAutoRef=useRef('');
+ const onePiecePosterCatalogueRef=useRef<Record<string,string>>({});
 
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
 
@@ -403,6 +388,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    try{
     const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'episode-posters',provider:'series',source:'one-piece-official'}});
     const officialPosters=data?.posters&&typeof data.posters==='object'?data.posters as Record<string,string>:{};
+    if(!error&&Object.keys(officialPosters).length===1180&&Number(data?.uniqueImages)===1180)onePiecePosterCatalogueRef.current=officialPosters;
     if(!error&&Object.keys(officialPosters).length){
      episodes=episodes.map((e:any)=>{
       const episodeNumber=Number(e.mal_id);
@@ -427,8 +413,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    }));
   }
   if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
-  // Manga-canon episodes only. Pure filler, mixed canon/filler and anime-original
-  // episodes are deliberately excluded until the user asks to include them.
+  // Include every numbered episode, including filler and anime-original episodes.
   // Build a complete episode index from 1–1180, preserving real provider metadata wherever available.
   const catalogueByNumber=new Map<number,any>();
   for(const e of episodes){const number=Number(e.mal_id);if(!Number.isInteger(number)||number<1||number>1180)continue;const prior=catalogueByNumber.get(number);if(!prior||(!String(prior.title||'').trim()&&String(e.title||'').trim()))catalogueByNumber.set(number,e);}
@@ -509,12 +494,12 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const score=Number(e.score);
   const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
   const synopsis=cleanDescription(String(e.synopsis||''))||'Synopsis not supplied by the catalogue.';
-  const cataloguePoster=String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||'').trim();
-  const officialStill=epNo>=1156&&epNo<=1180?'https://one-piece.com/img/anime/tvanime_'+epNo+'_1_2.png':'https://one-piece.com/img/anime/story/img_story_'+String(epNo).padStart(3,'0')+'.jpg';
-  const poster=cataloguePoster&&cataloguePoster!==root.poster&&!usedPosters.has(cataloguePoster)?cataloguePoster:officialStill;
+  const officialStill=String(onePiecePosterCatalogueRef.current[String(epNo)]||'').trim();
+  const cataloguePoster=String(officialStill||e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||'').trim();
+  const poster=officialStill&&officialStill!==root.poster&&!usedPosters.has(officialStill)?officialStill:(cataloguePoster&&cataloguePoster!==root.poster&&!usedPosters.has(cataloguePoster)?cataloguePoster:(cataloguePoster||root.poster));
   usedPosters.add(poster);
   const googleImageSearchUrl='https://www.google.com/search?tbm=isch&q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')+' official still');
-  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:String(epNo)+'. '+String(e.title||('Episode '+epNo)).replace(/^(?:(?:episode|ep)\s*\d+\s*[:·.—-]?\s*)+/i,'').trim(),description:synopsis,poster,backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:epNo<=1180?'completed':'planned',progress:epNo<=1180?1:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),googleImageSearchUrl,synopsis},externalLinks:{officialUrl:String(e.sourceUrl||'https://one-piece.com/anime/'),newsUrl:googleImageSearchUrl}};
+  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:String(epNo)+'. '+String(e.title||('Episode '+epNo)).replace(/^(?:(?:episode|ep)\s*\d+\s*[:·.—-]?\s*)+/i,'').trim(),description:synopsis,poster,backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:epNo<=1180?'completed':'planned',progress:epNo<=1180?1:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:e.seasonNumber==null?arcNumber:Number(e.seasonNumber),episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),googleImageSearchUrl,posterSource:officialStill?'one-piece-official-catalogue':cataloguePoster&&cataloguePoster!==root.poster?'catalogue':'fallback',synopsis},externalLinks:{officialUrl:String(e.sourceUrl||'https://one-piece.com/anime/'),newsUrl:googleImageSearchUrl}};
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
@@ -537,7 +522,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
   const episodeNumbers=new Set(episodeChildren.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1])).filter(Number.isInteger));
   const hasAllEpisodeNumbers=episodeNumbers.size===1180&&Array.from({length:1180},(_,index)=>episodeNumbers.has(index+1)).every(Boolean);
-  const hasAllEpisodesCompleted=episodeChildren.length===1180&&episodeChildren.every(x=>x.status==='completed'&&x.progress>=1&&Boolean(x.poster));
+  const hasAllEpisodesCompleted=episodeChildren.length===1180&&new Set(episodeChildren.map(x=>x.poster)).size===1180&&episodeChildren.every(x=>x.status==='completed'&&x.progress>=1&&Boolean(x.poster)&&x.episode?.posterSource==='one-piece-official-catalogue');
   const hasRealHierarchy=children.some(x=>String(x.externalId||'').startsWith('one-piece-arc-'))&&hasAllEpisodeNumbers&&hasAllEpisodesCompleted&&root.total===1180&&root.progress===1180&&root.status==='completed';
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
