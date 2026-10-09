@@ -12,8 +12,10 @@ const themes = [
   'modern-media-hub',
 ];
 
-assert.doesNotMatch(app, /Vinland Saga|vinlandSagaDemo|vinland-feature|seedVinlandDemo/i,
-  'The retired Vinland Saga demo must not be part of the app');
+assert.match(app, /importVinlandSaga/, 'Vinland Saga must be available as an explicit library import');
+assert.match(app, /Add Vinland Saga guide/, 'Home must expose the Vinland Saga import action');
+assert.match(app, /tt10233448/, 'Vinland Saga import must use its IMDb series identifier');
+assert.match(app, /VINLAND_SAGA_SEASONS/, 'Vinland Saga import must include both season episode guides');
 assert.match(app, /dataset\.frameTheme=theme/, 'Selected theme must be applied to the document');
 assert.match(app, /setTheme\(id\);void persistSetting\('theme',id\)/,
   'Theme picker must apply and persist the selected theme');
@@ -25,4 +27,4 @@ for (const theme of themes) {
   assert.ok(css.includes(`data-frame-theme="${theme}"`), `Theme styles are missing ${theme}`);
 }
 
-console.log('FRAME appearance checks passed: Vinland demo removed, six themes styled, theme changes applied/persisted, no duplicate preference reload.');
+console.log('FRAME checks passed: Vinland Saga bulk import available, six themes styled, theme changes applied/persisted, no duplicate preference reload.');
