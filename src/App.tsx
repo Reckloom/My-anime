@@ -13,7 +13,8 @@ import {FrameNotifications} from './components/FrameNotifications';
 import {FrameCommandPalette} from './components/FrameCommandPalette';
 import {FrameDataTools} from './components/FrameDataTools';
 import {FrameLibraryImport} from './components/FrameLibraryImport';
-import {aniList,DETAIL_QUERY,cleanDescription,titleOf} from './anilist';
+import {aniList,DETAIL_QUERY,SEARCH_QUERY,cleanDescription,titleOf} from './anilist';
+import {VINLAND_SAGA_IMDB_URL,VINLAND_SAGA_SEASONS} from './data/vinlandSaga';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
 
@@ -236,6 +237,34 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   saveQueue.current=operation.catch(()=>true);
   return operation;
  };
+ const importVinlandSaga=async()=>{
+  const existingRoot=items.find(x=>x.sourceProvider==='imdb'&&x.externalId==='tt10233448');
+  if(existingRoot){setAppMessage('Vinland Saga is already in your library.');window.setTimeout(()=>setAppMessage(''),3500);setSelected(existingRoot);return}
+  setAppMessage('Building Vinland Saga guide…');
+  let posterUrl=poster,backdropUrl='';
+  let anilistId:number|undefined;
+  let description='A Viking epic following Thorfinn through war, revenge, slavery, and the search for a better world.';
+  try{
+   const result=await aniList<any>(SEARCH_QUERY,{search:'Vinland Saga',page:1,perPage:10,type:'ANIME'});
+   const found=(result?.Page?.media||[]).find((m:any)=>String(m?.title?.english||m?.title?.romaji||'').toLowerCase()==='vinland saga')||(result?.Page?.media||[])[0];
+   if(found){posterUrl=found.coverImage?.extraLarge||posterUrl;backdropUrl=found.bannerImage||'';anilistId=Number(found.id)||undefined;description=cleanDescription(found.description)||description}
+  }catch{}
+  const rootId=crypto.randomUUID();
+  const root:MediaItem={id:rootId,anilistId,sourceProvider:'imdb',externalId:'tt10233448',title:'Vinland Saga',alternativeTitles:['ヴィンランド・サガ'],description,poster:posterUrl,backdrop:backdropUrl,medium:'anime',status:'planned',progress:0,total:48,year:2019,score:8.9,genres:['Action','Adventure','Drama'],themes:['Historical','Vikings'],studio:'Wit Studio / MAPPA',source:'Manga',favorite:false,notes:'Ratings are sourced from IMDb episode listings when this guide was assembled. Ratings can change over time.'};
+  const created:MediaItem[]=[root];
+  for(const season of VINLAND_SAGA_SEASONS){
+   const seasonId=crypto.randomUUID();
+   const avg=season.episodes.reduce((sum,e)=>sum+e[1],0)/season.episodes.length;
+   created.push({id:seasonId,parentId:rootId,sourceProvider:'imdb',externalId:'tt10233448-season-'+season.number,title:season.title,description:'Season '+season.number+' of Vinland Saga. Open a season to browse all 24 episodes, their IMDb ratings, and episode details.',poster:posterUrl,backdrop:backdropUrl,medium:'anime',status:'planned',progress:0,total:24,year:season.year,score:Math.round(avg*10)/10,genres:['Action','Adventure','Drama'],themes:['Historical','Vikings'],studio:season.number===1?'Wit Studio':'MAPPA',source:'Manga',season:'Season '+season.number,favorite:false,notes:'Season score shown as the average of the listed episode ratings; it is not a separate IMDb season rating.'});
+   season.episodes.forEach((episode,index)=>{
+    const episodeNumber=index+1;
+    const imdbUrl='https://www.imdb.com/title/tt10233448/episodes/?season='+season.number;
+    created.push({id:crypto.randomUUID(),parentId:seasonId,sourceProvider:'imdb',externalId:'tt10233448-s'+season.number+'e'+episodeNumber,title:'E'+String(episodeNumber).padStart(2,'0')+' · '+episode[0],description:'Vinland Saga · Season '+season.number+', Episode '+episodeNumber+'. Open the IMDb episode guide for the episode listing, images, and current details.',poster:posterUrl,backdrop:backdropUrl,medium:'anime',status:'planned',progress:0,total:1,year:season.year,score:episode[1],genres:['Action','Adventure','Drama'],themes:['Historical','Vikings'],studio:season.number===1?'Wit Studio':'MAPPA',source:'Manga',season:'Season '+season.number,favorite:false,episode:{seasonNumber:season.number,episodeNumber,episodeCode:'S'+season.number+' · E'+String(episodeNumber).padStart(2,'0'),ratingSource:'IMDb',imdbEpisodeUrl:imdbUrl,synopsis:'Episode synopsis and still image are available from the linked IMDb listing.'}});
+   });
+  }
+  const ok=await save([...created,...items]);
+  if(ok){setAppMessage('Added Vinland Saga, 2 seasons, and all 48 episodes.');window.setTimeout(()=>setAppMessage(''),5000);setSelected(root)}
+ };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
   const duplicate=items.find(x=>(item.anilistId&&x.anilistId===item.anilistId)||(item.sourceProvider&&item.externalId&&x.sourceProvider===item.sourceProvider&&x.externalId===item.externalId));
@@ -358,7 +387,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   </header>
   {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['friends','Friends'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
-   {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
+   {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} addVinlandSaga={()=>void importVinlandSaga()} go={go} name={profile?.display_name} />}
    {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
@@ -387,12 +416,12 @@ function ManualEntryForm({close,onCreate,library}:{close:()=>void;onCreate:(item
  const submit=async()=>{if(!title.trim()||busy)return;const t=total>0?Math.min(2000,total):undefined;const max=medium==='movie'?1:(medium==='game'||medium==='visual-novel'?100:(t||2000));setBusy(true);try{await onCreate({id:crypto.randomUUID(),title:title.trim(),description,poster:posterUrl.trim(),backdrop:'',medium,status,progress:status==='completed'?(t||max):Math.max(0,Math.min(max,progress)),total:t,progressUnit:units[medium],genres:[],themes:[],favorite,personalRating,notes:notes.trim()||undefined,parentId:parentId||undefined})}finally{setBusy(false)}};
  return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><aside className="detail-drawer manual-entry-drawer" onMouseDown={e=>e.stopPropagation()}><button className="close-btn" onClick={close} aria-label="Close"><X/></button><div className="manual-entry-head"><small>MANUAL ENTRY</small><h2>Add anything to FRAME.</h2><p>Use this for media that no catalogue can identify. You can edit all of it later.</p></div><div className="call-form manual-entry-form"><label>Title<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. a local series, book, game…" /></label><label>Media type<select value={medium} onChange={e=>setMedium(e.target.value as Medium)}>{Object.entries(types).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><label>Status<select value={status} onChange={e=>setStatus(e.target.value as MediaItem['status'])}>{[['planned','Planned'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['paused','Paused'],['dropped','Dropped']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><div className="manual-two-col"><label>Progress<input type="number" min="0" max="2000" value={progress} onChange={e=>setProgress(Number(e.target.value)||0)}/></label><label>Total<input type="number" min="0" max="2000" value={total||''} onChange={e=>setTotal(Number(e.target.value)||0)} placeholder="Optional" /></label></div><label>Poster URL<input value={posterUrl} onChange={e=>setPosterUrl(e.target.value)} placeholder="https://…" /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional description…" /></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={personalRating??''} onChange={e=>setPersonalRating(e.target.value===''?undefined:Number(e.target.value)||0)} /></label><label>Parent entry<select value={parentId} onChange={e=>setParentId(e.target.value)}><option value="">None — top level</option>{library.slice().sort((a,b)=>a.title.localeCompare(b.title)).map(x=><option key={x.id} value={x.id}>{x.parentId?'↳ ':''}{x.title}</option>)}</select></label><label>Favorite<select value={favorite?'yes':'no'} onChange={e=>setFavorite(e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label><label>Notes<textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything you want to remember…" /></label><button className="primary" disabled={!title.trim()||busy} onClick={()=>void submit()}>{busy?<RefreshCw size={16} className="spin"/>:<CirclePlus size={16}/>} {busy?'Adding…':'Add to my library'}</button></div></aside></div>;
 }
-function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
+function Home({items,total,open,finder,addVinlandSaga,go,name}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;addVinlandSaga:()=>void;go:(x:string)=>void;name?:string}){
  const active=items.filter(x=>['watching','reading','playing'].includes(x.status));
  const favorites=items.filter(x=>x.favorite);
  const topRated=[...items].sort((a,b)=>(b.personalRating??b.score??0)-(a.personalRating??a.score??0));
  return <div className="page home-page">
-  <section className="home-intro"><div className="home-intro-copy"><small>FRAME HOME</small><h1>{'Welcome back'+(name?', '+name:'')+'.'}</h1><p>{total?'You have '+total+' '+(total===1?'title':'titles')+' in your library.':'Your library is empty. Add your first title to get started.'}</p></div><div className="home-intro-actions"><button className="primary" onClick={finder}><Search size={16}/>Add media</button><button className="secondary" onClick={()=>go('library')}><Library size={16}/>Open library</button><button className="secondary" onClick={()=>go('calls')}><Radio size={16}/>Global Call</button></div></section>
+  <section className="home-intro"><div className="home-intro-copy"><small>FRAME HOME</small><h1>{'Welcome back'+(name?', '+name:'')+'.'}</h1><p>{total?'You have '+total+' '+(total===1?'title':'titles')+' in your library.':'Your library is empty. Add your first title to get started.'}</p></div><div className="home-intro-actions"><button className="primary" onClick={finder}><Search size={16}/>Add media</button><button className="secondary" onClick={()=>go('library')}><Library size={16}/>Open library</button><button className="secondary" onClick={addVinlandSaga}><CirclePlus size={16}/>Add Vinland Saga guide</button><button className="secondary" onClick={()=>go('calls')}><Radio size={16}/>Global Call</button></div></section>
 <section className="home-overview" aria-label="Library overview"><div><b>{total}</b><span>Library</span></div><div><b>{active.length}</b><span>In progress</span></div><div><b>{items.filter(x=>x.status==='completed').length}</b><span>Completed</span></div><div><b>{favorites.length}</b><span>Favorites</span></div></section>
   {active.length>0&&<section className="home-shelf home-continue"><div className="section-title"><div><small>KEEP GOING</small><h2>Continue</h2></div><button className="text-action" onClick={()=>go('library')}>View library <ChevronRight size={14}/></button></div><div className="media-grid">{active.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
   {favorites.length>0&&<section className="home-shelf home-favorites"><div className="section-title"><div><small>PINNED</small><h2>Favorites</h2></div><span>{favorites.length}</span></div><div className="media-grid">{favorites.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
