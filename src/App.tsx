@@ -469,7 +469,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const usedEpisodePosterUrls=new Set<string>();
   for(let index=0;index<arcs.length;index++){
    const arc=arcs[index];
-   const arcEpisodes=included.filter((e:any)=>Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
+   const arcEpisodes=included.filter((e:any)=>!assigned.has(Number(e.mal_id))&&Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
    if(!arcEpisodes.length)continue;
    const arcId='one-piece-arc-'+arc.start;
    created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' episodes',poster:root.poster,backdrop:root.backdrop,medium:'anime',status:arcEpisodes.every((e:any)=>Number(e.mal_id)<=watchedThrough)?'completed':'planned',progress:arcEpisodes.filter((e:any)=>Number(e.mal_id)<=watchedThrough).length,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'All numbered episodes in this arc are included, including filler and specials, and are marked completed per the library owner’s viewing status.'});
