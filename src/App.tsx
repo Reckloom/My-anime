@@ -726,8 +726,12 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const parts=items.filter(x=>x.parentId===root.id&&x.sourceProvider==='frame-naruto-part');
   const originalPart=parts.find(x=>x.externalId==='naruto-part-original');
   const shippudenPart=parts.find(x=>x.externalId==='naruto-part-shippuden');
-  const originalComplete=Boolean(originalPart&&items.some(arc=>arc.parentId===originalPart.id&&arc.sourceProvider==='frame-naruto-arc'&&items.some(ep=>ep.parentId===arc.id&&ep.sourceProvider==='frame-naruto-episode')));
-  const shippudenComplete=Boolean(shippudenPart&&items.some(arc=>arc.parentId===shippudenPart.id&&arc.sourceProvider==='frame-naruto-arc'&&items.some(ep=>ep.parentId===arc.id&&ep.sourceProvider==='frame-naruto-episode')));
+  const originalArcs=items.filter(arc=>arc.parentId===originalPart?.id&&arc.sourceProvider==='frame-naruto-arc');
+  const shippudenArcs=items.filter(arc=>arc.parentId===shippudenPart?.id&&arc.sourceProvider==='frame-naruto-arc');
+  const originalEpisodeCount=originalArcs.reduce((sum,arc)=>sum+items.filter(ep=>ep.parentId===arc.id&&ep.sourceProvider==='frame-naruto-episode').length,0);
+  const shippudenEpisodeCount=shippudenArcs.reduce((sum,arc)=>sum+items.filter(ep=>ep.parentId===arc.id&&ep.sourceProvider==='frame-naruto-episode').length,0);
+  const originalComplete=Boolean(originalPart&&originalArcs.length===7&&originalEpisodeCount===220);
+  const shippudenComplete=Boolean(shippudenPart&&shippudenArcs.length===32&&shippudenEpisodeCount===500);
   if(originalComplete&&shippudenComplete)return;
   const key=root.id+':'+parts.length;
   if(narutoAutoRef.current===key||narutoAutoRef.current===root.id+':ready')return;
