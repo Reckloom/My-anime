@@ -127,7 +127,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
       {Boolean(d.episode.directors?.length)&&<p><strong>Director(s):</strong> {d.episode.directors!.join(', ')}</p>}
       {Boolean(d.episode.writers?.length)&&<p><strong>Writer(s):</strong> {d.episode.writers!.join(', ')}</p>}
       {Boolean(d.episode.cast?.length)&&<p><strong>Cast:</strong> {d.episode.cast!.join(', ')}</p>}
-      <a className="episode-source-link" href={d.episode.imdbId?'https://www.imdb.com/title/'+d.episode.imdbId+'/':'https://www.imdb.com/find/?q='+encodeURIComponent(d.title)} target="_blank" rel="noreferrer">Open IMDb episode page <ExternalLink size={13}/></a>
+      <a className="episode-source-link" href={d.episode.imdbEpisodeUrl||(d.episode.imdbId?'https://www.imdb.com/title/'+d.episode.imdbId+'/':'https://www.imdb.com/find/?q='+encodeURIComponent(d.title))} target="_blank" rel="noreferrer">Open IMDb episode listing <ExternalLink size={13}/></a>
      </section>}
      <div className="tags">{d.genres.slice(0,8).map(x=><span key={x}>{x}</span>)}</div>
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
