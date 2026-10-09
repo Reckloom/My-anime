@@ -195,8 +195,7 @@ test.describe('FRAME anime episode catalogue', () => {
       })
     }));
 
-    await page.goto('/');
-    await page.evaluate(() => {
+    await page.addInitScript(() => {
       localStorage.setItem('frame-guest', '1');
       localStorage.setItem('frame-library:guest', JSON.stringify([{
         id: 'qa-one-piece', anilistId: 21, sourceProvider: 'anilist', externalId: '21',
@@ -205,7 +204,7 @@ test.describe('FRAME anime episode catalogue', () => {
         genres: [], themes: [], favorite: false, externalLinks: { malId: '21' }
       }]));
     });
-    await page.reload();
+    await page.goto('/');
     await navigatePrimary(page, 'Library');
     await page.getByText('One Piece', { exact: true }).click();
 
