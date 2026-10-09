@@ -479,7 +479,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const children=items.filter(x=>x.parentId===root.id);
   const arcIds=new Set(children.filter(x=>String(x.externalId||'').startsWith('one-piece-arc-')).map(x=>x.id));
   const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
-  const hasOnlyCanonEpisodes=episodeChildren.length>0&&episodeChildren.every(x=>{const match=String(x.externalId||'').match(/^one-piece-episode-(\\d+)$/);return Boolean(match&&isOnePieceCanonEpisodeNumber(Number(match[1])));});
+  const hasOnlyCanonEpisodes=episodeChildren.length>0&&episodeChildren.every(x=>{const match=String(x.externalId||'').match(/^one-piece-episode-(\d+)$/);return Boolean(match&&isOnePieceCanonEpisodeNumber(Number(match[1])));});
   const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'))&&hasOnlyCanonEpisodes&&episodeChildren.length>=Math.max(1,(Number(root.total)||1180)-150);
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
