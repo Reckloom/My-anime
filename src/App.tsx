@@ -16,6 +16,7 @@ import {FrameLibraryImport} from './components/FrameLibraryImport';
 import {aniList,DETAIL_QUERY,cleanDescription,titleOf} from './anilist';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
+import {makeVinlandSagaDemo} from './data/vinlandSagaDemo';
 
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
 const types:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
@@ -50,11 +51,12 @@ function dbToMedia(raw:unknown):MediaItem{
   airStart:meta.air_start?String(meta.air_start):undefined,airEnd:meta.air_end?String(meta.air_end):undefined,
   favorite:Boolean(r.favorite),notes:r.notes?String(r.notes):undefined,
   nextRelease:r.next_release?String(r.next_release):undefined,nextReleaseNumber:r.next_release_number==null?undefined:Number(r.next_release_number),
-  availability:data.availability as MediaItem['availability'],game:data.game as MediaItem['game'],notificationsEnabled:data.frameReleaseRadar?.enabled!==false,releaseRadarState:data.frameReleaseRadar&&typeof data.frameReleaseRadar==='object'?data.frameReleaseRadar:undefined
+  availability:data.availability as MediaItem['availability'],game:data.game as MediaItem['game'],notificationsEnabled:data.frameReleaseRadar?.enabled!==false,releaseRadarState:data.frameReleaseRadar&&typeof data.frameReleaseRadar==='object'?data.frameReleaseRadar:undefined,
+  episode:data.episode&&typeof data.episode==='object'?data.episode as MediaItem['episode']:undefined
  });
 }
 function toRow(item:MediaItem,userId:string){
- return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false}}};
+ return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false},episode:item.episode??null}};
 }
 function progressPercent(item:MediaItem){
  const total=item.total||item.customTotal||0;
@@ -236,6 +238,14 @@ export default function App(){
   saveQueue.current=operation.catch(()=>true);
   return operation;
  };
+ const seedVinlandDemo=async()=>{
+  const demo=makeVinlandSagaDemo();
+  const existingAnime=items.filter(x=>x.medium==='anime');
+  if(!window.confirm('Replace all anime entries in your FRAME library with Vinland Saga (2 seasons, 48 episodes)? Other media such as books and games will be kept. This cannot be undone.'))return;
+  const retained=items.filter(x=>x.medium!=='anime');
+  const ok=await save([...retained,...demo]);
+  if(ok){setAppMessage('Replaced '+existingAnime.length+' anime entries with Vinland Saga: 2 seasons and 48 episodes. Other media was kept.');window.setTimeout(()=>setAppMessage(''),6000)}
+ };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
   const duplicate=items.find(x=>(item.anilistId&&x.anilistId===item.anilistId)||(item.sourceProvider&&item.externalId&&x.sourceProvider===item.sourceProvider&&x.externalId===item.externalId));
@@ -359,7 +369,7 @@ export default function App(){
   {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['friends','Friends'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
    {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name}/>}
-   {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)}/>}
+   {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)} seedDemo={()=>void seedVinlandDemo()}/>}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setDirectCall}/>}
@@ -409,7 +419,7 @@ function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;li
  return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><img src={item.poster||poster} alt={item.title} loading="lazy" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total||500)} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
 }
 
-function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
+function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add,seedDemo}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void;seedDemo:()=>void}){
  const statusFilters:[string,string][]=[['incomplete','Not 100%'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
  const mediaFilters:[string,string][]=[['all','All Media'],...Object.entries(types)];
  const toggleMedia=(id:string)=>{
@@ -430,7 +440,7 @@ function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{i
  };
  const allMediaActive=!mediaFilters.slice(1).some(([key])=>filters.includes(key));
  return <div className="page library-page">
-  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div>
+  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><div className="library-heading-actions"><button className="secondary" type="button" onClick={seedDemo}>Replace anime library with Vinland Saga</button><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div></div>
   <div className="library-controls">
    <div className="filter-groups">
     <div className="filter-group">

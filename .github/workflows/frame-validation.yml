@@ -27,6 +27,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Validate episode fixture
+        run: npm run test:fixture
       - name: Type-check
         run: npm run typecheck
       - name: Build production bundle
