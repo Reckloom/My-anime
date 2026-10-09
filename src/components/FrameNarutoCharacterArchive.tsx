@@ -61,7 +61,6 @@ export function FrameNarutoCharacterArchive(){
   void request();return()=>{active=false};
  },[]);
  const visible=useMemo(()=>{const q=query.trim().toLowerCase();return characters.filter(c=>!q||[c.name,c.role,c.affiliation,c.bio,c.ability].join(' ').toLowerCase().includes(q))},[characters,query]);
- const initials=(name:string)=>name.split(/\s+/).map(x=>x[0]).slice(0,2).join('');
  return <section className="frame-character-archive">
   <div className="frame-character-head"><div><small>CHARACTER ARCHIVE</small><h3><Users size={18}/> Naruto characters</h3><p>Search the ninja world · tap any card for the character file</p></div><span className="frame-character-count">{visible.length} / {characters.length}</span></div>
   <label className="frame-character-search"><Search size={16}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search characters, villages, abilities…" aria-label="Search Naruto characters"/>{query&&<button type="button" onClick={()=>setQuery('')} aria-label="Clear character search"><X size={15}/></button>}</label>
