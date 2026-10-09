@@ -144,8 +144,9 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
        {externalLinks.anilabId&&!externalLinks.anilabUrl&&<span className="detail-external-id">AniLab ID: {externalLinks.anilabId}</span>}
       </div>
      </section>}
-     {d.medium==='anime'&&d.sourceProvider==='anilist-episode-subpart'&&externalLinks.malId&&<FrameEpisodeList malId={externalLinks.malId} currentProgress={d.progress} onMarkThrough={async episodeNumber=>{
-      const next={...d,progress:Math.min(max,episodeNumber)};
+     {d.medium==='anime'&&!d.episode&&(d.anilistId||d.sourceProvider==='anilist'||d.sourceProvider==='anilist-episode-subpart'||externalLinks.malId)&&<FrameEpisodeList malId={externalLinks.malId} title={d.title} currentProgress={d.progress} onMarkThrough={async episodeNumber=>{
+      const nextTotal=Math.max(d.total||0,episodeNumber);
+      const next={...d,total:nextTotal,progress:Math.min(nextTotal,episodeNumber)};
       setD(next);setSaveMessage('Saving episode progress…');
       try{const result=await save(next);setSaveMessage(result===false?'Could not save episode progress.':'Episode progress saved.')}catch{setSaveMessage('Could not save episode progress.')}
      }}/>}
