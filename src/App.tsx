@@ -265,20 +265,77 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     }
    }catch(error){console.warn('[FRAME One Piece TMDB episode catalogue]',error)}
   }
-  // Fall back to the public episode catalogue if server-side metadata is unavailable.
+  // First fallback: Kitsu's public episode catalogue provides titles, synopses,
+  // dates and thumbnails without a private API key.
   if(!episodes.length){
-   const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page=1');
-   if(!response.ok)throw new Error('The One Piece episode catalogue is temporarily unavailable.');
-   const first=await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number}};
+   try{
+    const search=await fetch('https://kitsu.io/api/edge/anime?filter[text]=One%20Piece&page[limit]=20');
+    if(!search.ok)throw new Error('Kitsu search HTTP '+search.status);
+    const searchData=await search.json() as {data?:Array<any>};
+    const matches=Array.isArray(searchData.data)?searchData.data:[];
+    const anime=matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase()==='one piece')
+      ||matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase().startsWith('one piece'));
+    if(!anime?.id)throw new Error('Kitsu did not identify the One Piece TV anime.');
+    const kitsuEpisodes:Array<any>=[];
+    const limit=20;
+    for(let offset=0;offset<1400;offset+=limit){
+     const url='https://kitsu.io/api/edge/anime/'+encodeURIComponent(String(anime.id))+'/episodes?page[limit]='+limit+'&page[offset]='+offset;
+     const pageResponse=await fetch(url);
+     if(!pageResponse.ok)throw new Error('Kitsu episode page failed (HTTP '+pageResponse.status+').');
+     const pageData=await pageResponse.json() as {data?:Array<any>;links?:{next?:string|null};meta?:{count?:number}};
+     const rows=Array.isArray(pageData.data)?pageData.data:[];
+     if(!rows.length)break;
+     for(const row of rows){
+      const a=row?.attributes||{};
+      const number=Number(a.number);
+      if(!Number.isFinite(number)||number<=0||number>2000)continue;
+      kitsuEpisodes.push({
+       mal_id:number,title:String(a.canonicalTitle||a.titles?.en||a.titles?.en_jp||('Episode '+number)),
+       aired:String(a.airdate||a.airDate||''),synopsis:String(a.synopsis||a.description||''),
+       images:{jpg:{image_url:String(a.thumbnail?.original||a.thumbnail?.large||a.thumbnail?.medium||'')}},
+       ratingSource:'Kitsu',runtimeMinutes:Number(a.length)||undefined,sourceUrl:'https://kitsu.io/anime/'+String(anime.attributes?.slug||anime.id)
+      });
+     }
+     if(!pageData.links?.next||rows.length<limit)break;
+     await new Promise(resolve=>window.setTimeout(resolve,350));
+    }
+    if(kitsuEpisodes.length)episodes=kitsuEpisodes;
+   }catch(error){console.warn('[FRAME One Piece Kitsu episode catalogue]',error)}
+  }
+  // Second fallback: Jikan / MyAnimeList. Episode lists can be temporarily
+  // rate-limited, so retry transient failures instead of abandoning the import.
+  if(!episodes.length){
+   const fetchJikanPage=async(page:number)=>{
+    let lastError:unknown;
+    for(let attempt=0;attempt<3;attempt++){
+     try{
+      const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
+      if(!response.ok)throw new Error('Jikan HTTP '+response.status);
+      return await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number}};
+     }catch(error){
+      lastError=error;
+      if(attempt<2)await new Promise(resolve=>window.setTimeout(resolve,1200*(attempt+1)));
+     }
+    }
+    throw lastError instanceof Error?lastError:new Error('Jikan episode catalogue unavailable.');
+   };
+   const first=await fetchJikanPage(1);
    episodes=[...(first.data||[])];
    const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
    for(let page=2;page<=pages;page++){
-    await new Promise(resolve=>window.setTimeout(resolve,1100));
-    const next=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
-    if(!next.ok)throw new Error('The catalogue stopped responding on page '+page+'.');
-    const payload=await next.json() as {data?:Array<any>};
-    episodes.push(...(payload.data||[]));
+    await new Promise(resolve=>window.setTimeout(resolve,1150));
+    const next=await fetchJikanPage(page);
+    episodes.push(...(next.data||[]));
    }
+  }
+  // Last-resort catalogue: never fail with an empty episode list. The title and
+  // progress record are still real numbered episode entries; source metadata is
+  // clearly marked unavailable rather than fabricated.
+  if(!episodes.length){
+   episodes=Array.from({length:1200},(_,index)=>({
+    mal_id:index+1,title:'Episode '+(index+1),synopsis:'Episode '+(index+1)+' of One Piece. The connected catalogues did not return episode-level metadata during this import.',
+    ratingSource:'Metadata unavailable',sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+(index+1))
+   }));
   }
   if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
   const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=2000).sort((a:any,b:any)=>Number(a.mal_id)-Number(b.mal_id));
