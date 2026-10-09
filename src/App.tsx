@@ -488,6 +488,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const existingByExternalId=new Map(items.filter(x=>x.externalId&&String(x.externalId).startsWith('one-piece-')).map(x=>[String(x.externalId),x] as const));
   const reconciled=created.map(next=>{
    const prior=next.externalId?existingByExternalId.get(String(next.externalId)):undefined;
+   if(next.id===rootId)return {...next,total:1180,customTotal:1180,progress:1180,status:'completed',personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
    const episodeMatch=String(next.externalId||'').match(/^one-piece-episode-(\d+)$/);
    if(episodeMatch){
     const number=Number(episodeMatch[1]);
