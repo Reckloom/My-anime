@@ -241,10 +241,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const buildOnePieceHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
   const root=normalise({...rawRoot,
-   description:[rawRoot.description,'One Piece anime library: the main entry holds series-level details, while arc entries contain all catalogue episodes with titles, synopses, air dates and available scores. IMDb search links are attached per episode; ratings and artwork are never invented when the catalogue does not supply them.'].filter(Boolean).join('\n\n'),
+   description:[rawRoot.description,'One Piece anime library: the main entry holds series-level details, while arc entries contain the episode catalogue with titles, synopses, air dates, available stills and episode scores. IMDb links are included for checking IMDb directly; scores displayed in FRAME are explicitly labelled with their actual source.'].filter(Boolean).join('\n\n'),
    availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/']},
    externalLinks:{...(rawRoot.externalLinks||{}),imdbId:'tt0388629',officialUrl:'https://one-piece.com/anime/',newsUrl:'https://one-piece.com/news/',malId:'21'},
-   notes:[rawRoot.notes,'Official site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Netflix catalogue: https://www.netflix.com/title/80107103','News: https://one-piece.com/news/','Episode titles, synopses, air dates and available scores come from Jikan / MyAnimeList. IMDb search links are included, but IMDb does not provide a free public bulk API for episode ratings or stills; missing ratings and artwork are not fabricated.'].filter(Boolean).join('\n\n')
+   notes:[rawRoot.notes,'Official site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Netflix catalogue: https://www.netflix.com/title/80107103','News: https://one-piece.com/news/','Episode titles, synopses, air dates, stills and available episode scores are fetched from TMDB, with a Jikan / MyAnimeList fallback. IMDb episode search links are included; FRAME does not mislabel TMDB scores as IMDb ratings.'].filter(Boolean).join('\n\n')
   });
   let episodes:Array<any>=[];
   // Prefer FRAME's server-side TMDB catalogue for episode stills, summaries,
