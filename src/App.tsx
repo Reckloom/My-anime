@@ -18,7 +18,7 @@ import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
 import {posterImageSrc} from './posterImage';
 
-const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
+const poster='/frame-logo.svg';
 const types:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
 const unitFor=(m:Medium)=>({anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as Record<Medium,string>)[m];
 type Profile={id:string;username:string;display_name:string;avatar_url?:string|null;bio?:string;frame_logo?:'ultra-instinct'|'classic-f'|'minimal-ring'|string|null};
@@ -286,11 +286,11 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const previousOriginal=items.find(x=>x.id===originalId||(x.parentId===rootId&&x.sourceProvider==='frame-naruto-part'&&x.externalId==='naruto-part-original'));
   const previousShippuden=items.find(x=>x.id===shippudenId||(x.parentId===rootId&&x.sourceProvider==='frame-naruto-part'&&x.externalId==='naruto-part-shippuden'));
   const originalProgress=Math.max(0,Math.min(220,previousOriginal?.progress??220));
-  const shippudenProgress=Math.max(0,Math.min(500,previousShippuden?.progress??170));
+  const shippudenProgress=Math.max(0,Math.min(500,previousShippuden?.progress??500));
   const original:MediaItem={
    id:previousOriginal?.id||originalId,parentId:rootId,sourceProvider:'frame-naruto-part',externalId:'naruto-part-original',
    title:'Naruto',description:'The original Naruto TV anime — 220 numbered episodes, including filler and anime-original episodes. Story arcs and individual episode entries are organised below.',
-   poster:previousOriginal?.poster||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',backdrop:previousOriginal?.backdrop||previousOriginal?.poster||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+   poster:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',backdrop:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
    medium:'anime',status:originalProgress>=220?'completed':originalProgress>0?'watching':'planned',progress:originalProgress,total:220,customTotal:220,year:2002,
    score:previousOriginal?.score,personalRating:previousOriginal?.personalRating,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],favorite:previousOriginal?.favorite??false,
    notes:'FRAME_NARUTO_PART=original-v2. Episode catalogue: MyAnimeList / Jikan (MAL ID 20), enriched with Kitsu episode thumbnails when available.',
@@ -299,7 +299,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const shippuden:MediaItem={
    id:previousShippuden?.id||shippudenId,parentId:rootId,sourceProvider:'frame-naruto-part',externalId:'naruto-part-shippuden',
    title:'Naruto Shippuden',description:'Naruto’s return and the next stage of the ninja world — 500 numbered episodes, including filler and anime-original episodes. Story arcs and individual episode entries are organised below.',
-   poster:previousShippuden?.poster||'https://cdn.myanimelist.net/images/anime/5/17407.jpg',backdrop:previousShippuden?.backdrop||previousShippuden?.poster||'https://cdn.myanimelist.net/images/anime/5/17407.jpg',
+   poster:'https://cdn.myanimelist.net/images/anime/5/17407.jpg',backdrop:'https://cdn.myanimelist.net/images/anime/5/17407.jpg',
    medium:'anime',status:shippudenProgress>=500?'completed':shippudenProgress>0?'watching':'planned',progress:shippudenProgress,total:500,customTotal:500,year:2007,
    score:previousShippuden?.score,personalRating:previousShippuden?.personalRating,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],favorite:previousShippuden?.favorite??false,
    notes:'FRAME_NARUTO_PART=shippuden-v2. Episode catalogue: MyAnimeList / Jikan (MAL ID 1735), enriched with Kitsu episode thumbnails when available.',
@@ -309,8 +309,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const root=normalise({
    ...priorRoot,title:'Naruto',medium:'anime',total:720,customTotal:720,progress:originalProgress+shippudenProgress,
    status:originalProgress+shippudenProgress>=720?'completed':'watching',
-   poster:priorRoot.poster||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
-   backdrop:priorRoot.backdrop||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+   poster:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+   backdrop:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
    year:2002,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],
    description:'The complete Naruto anime library, organised into two direct subparts: Naruto (220 episodes) and Naruto Shippuden (500 episodes). Each subpart contains story-arc groups and individual episode entries.',
    externalLinks:{...(priorRoot.externalLinks||{}),officialUrl:'https://naruto-official.com/en'},
@@ -323,7 +323,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const matches=Array.isArray(search.data)?search.data:[];
    const normalizedTitle=title.toLowerCase().replace(/[^a-z0-9]/g,'');
    const anime=matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'')===normalizedTitle)
-    ||matches.find((x:any)=>String(x?.attributes?.canonicalTitle||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'').includes(normalizedTitle));
+ ;
    if(!anime?.id)throw new Error('Kitsu did not identify '+title);
    const result:any[]=[];
    const limit=20;
@@ -411,7 +411,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const arcEpisodes=episodes.filter(e=>e.number>=arc.start&&e.number<=arc.end);
     const oldArc=priorById.get(arcId);
     const candidates=arcEpisodes.map(e=>String(e.poster||'').trim()).filter(url=>url&&!usedPosters.has(url));
-    const arcPoster=candidates[0]||'';
+    const arcPoster=candidates[0]||part.poster;
     if(arcPoster)usedPosters.add(arcPoster);
     const arcProgress=Math.max(0,Math.min(arc.end,watchedThrough)-arc.start+1);
     const arcItem:MediaItem={
@@ -435,7 +435,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      created.push({
       id:episodeId,parentId:arcId,sourceProvider:'frame-naruto-episode',externalId:'naruto-episode-'+partKey+'-'+e.number,
       title:String(e.number)+'. '+String(e.title||('Episode '+e.number)),description:cleanDescription(String(e.synopsis||''))||('Episode '+e.number+' of '+part.title+'.'),
-      poster:episodePoster,backdrop:episodePoster,medium:'anime',
+      poster:episodePoster||part.poster,backdrop:episodePoster||part.poster,medium:'anime',
       status:e.number<=watchedThrough?'completed':(prior?.status||'planned'),progress:e.number<=watchedThrough?1:Math.min(prior?.progress??0,1),total:1,
       year:airDate?Number(airDate.slice(0,4))||part.year:part.year,score:prior?.score,personalRating:prior?.personalRating,
       genres:part.genres,themes:part.themes,favorite:prior?.favorite??false,season:arc.name,
