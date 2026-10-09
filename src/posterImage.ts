@@ -8,11 +8,24 @@ export function posterImageSrc(value?: string | null): string {
 
   try {
     const parsed = new URL(url);
-    if (
+    const wikiEpisodeArtwork =
       parsed.protocol === 'https:' &&
       parsed.hostname === 'static.wikia.nocookie.net' &&
-      parsed.pathname.startsWith('/onepiece/images/')
-    ) {
+      parsed.pathname.startsWith('/onepiece/images/');
+    const officialEpisodeArtwork =
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'one-piece.com' &&
+      (/^\/img\/anime\/story\/img_story_\d+\.jpg$/i.test(parsed.pathname) ||
+       /^\/o\/assets\/images\/anime\/tvstory\/[a-z0-9_-]+\/story_img_\d+\.jpg$/i.test(parsed.pathname));
+    const vodAnimeEpisodeArtwork =
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'www.vodanime.com' &&
+      /^\/media\/one-piece-episode-\d+-thumbnail-\d+\.jpg$/i.test(parsed.pathname);
+    const idnEpisodeArtwork =
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'image.idn.media' &&
+      /\.(?:jpe?g|png|webp|avif)$/i.test(parsed.pathname);
+    if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork) {
       return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
     }
     return url;
