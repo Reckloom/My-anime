@@ -3359,3 +3359,7 @@ hr,.divider{border-color:var(--frame-line)!important}
 .frame-notification-copy b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 .frame-notification-item-actions button span{white-space:nowrap}
 .frame-notification-subtitle{color:var(--frame-muted)!important;font-size:10px!important;letter-spacing:0!important;font-weight:500!important}
+
+/* Keep the details drawer independently scrollable on touch devices and in browsers with smooth page scrolling. */
+.detail-modal{overflow-y:auto!important;overflow-x:hidden!important;scroll-behavior:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.frame-episode-list{scroll-margin-block:16px}
