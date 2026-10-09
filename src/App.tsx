@@ -305,34 +305,38 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   // Second fallback: Jikan / MyAnimeList. Episode lists can be temporarily
   // rate-limited, so retry transient failures instead of abandoning the import.
   if(!episodes.length){
-   const fetchJikanPage=async(page:number)=>{
-    let lastError:unknown;
-    for(let attempt=0;attempt<3;attempt++){
-     try{
-      const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
-      if(!response.ok)throw new Error('Jikan HTTP '+response.status);
-      return await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number}};
-     }catch(error){
-      lastError=error;
-      if(attempt<2)await new Promise(resolve=>window.setTimeout(resolve,1200*(attempt+1)));
+   try{
+    const fetchJikanPage=async(page:number)=>{
+     let lastError:unknown;
+     for(let attempt=0;attempt<3;attempt++){
+      try{
+       const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
+       if(!response.ok)throw new Error('Jikan HTTP '+response.status);
+       return await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number}};
+      }catch(error){
+       lastError=error;
+       if(attempt<2)await new Promise(resolve=>window.setTimeout(resolve,1200*(attempt+1)));
+      }
      }
+     throw lastError instanceof Error?lastError:new Error('Jikan episode catalogue unavailable.');
+    };
+    const first=await fetchJikanPage(1);
+    const jikanEpisodes=[...(first.data||[])];
+    const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
+    for(let page=2;page<=pages;page++){
+     await new Promise(resolve=>window.setTimeout(resolve,1150));
+     const next=await fetchJikanPage(page);
+     jikanEpisodes.push(...(next.data||[]));
     }
-    throw lastError instanceof Error?lastError:new Error('Jikan episode catalogue unavailable.');
-   };
-   const first=await fetchJikanPage(1);
-   episodes=[...(first.data||[])];
-   const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
-   for(let page=2;page<=pages;page++){
-    await new Promise(resolve=>window.setTimeout(resolve,1150));
-    const next=await fetchJikanPage(page);
-    episodes.push(...(next.data||[]));
-   }
+    if(jikanEpisodes.length)episodes=jikanEpisodes;
+   }catch(error){episodes=[];console.warn('[FRAME One Piece Jikan episode catalogue]',error)}
   }
   // Last-resort catalogue: never fail with an empty episode list. The title and
   // progress record are still real numbered episode entries; source metadata is
   // clearly marked unavailable rather than fabricated.
   if(!episodes.length){
-   episodes=Array.from({length:1200},(_,index)=>({
+   const fallbackCount=Math.max(1,Math.min(2000,Number(rawRoot.total||root.total)||1150));
+   episodes=Array.from({length:fallbackCount},(_,index)=>({
     mal_id:index+1,title:'Episode '+(index+1),synopsis:'Episode '+(index+1)+' of One Piece. The connected catalogues did not return episode-level metadata during this import.',
     ratingSource:'Metadata unavailable',sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+(index+1))
    }));
