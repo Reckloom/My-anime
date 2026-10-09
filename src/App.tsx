@@ -246,19 +246,39 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    externalLinks:{...(rawRoot.externalLinks||{}),imdbId:'tt0388629',officialUrl:'https://one-piece.com/anime/',newsUrl:'https://one-piece.com/news/',malId:'21'},
    notes:[rawRoot.notes,'Official site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Netflix catalogue: https://www.netflix.com/title/80107103','News: https://one-piece.com/news/','Episode titles, synopses, air dates and available scores come from Jikan / MyAnimeList. IMDb search links are included, but IMDb does not provide a free public bulk API for episode ratings or stills; missing ratings and artwork are not fabricated.'].filter(Boolean).join('\n\n')
   });
-  const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page=1');
-  if(!response.ok)throw new Error('The One Piece episode catalogue is temporarily unavailable.');
-  const first=await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number}};
-  const episodes:Array<any>=[...(first.data||[])];
-  const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
-  for(let page=2;page<=pages;page++){
-   await new Promise(resolve=>window.setTimeout(resolve,1100));
-   const next=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
-   if(!next.ok)throw new Error('The catalogue stopped responding on page '+page+'.');
-   const payload=await next.json() as {data?:Array<any>};
-   episodes.push(...(payload.data||[]));
+  let episodes:Array<any>=[];
+  // Prefer FRAME's server-side TMDB catalogue for episode stills, summaries,
+  // dates and episode-level community scores.
+  if(supabase){
+   try{
+    const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'episodes',provider:'series',source:'tmdb-tv',externalId:'37854'}});
+    if(!error&&Array.isArray(data?.episodes)){
+     episodes=data.episodes.map((e:any)=>({
+      mal_id:Number(e.absoluteEpisode),title:e.title,aired:e.airDate,score:e.score,
+      synopsis:e.synopsis,images:{jpg:{image_url:e.poster||'',large_image_url:e.backdrop||''}},
+      ratingCount:e.ratingCount,ratingSource:e.ratingSource||'TMDB',runtimeMinutes:e.runtimeMinutes,
+      tmdbId:e.tmdbId,seasonNumber:e.seasonNumber,episodeNumber:e.episodeNumber,
+      imdbEpisodeUrl:e.imdbEpisodeUrl,sourceUrl:e.sourceUrl
+     }));
+    }
+   }catch(error){console.warn('[FRAME One Piece TMDB episode catalogue]',error)}
   }
-  const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=2000);
+  // Fall back to the public episode catalogue if server-side metadata is unavailable.
+  if(!episodes.length){
+   const response=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page=1');
+   if(!response.ok)throw new Error('The One Piece episode catalogue is temporarily unavailable.');
+   const first=await response.json() as {data?:Array<any>;pagination?:{last_visible_page?:number}};
+   episodes=[...(first.data||[])];
+   const pages=Math.min(Number(first.pagination?.last_visible_page||1),20);
+   for(let page=2;page<=pages;page++){
+    await new Promise(resolve=>window.setTimeout(resolve,1100));
+    const next=await fetch('https://api.jikan.moe/v4/anime/21/episodes?page='+page);
+    if(!next.ok)throw new Error('The catalogue stopped responding on page '+page+'.');
+    const payload=await next.json() as {data?:Array<any>};
+    episodes.push(...(payload.data||[]));
+   }
+  }
+  const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=2000).sort((a:any,b:any)=>Number(a.mal_id)-Number(b.mal_id));
   if(!included.length)throw new Error('The catalogue returned no usable episodes.');
   const arcs=[
    {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},{name:'Syrup Village',start:9,end:18},
@@ -305,7 +325,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const score=Number(e.score);
   const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
   const synopsis=cleanDescription(String(e.synopsis||''))||'Synopsis not supplied by the catalogue.';
-  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:'jikan',externalId:'one-piece-episode-'+epNo,title:'Episode '+epNo+' · '+String(e.title||('Episode '+epNo)),description:synopsis,poster:String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||root.poster),backdrop:'',medium:'anime',status:'planned',progress:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,episode:{seasonNumber:arcNumber,episodeNumber:epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?'MyAnimeList / Jikan':'Rating unavailable',imdbEpisodeUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece episode '+epNo+' '+String(e.title||'')),synopsis}};
+  return {id:'one-piece-episode-'+epNo,parentId,sourceProvider:e.tmdbId?'tmdb-tv-episode':'jikan',externalId:'one-piece-episode-'+epNo,title:'Episode '+epNo+' · '+String(e.title||('Episode '+epNo)),description:synopsis,poster:String(e.images?.jpg?.image_url||e.images?.jpg?.large_image_url||root.poster),backdrop:String(e.images?.jpg?.large_image_url||''),medium:'anime',status:'planned',progress:0,total:1,year:aired?Number(String(aired).slice(0,4))||root.year:root.year,score:Number.isFinite(score)&&score>0?score:undefined,genres:root.genres,themes:root.themes,studio:root.studio,source:e.ratingSource||root.source,season:arc.name,favorite:false,episode:{seasonNumber:Number(e.seasonNumber)||arcNumber,episodeNumber:Number(e.episodeNumber)||epNo,episodeCode:'EP '+String(epNo).padStart(4,'0'),airDate:aired?String(aired).slice(0,10):undefined,ratingSource:Number.isFinite(score)&&score>0?(e.ratingSource||'MyAnimeList / Jikan'):'Rating unavailable',ratingCount:Number(e.ratingCount)>0?Number(e.ratingCount):undefined,runtimeMinutes:Number(e.runtimeMinutes)>0?Number(e.runtimeMinutes):undefined,imdbEpisodeUrl:String(e.imdbEpisodeUrl||('https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+epNo+' '+String(e.title||'')))),synopsis}};
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
