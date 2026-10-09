@@ -2968,3 +2968,84 @@ hr,.divider{border-color:var(--frame-line)!important}
  .page{padding-inline:15px!important}
  .settings-panel,.tool-card,.social-card{padding:16px!important}
 }
+
+
+/* The six FRAME experiences: same charcoal / ivory / antique-gold identity, six layouts */
+:root{
+ --frame-bg:#08090b!important;--frame-surface:#101114!important;--frame-surface-2:#151619!important;
+ --frame-surface-3:#1b1c20!important;--frame-line:#ffffff18!important;--frame-line-strong:#ffffff28!important;
+ --frame-text:#f3f0e9!important;--frame-muted:#a3a09a!important;--frame-dim:#77766f!important;
+ --frame-accent:#d9bd8b!important;--frame-accent-2:#f0d9ad!important;--frame-success:#c8d8b1!important;
+ color-scheme:dark!important;
+}
+:root[data-frame-mode="light"],:root[data-frame-mode="system"]{
+ --frame-bg:#08090b!important;--frame-surface:#101114!important;--frame-surface-2:#151619!important;
+ --frame-surface-3:#1b1c20!important;--frame-line:#ffffff18!important;--frame-text:#f3f0e9!important;
+ --frame-muted:#a3a09a!important;--frame-accent:#d9bd8b!important; color-scheme:dark!important;
+}
+:root[data-frame-theme="cinematic-archive"] .home-page .vinland-feature{min-height:560px}
+:root[data-frame-theme="midnight-glass"] .home-page .vinland-feature,
+:root[data-frame-theme="midnight-glass"] .search-hero{
+ background-color:#11131a!important;box-shadow:inset 0 1px #ffffff12,0 28px 90px #0008!important;
+ border:1px solid #d9bd8b38!important;backdrop-filter:blur(24px)
+}
+:root[data-frame-theme="midnight-glass"] .media-card,
+:root[data-frame-theme="midnight-glass"] .settings-panel,
+:root[data-frame-theme="midnight-glass"] .connection-card{
+ background:linear-gradient(145deg,#1a1c22c9,#101114df)!important;box-shadow:inset 0 1px #ffffff0b,0 18px 48px #0004!important
+}
+:root[data-frame-theme="midnight-glass"] .frame-topbar{background:#0a0b0edb!important;backdrop-filter:blur(28px) saturate(130%)!important}
+:root[data-frame-theme="clean-editorial"] .page{max-width:1420px!important;margin-inline:auto!important;padding-inline:clamp(24px,4vw,68px)!important}
+:root[data-frame-theme="clean-editorial"] .home-intro{padding-block:clamp(34px,5vw,70px)!important;border-bottom:1px solid var(--frame-line)!important}
+:root[data-frame-theme="clean-editorial"] .home-intro h1,
+:root[data-frame-theme="clean-editorial"] .page-heading h1{font-family:Georgia,"Times New Roman",serif!important;font-weight:500!important;letter-spacing:-.055em!important}
+:root[data-frame-theme="clean-editorial"] .media-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))!important;gap:24px!important}
+:root[data-frame-theme="clean-editorial"] .media-card{padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+:root[data-frame-theme="clean-editorial"] .media-card:hover{transform:translateY(-3px)!important;background:transparent!important;box-shadow:none!important}
+:root[data-frame-theme="clean-editorial"] .media-poster{border-radius:8px!important}
+:root[data-frame-theme="clean-editorial"] .media-copy{padding:7px 2px!important}
+:root[data-frame-theme="full-screen-epic"] .home-page .vinland-feature{min-height:min(78vh,780px)!important;border-radius:4px!important;margin-block:18px 46px!important}
+:root[data-frame-theme="full-screen-epic"] .vinland-feature h2{font-size:clamp(64px,10vw,142px)!important;line-height:.86!important;letter-spacing:-.075em!important}
+:root[data-frame-theme="full-screen-epic"] .vinland-feature-content{max-width:900px!important;padding:clamp(28px,5vw,72px)!important}
+:root[data-frame-theme="full-screen-epic"] .vinland-feature:before{background:linear-gradient(90deg,#08090bf2 0%,#08090b9e 42%,#08090b12 100%),linear-gradient(0deg,#08090b75,transparent 45%)!important}
+:root[data-frame-theme="full-screen-epic"] .media-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr))!important;gap:15px!important}
+:root[data-frame-theme="collectors-archive"] .home-page .vinland-feature{min-height:450px!important;display:grid!important;grid-template-columns:minmax(260px,.8fr) minmax(0,1.2fr)!important;align-items:stretch!important}
+:root[data-frame-theme="collectors-archive"] .vinland-feature-art{position:absolute!important;inset:0 50% 0 0!important;background-size:cover!important;background-position:center!important;opacity:.96!important}
+:root[data-frame-theme="collectors-archive"] .vinland-feature:before{background:linear-gradient(90deg,transparent 0%,#08090b10 38%,#08090bf7 58%,#08090b 100%)!important}
+:root[data-frame-theme="collectors-archive"] .vinland-feature-content{width:56%!important;margin-left:auto!important;padding:clamp(26px,4vw,60px)!important}
+:root[data-frame-theme="collectors-archive"] .media-card{display:grid!important;grid-template-columns:88px minmax(0,1fr)!important;gap:12px!important;align-items:center!important}
+:root[data-frame-theme="collectors-archive"] .media-poster{grid-row:1 / span 2!important}
+:root[data-frame-theme="collectors-archive"] .media-copy{min-width:0!important}
+:root[data-frame-theme="modern-media-hub"] .frame-topbar{height:auto!important;min-height:78px!important;padding:14px 24px!important;display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:18px!important}
+:root[data-frame-theme="modern-media-hub"] .frame-nav{justify-content:center!important;gap:8px!important}
+:root[data-frame-theme="modern-media-hub"] .frame-nav button{padding:11px 16px!important;border-radius:12px!important}
+:root[data-frame-theme="modern-media-hub"] .page{max-width:1600px!important;margin-inline:auto!important}
+:root[data-frame-theme="modern-media-hub"] .home-overview{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+:root[data-frame-theme="modern-media-hub"] .media-grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr))!important;gap:13px!important}
+:root[data-frame-theme="modern-media-hub"] .library-controls{position:sticky!important;top:76px!important;z-index:5!important;backdrop-filter:blur(20px)!important}
+.theme-picker{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important}
+.theme-choice{min-height:124px!important;grid-template-columns:48px minmax(0,1fr)!important;padding:13px!important;border-radius:16px!important;background:linear-gradient(145deg,#17181b,#101114)!important;border-color:#ffffff18!important}
+.theme-choice strong{font-size:12px!important;line-height:1.4!important;color:#f3f0e9!important}
+.theme-choice small{font-size:10px!important;line-height:1.45!important;color:#a3a09a!important}
+.theme-choice.selected{border-color:#d9bd8b!important;box-shadow:0 0 0 1px #d9bd8b55,0 10px 30px #0003!important}
+.theme-preview{width:46px!important;height:46px!important;border:1px solid #ffffff25!important;border-radius:13px!important;box-shadow:inset 0 1px #ffffff22!important}
+.theme-preview.cinematic-archive{background:linear-gradient(145deg,#08090b 0 55%,#d9bd8b)!important}
+.theme-preview.midnight-glass{background:linear-gradient(145deg,#171923,#292b3d 65%,#d9bd8b)!important}
+.theme-preview.clean-editorial{background:linear-gradient(145deg,#151619 0 60%,#f3f0e9)!important}
+.theme-preview.full-screen-epic{background:linear-gradient(145deg,#08090b,#693d2e 52%,#d9bd8b)!important}
+.theme-preview.collectors-archive{background:linear-gradient(90deg,#d9bd8b 0 32%,#101114 32% 100%)!important}
+.theme-preview.modern-media-hub{background:linear-gradient(90deg,#24252a 0 25%,#101114 25% 100%)!important}
+.theme-preview.cinematic-archive span,.theme-preview.midnight-glass span,.theme-preview.clean-editorial span,.theme-preview.full-screen-epic span,.theme-preview.collectors-archive span,.theme-preview.modern-media-hub span{display:block!important;background:#d9bd8b!important;border-radius:3px!important}
+@media(max-width:850px){
+ .theme-picker{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+ .theme-choice{min-height:112px!important;padding:10px!important;grid-template-columns:38px minmax(0,1fr)!important;gap:8px!important}
+ .theme-preview{width:38px!important;height:38px!important}
+ :root[data-frame-theme="clean-editorial"] .page{padding-inline:16px!important}
+ :root[data-frame-theme="collectors-archive"] .home-page .vinland-feature{display:flex!important;min-height:550px!important}
+ :root[data-frame-theme="collectors-archive"] .vinland-feature-art{inset:0!important;opacity:.45!important}
+ :root[data-frame-theme="collectors-archive"] .vinland-feature-content{width:100%!important;margin:0!important}
+ :root[data-frame-theme="collectors-archive"] .media-card{display:block!important}
+ :root[data-frame-theme="collectors-archive"] .media-poster{grid-row:auto!important}
+ :root[data-frame-theme="modern-media-hub"] .frame-topbar{display:flex!important;flex-wrap:wrap!important}
+ :root[data-frame-theme="modern-media-hub"] .home-overview{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
