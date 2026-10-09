@@ -35,6 +35,13 @@ const seed:Omit<NarutoCharacter,'image'|'description'>[]=[
  {name:'Kushina Uzumaki',role:'Former Nine-Tails jinchuriki',affiliation:'Uzumaki clan; Konohagakure',bio:'Naruto’s mother, remembered for fierce determination and powerful chakra chains.',ability:'Adamantine Sealing Chains'}
 ];
 const queryFor=(name:string)=>'https://www.google.com/search?q='+encodeURIComponent(name+' Naruto character');
+function NarutoPortrait({character,large=false}:{character:NarutoCharacter;large?:boolean}){
+ const [failed,setFailed]=useState(false);
+ useEffect(()=>setFailed(false),[character.image,character.name]);
+ const initials=character.name.split(/\\s+/).map(x=>x[0]).slice(0,2).join('');
+ if(character.image&&!failed)return <img src={character.image} alt={character.name} loading="lazy" onError={()=>setFailed(true)}/>;
+ return <span className={'naruto-character-initials'+(large?' large':'')} style={{display:'grid',placeItems:'center',width:large?150:'100%',height:large?190:'100%',minHeight:large?190:170,fontSize:large?'2.5rem':'2.1rem',fontWeight:800,letterSpacing:'.08em',background:'linear-gradient(145deg,#172a46,#30204b 58%,#0b111f)',color:'#f5f3ff'}}>{initials}</span>;
+}
 export function FrameNarutoCharacterArchive(){
  const [query,setQuery]=useState('');
  const [characters,setCharacters]=useState<NarutoCharacter[]>(()=>seed);
@@ -59,13 +66,13 @@ export function FrameNarutoCharacterArchive(){
   <div className="frame-character-head"><div><small>CHARACTER ARCHIVE</small><h3><Users size={18}/> Naruto characters</h3><p>Search the ninja world · tap any card for the character file</p></div><span className="frame-character-count">{visible.length} / {characters.length}</span></div>
   <label className="frame-character-search"><Search size={16}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search characters, villages, abilities…" aria-label="Search Naruto characters"/>{query&&<button type="button" onClick={()=>setQuery('')} aria-label="Clear character search"><X size={15}/></button>}</label>
   <div className="frame-character-rail" aria-label="Horizontally scrolling Naruto character profiles">{visible.map(c=><article className="frame-character-card" key={c.name} role="button" tabIndex={0} onClick={()=>setSelected(c)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setSelected(c)}}} aria-label={'Open details for '+c.name}>
-   <div className="frame-character-portrait">{c.image?<img src={c.image} alt={c.name} loading="lazy" onError={e=>{e.currentTarget.style.display='none'}}/>:<span className="naruto-character-initials" style={{display:'grid',placeItems:'center',width:'100%',height:'100%',fontSize:'2.1rem',fontWeight:800,letterSpacing:'.08em'}}>{initials(c.name)}</span>}<span className="frame-character-open"><Users size={13}/> View profile</span></div>
+   <div className="frame-character-portrait"><NarutoPortrait character={c}/><span className="frame-character-open"><Users size={13}/> View profile</span></div>
    <div className="frame-character-copy"><a className="frame-character-name" href={queryFor(c.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>{c.name}<ExternalLink size={13}/></a><span className="frame-character-alias">{c.affiliation}</span><div className="frame-character-role">{c.role}</div><p>{c.bio}</p><span className="frame-character-tap">Tap card for facts <span>↗</span></span></div>
   </article>)}</div><div className="frame-character-rail-hint"><span>← Swipe to explore →</span><span>{visible.length} profiles</span></div>
   <p className="frame-character-source">Character portraits are matched by exact name through AniList; when artwork cannot be verified, FRAME shows a name monogram instead of an unrelated anime poster.</p>
   {selected&&<div className="frame-character-modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><section className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selected.name+' character details'}>
    <button className="frame-character-modal-close" type="button" onClick={()=>setSelected(null)} aria-label="Close character details"><X size={19}/></button>
-   <div className="frame-character-modal-hero">{selected.image?<img src={selected.image} alt={selected.name}/>:<span className="naruto-character-initials large" style={{display:'grid',placeItems:'center',width:150,height:190,fontSize:'2.5rem',fontWeight:800,letterSpacing:'.08em'}}>{initials(selected.name)}</span>}<div><small>NARUTO · CHARACTER FILE</small><h2>{selected.name}</h2><p>{selected.role}</p><span className="frame-character-modal-affiliation">{selected.affiliation}</span><a className="frame-character-google" href={queryFor(selected.name)} target="_blank" rel="noreferrer">Search exact character name <ExternalLink size={13}/></a></div></div>
+   <div className="frame-character-modal-hero"><NarutoPortrait character={selected} large/><div><small>NARUTO · CHARACTER FILE</small><h2>{selected.name}</h2><p>{selected.role}</p><span className="frame-character-modal-affiliation">{selected.affiliation}</span><a className="frame-character-google" href={queryFor(selected.name)} target="_blank" rel="noreferrer">Search exact character name <ExternalLink size={13}/></a></div></div>
    <div className="frame-character-fact-grid"><div><span>Village / affiliation</span><b>{selected.affiliation}</b></div><div><span>Role</span><b>{selected.role}</b></div><div><span>Signature abilities</span><b>{selected.ability}</b></div><div><span>Character summary</span><b>{selected.bio}</b></div></div>
    {selected.description&&<p className="frame-character-modal-bio">{selected.description}</p>}
   </section></div>}
