@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowLeft,Check,ChevronLeft,ChevronRight,Edit3,ExternalLink,Heart,RefreshCw,Star,X} from 'lucide-react';
 import type {MediaAvailability,MediaItem,Status} from '../types';
 import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
