@@ -327,13 +327,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    if(!anime?.id)throw new Error('Kitsu did not identify '+title);
    const result:any[]=[];
    const limit=20;
-   const total=Math.min(Number(first.meta?.count||expected),expected);
    const fetchPage=async(offset:number)=>{
     const r=await fetch('https://kitsu.io/api/edge/anime/'+encodeURIComponent(String(anime.id))+'/episodes?page[limit]='+limit+'&page[offset]='+offset);
     if(!r.ok)throw new Error('Kitsu episode page HTTP '+r.status);
     return await r.json() as any;
    };
    const first=await fetchPage(0);
+   const total=Math.min(Number(first.meta?.count||expected),expected);
    const add=(page:any)=>{for(const row of Array.isArray(page.data)?page.data:[]){
     const a=row?.attributes||{},number=Number(a.number);
     if(!Number.isInteger(number)||number<1||number>expected)continue;
