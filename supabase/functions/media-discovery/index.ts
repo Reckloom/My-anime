@@ -383,9 +383,9 @@ async function onePieceEpisodeCatalogue(id:string){
 }
 
 async function onePieceArcPosterCatalogue(id:string,rawArcs:any[]){
-  // Map each absolute episode number to TMDB's actual season/episode numbering.
-  // FRAME's arc grouping number is not a TMDB season number; using it directly
-  // caused the still-image lookups to miss and silently fall back to generic art.
+  // Use dedicated arc artwork from the public One Piece Wiki catalogue.
+  // The old official episode-image host returns 403 for direct requests, and
+  // TMDB credentials are not configured for this project.
   const ranges=(Array.isArray(rawArcs)?rawArcs:[]).map((arc:any)=>({
     id:String(arc?.id||''),title:String(arc?.title||'One Piece arc'),
     currentPoster:String(arc?.currentPoster||''),
@@ -394,86 +394,44 @@ async function onePieceArcPosterCatalogue(id:string,rawArcs:any[]){
       poster:String(e?.poster||''),backdrop:String(e?.backdrop||'')
     })).filter((e:any)=>e.absoluteEpisode>0)
   })).filter((arc:any)=>arc.id&&arc.candidates.length);
-
-  let seasonRanges:{seasonNumber:number;start:number;end:number}[]=[];
-  try{
-    const series=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
-    const seasons=(Array.isArray(series?.seasons)?series.seasons:[])
-      .filter((s:any)=>Number(s?.season_number)>=0&&Number(s?.episode_count)>0)
-      .sort((a:any,b:any)=>{
-        const an=Number(a.season_number),bn=Number(b.season_number);
-        return (an===0?9999:an)-(bn===0?9999:bn);
-      });
-    let cursor=0;
-    seasonRanges=seasons.map((season:any)=>{
-      const count=Number(season.episode_count)||0;
-      const range={seasonNumber:Number(season.season_number),start:cursor+1,end:cursor+count};
-      cursor+=count;
-      return range;
-    });
-  }catch(error){
-    // If TMDB is temporarily unavailable or not configured, preserve the local
-    // distinct-image fallback rather than failing the entire refresh request.
-    console.warn('[FRAME One Piece TMDB season map]',error);
+  const catalogue=[{"file":"Amazon_Lily_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/4/4e/Amazon_Lily_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230404002344","page":"https://onepiece.fandom.com/wiki/File:Amazon_Lily_Arc.png"},{"file":"Arabasta_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/0/0b/Arabasta_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240206111117","page":"https://onepiece.fandom.com/wiki/File:Arabasta_Arc.png"},{"file":"Arlong_Park_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/1/19/Arlong_Park_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240418031111","page":"https://onepiece.fandom.com/wiki/File:Arlong_Park_Arc.png"},{"file":"Baratie_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/b/b0/Baratie_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240615143422","page":"https://onepiece.fandom.com/wiki/File:Baratie_Arc.png"},{"file":"Caesar_Retrieval_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/81/Caesar_Retrieval_Arc.png/revision/latest/scale-to-width-down/1000?cb=20231014134800","page":"https://onepiece.fandom.com/wiki/File:Caesar_Retrieval_Arc.png"},{"file":"Cidre_Guild_Arc_DVD.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/8f/Cidre_Guild_Arc_DVD.png/revision/latest/scale-to-width-down/1000?cb=20191230025953","page":"https://onepiece.fandom.com/wiki/File:Cidre_Guild_Arc_DVD.png"},{"file":"Dressrosa_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/5/52/Dressrosa_Arc.png/revision/latest/scale-to-width-down/1000?cb=20150319033925","page":"https://onepiece.fandom.com/wiki/File:Dressrosa_Arc.png"},{"file":"Drum_Island_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/c/c3/Drum_Island_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240720150849","page":"https://onepiece.fandom.com/wiki/File:Drum_Island_Arc.png"},{"file":"Egghead_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/f/f5/Egghead_Arc.png/revision/latest/scale-to-width-down/1000?cb=20241226010617","page":"https://onepiece.fandom.com/wiki/File:Egghead_Arc.png"},{"file":"Elbaph_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/f/fa/Elbaph_Arc.png/revision/latest/scale-to-width-down/1000?cb=20251221200459","page":"https://onepiece.fandom.com/wiki/File:Elbaph_Arc.png"},{"file":"Enies_Lobby_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/b/b7/Enies_Lobby_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230405214929","page":"https://onepiece.fandom.com/wiki/File:Enies_Lobby_Arc.png"},{"file":"Fish-Man_Island_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/e/e5/Fish-Man_Island_Arc.png/revision/latest/scale-to-width-down/1000?cb=20210116220320","page":"https://onepiece.fandom.com/wiki/File:Fish-Man_Island_Arc.png"},{"file":"Foxy's_Return_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/4/45/Foxy%27s_Return_Arc.png/revision/latest/scale-to-width-down/1000?cb=20130427171619","page":"https://onepiece.fandom.com/wiki/File:Foxy%27s_Return_Arc.png"},{"file":"G-8_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/9/97/G-8_Arc.png/revision/latest/scale-to-width-down/1000?cb=20121215232840","page":"https://onepiece.fandom.com/wiki/File:G-8_Arc.png"},{"file":"Goat_Island_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/85/Goat_Island_Arc.png/revision/latest/scale-to-width-down/1000?cb=20260113102902","page":"https://onepiece.fandom.com/wiki/File:Goat_Island_Arc.png"},{"file":"Ice_Hunter_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/9/97/Ice_Hunter_Arc.png/revision/latest/scale-to-width-down/1000?cb=20200512214358","page":"https://onepiece.fandom.com/wiki/File:Ice_Hunter_Arc.png"},{"file":"Impel_Down_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/a/a4/Impel_Down_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230404150427","page":"https://onepiece.fandom.com/wiki/File:Impel_Down_Arc.png"},{"file":"Jaya_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/f/f0/Jaya_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240312011132","page":"https://onepiece.fandom.com/wiki/File:Jaya_Arc.png"},{"file":"Laboon_Anime_Infobox.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/88/Laboon_Anime_Infobox.png/revision/latest/scale-to-width-down/1000?cb=20180508212232","page":"https://onepiece.fandom.com/wiki/File:Laboon_Anime_Infobox.png"},{"file":"Levely_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/1/11/Levely_Arc.png/revision/latest/scale-to-width-down/1000?cb=20211203193700","page":"https://onepiece.fandom.com/wiki/File:Levely_Arc.png"},{"file":"Little_East_Blue_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/c/c6/Little_East_Blue_Arc.png/revision/latest/scale-to-width-down/1000?cb=20130509191516","page":"https://onepiece.fandom.com/wiki/File:Little_East_Blue_Arc.png"},{"file":"Little_Garden_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/81/Little_Garden_Arc.png/revision/latest/scale-to-width-down/1000?cb=20250204204145","page":"https://onepiece.fandom.com/wiki/File:Little_Garden_Arc.png"},{"file":"Loguetown_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/3/3f/Loguetown_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240720203743","page":"https://onepiece.fandom.com/wiki/File:Loguetown_Arc.png"},{"file":"Long_Ring_Long_Land_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/3/33/Long_Ring_Long_Land_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230323222528","page":"https://onepiece.fandom.com/wiki/File:Long_Ring_Long_Land_Arc.png"},{"file":"Marine_Rookie_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/2/26/Marine_Rookie_Arc.png/revision/latest/scale-to-width-down/1000?cb=20170305014019","page":"https://onepiece.fandom.com/wiki/File:Marine_Rookie_Arc.png"},{"file":"Marineford_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/2/28/Marineford_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230122224253","page":"https://onepiece.fandom.com/wiki/File:Marineford_Arc.png"},{"file":"Ocean's_Dream_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/b/b3/Ocean%27s_Dream_Arc.png/revision/latest/scale-to-width-down/1000?cb=20210524165804","page":"https://onepiece.fandom.com/wiki/File:Ocean%27s_Dream_Arc.png"},{"file":"Orange_Town_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/5/5a/Orange_Town_Arc.png/revision/latest/scale-to-width-down/1000?cb=20130206004236","page":"https://onepiece.fandom.com/wiki/File:Orange_Town_Arc.png"},{"file":"Post-Arabasta_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/6/6f/Post-Arabasta_Arc.png/revision/latest/scale-to-width-down/1000?cb=20260113102758","page":"https://onepiece.fandom.com/wiki/File:Post-Arabasta_Arc.png"},{"file":"Post-Enies_Lobby_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/6/6b/Post-Enies_Lobby_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230404180552","page":"https://onepiece.fandom.com/wiki/File:Post-Enies_Lobby_Arc.png"},{"file":"Post-War_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/4/4c/Post-War_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240804222941","page":"https://onepiece.fandom.com/wiki/File:Post-War_Arc.png"},{"file":"Punk_Hazard_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/d/df/Punk_Hazard_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240418031118","page":"https://onepiece.fandom.com/wiki/File:Punk_Hazard_Arc.png"},{"file":"Return_to_Sabaody_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/c/c6/Return_to_Sabaody_Arc.png/revision/latest/scale-to-width-down/1000?cb=20210116220828","page":"https://onepiece.fandom.com/wiki/File:Return_to_Sabaody_Arc.png"},{"file":"Romance_Dawn_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/9/90/Romance_Dawn_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230527232506","page":"https://onepiece.fandom.com/wiki/File:Romance_Dawn_Arc.png"},{"file":"Ruluka_Island_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/3/30/Ruluka_Island_Arc.png/revision/latest/scale-to-width-down/1000?cb=20260113103029","page":"https://onepiece.fandom.com/wiki/File:Ruluka_Island_Arc.png"},{"file":"Sabaody_Archipelago_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/2/2b/Sabaody_Archipelago_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230403161152","page":"https://onepiece.fandom.com/wiki/File:Sabaody_Archipelago_Arc.png"},{"file":"Silver_Mine_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/e/e0/Silver_Mine_Arc.png/revision/latest/scale-to-width-down/1000?cb=20161025082354","page":"https://onepiece.fandom.com/wiki/File:Silver_Mine_Arc.png"},{"file":"Skypiea_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/d/d6/Skypiea_Arc.png/revision/latest/scale-to-width-down/1000?cb=20210107041826","page":"https://onepiece.fandom.com/wiki/File:Skypiea_Arc.png"},{"file":"Spa_Island_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/7/7a/Spa_Island_Arc.png/revision/latest/scale-to-width-down/1000?cb=20140916102828","page":"https://onepiece.fandom.com/wiki/File:Spa_Island_Arc.png"},{"file":"Syrup_Village_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/b/bc/Syrup_Village_Arc.png/revision/latest/scale-to-width-down/1000?cb=20250716000213","page":"https://onepiece.fandom.com/wiki/File:Syrup_Village_Arc.png"},{"file":"Thriller_Bark_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/7/7e/Thriller_Bark_Arc.png/revision/latest/scale-to-width-down/1000?cb=20160705133246","page":"https://onepiece.fandom.com/wiki/File:Thriller_Bark_Arc.png"},{"file":"Uta's_Past_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/8b/Uta%27s_Past_Arc.png/revision/latest/scale-to-width-down/1000?cb=20220821094115","page":"https://onepiece.fandom.com/wiki/File:Uta%27s_Past_Arc.png"},{"file":"Wano_Country_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/a/a3/Wano_Country_Arc.png/revision/latest/scale-to-width-down/1000?cb=20211130095510","page":"https://onepiece.fandom.com/wiki/File:Wano_Country_Arc.png"},{"file":"Warship_Island_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/7/77/Warship_Island_Arc.png/revision/latest/scale-to-width-down/1000?cb=20210419140916","page":"https://onepiece.fandom.com/wiki/File:Warship_Island_Arc.png"},{"file":"Water_7_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/c/c4/Water_7_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230404175605","page":"https://onepiece.fandom.com/wiki/File:Water_7_Arc.png"},{"file":"Whisky_Peak_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/4/4d/Whisky_Peak_Arc.png/revision/latest/scale-to-width-down/1000?cb=20230919201624","page":"https://onepiece.fandom.com/wiki/File:Whisky_Peak_Arc.png"},{"file":"Whole_Cake_Island_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/6/6b/Whole_Cake_Island_Arc.png/revision/latest/scale-to-width-down/1000?cb=20180227003004","page":"https://onepiece.fandom.com/wiki/File:Whole_Cake_Island_Arc.png"},{"file":"Z's_Ambition_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/6/69/Z%27s_Ambition_Arc.png/revision/latest/scale-to-width-down/1000?cb=20130622052036","page":"https://onepiece.fandom.com/wiki/File:Z%27s_Ambition_Arc.png"},{"file":"Zou_Arc.png","poster":"https://static.wikia.nocookie.net/onepiece/images/e/ec/Zou_Arc.png/revision/latest/scale-to-width-down/1000?cb=20240818134937","page":"https://onepiece.fandom.com/wiki/File:Zou_Arc.png"}] as {file:string;poster:string;page:string}[];
+  const extraArtwork=[{"key":"ace flashback specials","file":"Portgas_D._Ace_Anime_Infobox.png","poster":"https://static.wikia.nocookie.net/onepiece/images/4/4f/Portgas_D._Ace_Anime_Infobox.png/revision/latest/scale-to-width-down/536?cb=20240629132600","page":"https://onepiece.fandom.com/wiki/File:Portgas_D._Ace_Anime_Infobox.png"},{"key":"aokiji encounter","file":"Kuzan_Anime_Pre_Timeskip_Infobox.png","poster":"https://static.wikia.nocookie.net/onepiece/images/a/a9/Kuzan_Anime_Pre_Timeskip_Infobox.png/revision/latest/scale-to-width-down/536?cb=20230221222337","page":"https://onepiece.fandom.com/wiki/File:Kuzan_Anime_Pre_Timeskip_Infobox.png"},{"key":"boss luffy historical specials","file":"Monkey_D._Luffy_Manga_Pre_Timeskip_Infobox.png","poster":"https://static.wikia.nocookie.net/onepiece/images/7/72/Monkey_D._Luffy_Manga_Pre_Timeskip_Infobox.png/revision/latest?cb=20250225214911","page":"https://onepiece.fandom.com/wiki/File:Monkey_D._Luffy_Manga_Pre_Timeskip_Infobox.png"},{"key":"chopper man special","file":"Chopper_Man.png","poster":"https://static.wikia.nocookie.net/onepiece/images/5/59/Chopper_Man.png/revision/latest?cb=20120916012923","page":"https://onepiece.fandom.com/wiki/File:Chopper_Man.png"},{"key":"koby and helmeppo","file":"Koby_and_Helmeppo_Training_Hard.png","poster":"https://static.wikia.nocookie.net/onepiece/images/0/09/Koby_and_Helmeppo_Training_Hard.png/revision/latest?cb=20200613100114","page":"https://onepiece.fandom.com/wiki/File:Koby_and_Helmeppo_Training_Hard.png"},{"key":"romance dawn anniversary special","file":"Episode_907.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/85/Episode_907.png/revision/latest?cb=20191020023448","page":"https://onepiece.fandom.com/wiki/File:Episode_907.png"},{"key":"straw hat separation","file":"Straw_Hat_Pirates_as_a_Family.png","poster":"https://static.wikia.nocookie.net/onepiece/images/8/8a/Straw_Hat_Pirates_as_a_Family.png/revision/latest?cb=20230808215552","page":"https://onepiece.fandom.com/wiki/File:Straw_Hat_Pirates_as_a_Family.png"}] as {key:string;file:string;poster:string;page:string}[];
+  const normalize=(value:string)=>String(value||'').normalize('NFKD').toLowerCase()
+    .replace(/['’]/g,'').replace(/\\(filler\\)/g,'').replace(/[^a-z0-9]+/g,' ').trim().replace(/\\s+/g,' ');
+  const byTitle=new Map<string,{file:string;poster:string;page:string}>();
+  for(const entry of catalogue){
+    const base=entry.file.replace(/\\.[^.]+$/,'').replace(/_DVD$/i,'').replace(/_Arc$/i,'').replace(/_Anime_Infobox$/i,'').replace(/_/g,' ');
+    const key=normalize(base);
+    if(key&&!byTitle.has(key))byTitle.set(key,entry);
+    if(key==='laboon')byTitle.set('reverse mountain',entry);
   }
-  const locateEpisode=(absoluteEpisode:number)=>{
-    const range=seasonRanges.find((s:any)=>absoluteEpisode>=s.start&&absoluteEpisode<=s.end);
-    return range?{seasonNumber:range.seasonNumber,episodeNumber:absoluteEpisode-range.start+1}:null;
-  };
-
+  byTitle.set('levely reverie',byTitle.get('levely')!);
+  for(const extra of extraArtwork)byTitle.set(extra.key,extra);
   const usedUrls=new Set<string>();
-  const output:Record<string,{poster:string;backdrop:string;episodeNumber:number;episodeTitle:string;sourceUrl:string;artworkSource:string}>={};
+  const output:Record<string,{poster:string;backdrop:string;episodeNumber:number;episodeTitle:string;sourceUrl:string;artworkSource:string;kind:string}>={};
   for(let offset=0;offset<ranges.length;offset+=4){
     const batch=ranges.slice(offset,offset+4);
     await Promise.all(batch.map(async(arc:any)=>{
-      // Prefer TMDB stills for episodes inside this exact story arc. Candidates
-      // are ordered around the arc midpoint by the caller; never reuse the root
-      // series poster, this arc's existing poster, or another returned arc image.
-      for(const episode of arc.candidates){
-        const location=locateEpisode(episode.absoluteEpisode);
-        if(!location)continue;
-        const episodeUrl='https://www.themoviedb.org/tv/'+id+'/season/'+location.seasonNumber+'/episode/'+location.episodeNumber;
-        try{
-          const url='https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'/season/'+encodeURIComponent(String(location.seasonNumber))+'/episode/'+encodeURIComponent(String(location.episodeNumber))+'/images';
-          const data=await getJson(url,tmdbHeaders());
-          const currentPath=String(episode.poster||'').match(/image\.tmdb\.org\/t\/p\/[^/]+(\/.*)$/)?.[1]||'';
-          const arcPath=String(arc.currentPoster||'').match(/image\.tmdb\.org\/t\/p\/[^/]+(\/.*)$/)?.[1]||'';
-          const stills=(Array.isArray(data?.stills)?data.stills:[])
-            .filter((x:any)=>String(x?.file_path||'').trim()&&String(x.file_path)!==currentPath&&String(x.file_path)!==arcPath)
-            .sort((a:any,b:any)=>Number(b.vote_average||0)-Number(a.vote_average||0)||Number(b.width||0)-Number(a.width||0));
-          const still=stills.find((x:any)=>!usedUrls.has(tmdbImage(x.file_path,'w500')));
-          if(still){
-            const poster=tmdbImage(still.file_path,'w500');
-            usedUrls.add(poster);
-            output[arc.id]={poster,backdrop:tmdbImage(still.file_path,'original'),episodeNumber:episode.absoluteEpisode,episodeTitle:episode.title,sourceUrl:episodeUrl,artworkSource:'TMDB-alternative-still'};
-            return;
-          }
-          // If no alternate still exists, the episode's own TMDB still is still
-          // better than a generic series image and is specific to this arc.
-          const detail=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'/season/'+encodeURIComponent(String(location.seasonNumber))+'/episode/'+encodeURIComponent(String(location.episodeNumber))+'?language=en-US',tmdbHeaders());
-          const ownStill=String(detail?.still_path||'').trim();
-          const ownPoster=tmdbImage(ownStill,'w500');
-          if(ownStill&&ownPoster!==arc.currentPoster&&!usedUrls.has(ownPoster)){
-            usedUrls.add(ownPoster);
-            output[arc.id]={poster:ownPoster,backdrop:tmdbImage(ownStill,'original'),episodeNumber:episode.absoluteEpisode,episodeTitle:String(detail?.name||episode.title),sourceUrl:episodeUrl,artworkSource:'TMDB-episode-still'};
-            return;
-          }
-        }catch(error){console.warn('[FRAME One Piece arc TMDB artwork]',arc.id,episode.absoluteEpisode,error)}
+      const match=byTitle.get(normalize(arc.title));
+      if(match&&match.poster!==arc.currentPoster&&!usedUrls.has(match.poster)){
+        usedUrls.add(match.poster);
+        output[arc.id]={poster:match.poster,backdrop:match.poster,episodeNumber:0,episodeTitle:arc.title,sourceUrl:match.page,artworkSource:'One Piece Wiki arc-specific artwork',kind:'arc-artwork'};
+        return;
       }
-      // Last resort: distinct episode art from this exact arc. This keeps every
-      // result different even when TMDB has no usable image for a candidate.
+      // Fallback for any future arc with no dedicated image: keep its own
+      // episode art, never reuse the main series poster or another arc image.
       for(const episode of arc.candidates){
         const candidates=[episode.poster,episode.backdrop].map((url:string)=>String(url||'').trim())
           .filter((url:string,index:number,all:string[])=>url&&url!==arc.currentPoster&&!usedUrls.has(url)&&all.indexOf(url)===index);
         const poster=candidates[0];
         if(!poster)continue;
         usedUrls.add(poster);
-        output[arc.id]={poster,backdrop:episode.backdrop&&episode.backdrop!==arc.currentPoster?episode.backdrop:poster,episodeNumber:episode.absoluteEpisode,episodeTitle:episode.title,sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+episode.absoluteEpisode+' '+episode.title),artworkSource:'related-episode-still'};
+        output[arc.id]={poster,backdrop:episode.backdrop&&episode.backdrop!==arc.currentPoster?episode.backdrop:poster,episodeNumber:episode.absoluteEpisode,episodeTitle:episode.title,sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+episode.absoluteEpisode+' '+episode.title),artworkSource:'related-episode-still',kind:'episode-still'};
         return;
       }
     }));
   }
-  return {source:'TMDB arc-specific episode stills with unique related-art fallback',count:Object.keys(output).length,posters:output};
+  return {source:'One Piece Wiki arc-specific artwork with unique episode-still fallback',count:Object.keys(output).length,posters:output};
 }
 
 async function detailTmdbSeries(id:string){
