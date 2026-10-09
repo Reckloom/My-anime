@@ -85,6 +85,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const gameData=d.game||{};
  const complexity=gameData.complexity||{};
  const availability=d.availability||{};
+ const externalLinks=d.externalLinks||{};
  const gamePlatforms=listValue(gameData.platforms);
  const gameModes=listValue(gameData.gameModes);
  const gameDlc=listValue(gameData.dlc);
@@ -130,6 +131,18 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
       <a className="episode-source-link" href={d.episode.imdbEpisodeUrl||(d.episode.imdbId?'https://www.imdb.com/title/'+d.episode.imdbId+'/':'https://www.imdb.com/find/?q='+encodeURIComponent(d.title))} target="_blank" rel="noreferrer">Open IMDb episode listing <ExternalLink size={13}/></a>
      </section>}
      <div className="tags">{d.genres.slice(0,8).map(x=><span key={x}>{x}</span>)}</div>
+     {(externalLinks.imdbId||externalLinks.malId||d.anilistId||externalLinks.anilabId||externalLinks.anilabUrl||externalLinks.officialUrl||externalLinks.newsUrl)&&<section className="detail-external-links" aria-label="External anime links">
+      <div className="detail-section-head"><h3>Sources & updates</h3><span>Verified identifiers</span></div>
+      <div className="detail-external-link-list">
+       {(externalLinks.imdbId)&&<a href={'https://www.imdb.com/title/'+externalLinks.imdbId+'/'} target="_blank" rel="noreferrer">IMDb <ExternalLink size={13}/></a>}
+       {externalLinks.malId&&<a href={'https://myanimelist.net/anime/'+externalLinks.malId+'/'} target="_blank" rel="noreferrer">MyAnimeList <ExternalLink size={13}/></a>}
+       {d.anilistId&&<a href={'https://anilist.co/anime/'+d.anilistId+'/'} target="_blank" rel="noreferrer">AniList <ExternalLink size={13}/></a>}
+       {externalLinks.officialUrl&&<a href={externalLinks.officialUrl} target="_blank" rel="noreferrer">Official site <ExternalLink size={13}/></a>}
+       {externalLinks.newsUrl&&<a href={externalLinks.newsUrl} target="_blank" rel="noreferrer">News & announcements <ExternalLink size={13}/></a>}
+       {externalLinks.anilabUrl&&<a href={externalLinks.anilabUrl} target="_blank" rel="noreferrer">Open in AniLab <ExternalLink size={13}/></a>}
+       {externalLinks.anilabId&&!externalLinks.anilabUrl&&<span className="detail-external-id">AniLab ID: {externalLinks.anilabId}</span>}
+      </div>
+     </section>}
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
     </div>
    </div>
@@ -149,6 +162,12 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
       <label>External ID<input value={d.externalId||''} onChange={e=>update('externalId',e.target.value||undefined)}/></label>
       <label>AniList ID<input type="number" value={d.anilistId??''} onChange={e=>update('anilistId',e.target.value===''?undefined:Number(e.target.value))}/></label>
       <label>Metadata ID<input value={d.metadataId||''} onChange={e=>update('metadataId',e.target.value||undefined)}/></label>
+      <label>IMDb ID<input value={externalLinks.imdbId||''} onChange={e=>update('externalLinks',{...externalLinks,imdbId:e.target.value.trim()||undefined})} placeholder="tt0388629"/></label>
+      <label>MyAnimeList ID<input value={externalLinks.malId||''} onChange={e=>update('externalLinks',{...externalLinks,malId:e.target.value.trim()||undefined})} placeholder="21"/></label>
+      <label>AniLab ID<input value={externalLinks.anilabId||''} onChange={e=>update('externalLinks',{...externalLinks,anilabId:e.target.value.trim()||undefined})} placeholder="Paste the title ID from AniLab"/></label>
+      <label>AniLab title link<input value={externalLinks.anilabUrl||''} onChange={e=>update('externalLinks',{...externalLinks,anilabUrl:e.target.value.trim()||undefined})} placeholder="Optional share link"/></label>
+      <label>Official website<input value={externalLinks.officialUrl||''} onChange={e=>update('externalLinks',{...externalLinks,officialUrl:e.target.value.trim()||undefined})} placeholder="https://…"/></label>
+      <label>News / announcements URL<input value={externalLinks.newsUrl||''} onChange={e=>update('externalLinks',{...externalLinks,newsUrl:e.target.value.trim()||undefined})} placeholder="Official news page"/></label>
       <label>Year<input type="number" min="1800" max="3000" value={d.year??''} onChange={e=>update('year',e.target.value===''?undefined:Number(e.target.value))}/></label>
       <label>Source score<input type="number" min="0" max="10" step=".1" value={d.score??''} onChange={e=>update('score',e.target.value===''?undefined:Number(e.target.value))}/></label>
       <label>Studio / author / publisher<input value={d.studio||''} onChange={e=>update('studio',e.target.value||undefined)}/></label>
