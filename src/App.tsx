@@ -269,7 +269,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      {name:'Final Saga · Egghead',start:1086,end:2000}
     ];
     const rootId=crypto.randomUUID();
-    const root:MediaItem={...item,id:rootId,total:episodes.length,progress:0,notes:[item.notes,'FRAME hierarchy: canon episodes are grouped into saga parts. Episode metadata comes from Jikan/MyAnimeList and can be refreshed by re-importing in a future update. Streaming availability changes by region; use the service links on this entry.'].filter(Boolean).join('\n\n')};
+    const root:MediaItem={...item,id:rootId,total:episodes.length,progress:0,
+    description:[item.description,'Follow the Grand Line through the anime’s saga and arc structure. Open a saga to browse individual episodes, air dates, ratings and synopses where the catalogue provides them.'].filter(Boolean).join('\n\n'),
+    availability:{watch:['https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','https://www.netflix.com/title/80107103'],read:['https://one-piece.com/'],buy:[]},
+    notes:[item.notes,'Official series site: https://one-piece.com/','Official anime catalogue: https://www.crunchyroll.com/series/GRMG8ZQZR/one-piece','Streaming catalogue: https://www.netflix.com/title/80107103','News and announcements: https://www.animenewsnetwork.com/search/?q=One%20Piece','FRAME hierarchy: episodes are grouped under saga parts. Episode metadata comes from Jikan/MyAnimeList; episode-specific still images are not supplied consistently by that catalogue, so the series artwork is used as a fallback. Streaming availability changes by region.'].filter(Boolean).join('\n\n')};
     const created:MediaItem[]=[root];
     const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&!e.filler&&!e.recap&&Number(e.mal_id)<=2000);
     for(const arc of arcs){
