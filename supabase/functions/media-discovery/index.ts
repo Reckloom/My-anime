@@ -333,7 +333,7 @@ async function searchTmdbSeries(query:string){
 
 async function onePieceEpisodeCatalogue(id:string){
   const series=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
-  const seasons=Array.isArray(series?.seasons)?series.seasons.filter((s:any)=>Number(s?.season_number)>0):[];
+  const seasons=Array.isArray(series?.seasons)?series.seasons.filter((s:any)=>Number(s?.season_number)>=0).sort((a:any,b:any)=>{const an=Number(a.season_number),bn=Number(b.season_number);return (an===0?9999:an)-(bn===0?9999:bn)}):[];
   const all:any[]=[];
   // Keep the request burst small to respect the metadata provider's rate limits.
   for(let i=0;i<seasons.length;i+=4){
@@ -345,7 +345,7 @@ async function onePieceEpisodeCatalogue(id:string){
     for(const episodes of results)all.push(...episodes);
   }
   const episodes=all.filter((e:any)=>Number(e?.episode_number)>0).sort((a:any,b:any)=>
-    Number(a.season_number)-Number(b.season_number)||Number(a.episode_number)-Number(b.episode_number)
+    (Number(a.season_number)===0?9999:Number(a.season_number))-(Number(b.season_number)===0?9999:Number(b.season_number))||Number(a.episode_number)-Number(b.episode_number)
   );
   return {
     provider:'tmdb-tv-episodes',externalId:String(series.id),title:String(series.name||series.original_name||'One Piece'),
@@ -353,7 +353,7 @@ async function onePieceEpisodeCatalogue(id:string){
     source:'TMDB',seriesUrl:'https://www.themoviedb.org/tv/'+series.id,
     episodes:episodes.map((e:any,index:number)=>({
       absoluteEpisode:index+1,tmdbId:String(e.id),title:String(e.name||('Episode '+(index+1))),
-      seasonNumber:Number(e.season_number)||1,episodeNumber:Number(e.episode_number)||index+1,
+      seasonNumber:Number(e.season_number),episodeNumber:Number(e.episode_number)||index+1,special:Number(e.season_number)===0,
       airDate:e.air_date?String(e.air_date):undefined,poster:tmdbImage(e.still_path,'w500'),
       backdrop:tmdbImage(e.still_path,'original'),score:e.vote_average==null?null:Number(e.vote_average),
       ratingCount:e.vote_count==null?0:Number(e.vote_count),ratingSource:'TMDB',
