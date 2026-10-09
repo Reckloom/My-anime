@@ -464,11 +464,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const arcId='one-piece-arc-'+arc.start;
    // Give each story arc a content-related still of its own and reserve it so
    // no episode in the hierarchy reuses that exact artwork.
-   const representative=arcEpisodes[Math.floor(arcEpisodes.length/2)];
    const arcCandidates=arcEpisodes.flatMap((episode:any)=>[
+    String(onePiecePosterCatalogueRef.current[String(Number(episode?.mal_id))]||'').trim(),
     String(episode?.images?.jpg?.image_url||'').trim(),
-    String(episode?.images?.jpg?.large_image_url||'').trim(),
-    String(onePiecePosterCatalogueRef.current[String(Number(episode?.mal_id))]||'').trim()
+    String(episode?.images?.jpg?.large_image_url||'').trim()
    ]).filter((url:string,index:number,all:string[])=>Boolean(url)&&url!==root.poster&&all.indexOf(url)===index&&!usedEpisodePosterUrls.has(url));
    const arcPoster=arcCandidates[0]||root.poster;
    if(arcPoster!==root.poster)usedEpisodePosterUrls.add(arcPoster);
