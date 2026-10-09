@@ -357,7 +357,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
       const data=await response.json() as any;
       for(const row of Array.isArray(data.data)?data.data:[]){
        const number=Number(row.mal_id);
-       if(Number.isInteger(number)&&number>=1&&number<=expected)result.push({number,title:String(row.title||''),aired:String(row.aired||''),synopsis:String(row.synopsis||''),poster:'',source:'MyAnimeList / Jikan'});
+       if(Number.isInteger(number)&&number>=1&&number<=expected)result.push({number,title:String(row.title||''),aired:String(typeof row.aired==='string'?row.aired:(row.aired?.from||'')),synopsis:String(row.synopsis||''),poster:'',source:'MyAnimeList / Jikan'});
       }
       lastError=null;break;
      }catch(error){lastError=error;if(attempt<2)await new Promise(resolve=>window.setTimeout(resolve,1000*(attempt+1)))}
