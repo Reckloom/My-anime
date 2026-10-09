@@ -317,7 +317,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const client=supabase;if(!client||!user?.id)return;
   setRadarBusy(true);setRadarError('');
   try{const {data,error}=await client.functions.invoke('release-radar',{body:{action:'refresh'}});if(error)throw error;const releases=Array.isArray((data as any)?.releases)?(data as any).releases:[];setRadar(releases);if(user?.id){const current=releases.filter((x:any)=>x?.released).slice(0,30);if(current.length){
-     const rows=current.map((x:any)=>({user_id:user.id,type:'release',title:x.title+' · Episode '+x.episode,body:'A tracked release is available now.',href:'radar',dedupe_key:'release:'+x.anilistId+':'+x.episode}));
+     const rows=current.map((x:any)=>({user_id:user.id,type:'release',title:x.title+' · Episode '+x.episode,body:'A tracked release is available now.',href:'media:'+x.mediaId,dedupe_key:'release:'+x.anilistId+':'+x.episode}));
      const keys=rows.map((x:any)=>x.dedupe_key);
      const {data:existing}=await client.from('frame_notifications').select('dedupe_key').eq('user_id',user.id).in('dedupe_key',keys);
      const seen=new Set((existing||[]).map((x:any)=>String(x.dedupe_key)));
@@ -410,7 +410,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
     <button className="primary top-find" onClick={()=>setFinder(true)}><Search size={16}/>Search</button>
     <button className="top-icon" title="Connections" aria-label="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
-    <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>href&&go(href)}/>
+    <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>{if(!href)return;if(href.startsWith('media:')){const match=items.find(x=>x.id===href.slice(6));if(match){setSelected(match);return}}go(href)}}/>
     {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
     <button className="top-account" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
       <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt={(profile.display_name||user?.email||'Account')+' avatar'} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
