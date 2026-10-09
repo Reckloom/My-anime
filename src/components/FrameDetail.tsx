@@ -192,7 +192,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    </div>
 
 
-     {d.medium==='anime'&&!d.episode&&!(/^one piece( \(tv\))?$/i.test(d.title.trim())&&library.some(x=>x.parentId===d.id&&String(x.sourceProvider)==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-')))&&!(/^naruto(?: \\(tv\\))?$/i.test(d.title.trim())&&library.some(x=>x.parentId===d.id&&String(x.sourceProvider)==='frame-naruto-part'))&&(d.anilistId||d.sourceProvider==='anilist'||d.sourceProvider==='anilist-episode-subpart'||externalLinks.malId)&&<FrameEpisodeList malId={externalLinks.malId} title={d.title} currentProgress={d.progress} onMarkThrough={async episodeNumber=>{
+     {d.medium==='anime'&&!d.episode&&!(/^one piece( \(tv\))?$/i.test(d.title.trim())&&library.some(x=>x.parentId===d.id&&String(x.sourceProvider)==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-')))&&!(/^naruto$/i.test(d.title.trim())&&library.some(x=>x.parentId===d.id&&String(x.sourceProvider)==='frame-naruto-part'))&&(d.anilistId||d.sourceProvider==='anilist'||d.sourceProvider==='anilist-episode-subpart'||externalLinks.malId)&&<FrameEpisodeList malId={externalLinks.malId} title={d.title} currentProgress={d.progress} onMarkThrough={async episodeNumber=>{
       const nextTotal=Math.max(d.total||0,episodeNumber);
       const next={...d,total:nextTotal,progress:Math.min(nextTotal,episodeNumber)};
       setD(next);setSaveMessage('Saving episode progress…');
