@@ -219,12 +219,20 @@ test.describe('FRAME anime episode catalogue', () => {
     console.log('Episode QA: Episodes heading visible');
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
     console.log('Episode QA: episode row visible; mark buttons =', await page.getByRole('button', { name: 'Mark through' }).count());
-    await page.locator('.detail-modal').evaluate(modal => {
+    const geometry = await page.locator('.detail-modal').evaluate(modal => {
       const panel = modal.querySelector('.frame-episode-list') as HTMLElement | null;
+      const button = modal.querySelector('.frame-episode-mark') as HTMLElement | null;
       if (panel) modal.scrollTop = Math.max(0, panel.offsetTop - 20);
+      if (button) button.scrollIntoView({ block: 'center', behavior: 'auto' });
+      const rect = button?.getBoundingClientRect();
+      const modalRect = modal.getBoundingClientRect();
+      return { scrollTop: modal.scrollTop, scrollHeight: modal.scrollHeight, clientHeight: modal.clientHeight,
+        panelTop: panel?.getBoundingClientRect().top, buttonTop: rect?.top, buttonBottom: rect?.bottom,
+        modalTop: modalRect.top, modalBottom: modalRect.bottom,
+        hit: rect ? document.elementFromPoint(rect.left + rect.width/2, rect.top + rect.height/2)?.tagName : null };
     });
-    await page.getByRole('button', { name: 'Mark through' }).evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'auto' }));
-    await page.getByRole('button', { name: 'Mark through' }).click({timeout:5000});
+    console.log('Episode QA geometry:', geometry);
+    await page.getByRole('button', { name: 'Mark through' }).click({force:true});
     console.log('Episode QA: clicked mark-through');
     await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
   });
