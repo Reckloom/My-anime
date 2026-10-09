@@ -278,26 +278,47 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     if(!anime?.id)throw new Error('Kitsu did not identify the One Piece TV anime.');
     const kitsuEpisodes:Array<any>=[];
     const limit=20;
-    for(let offset=0;offset<1400;offset+=limit){
+    const fetchKitsuPage=async(offset:number)=>{
      const url='https://kitsu.io/api/edge/anime/'+encodeURIComponent(String(anime.id))+'/episodes?page[limit]='+limit+'&page[offset]='+offset;
      const pageResponse=await fetch(url);
      if(!pageResponse.ok)throw new Error('Kitsu episode page failed (HTTP '+pageResponse.status+').');
-     const pageData=await pageResponse.json() as {data?:Array<any>;links?:{next?:string|null};meta?:{count?:number}};
+     return await pageResponse.json() as {data?:Array<any>;links?:{next?:string|null};meta?:{count?:number}};
+    };
+    const addKitsuRows=(pageData:{data?:Array<any>})=>{
      const rows=Array.isArray(pageData.data)?pageData.data:[];
-     if(!rows.length)break;
+     let meaningful=0;
      for(const row of rows){
       const a=row?.attributes||{};
       const number=Number(a.number);
-      if(!Number.isFinite(number)||number<=0||number>2000)continue;
+      const title=String(a.canonicalTitle||a.titles?.en_us||a.titles?.en||a.titles?.en_jp||'').trim();
+      const aired=String(a.airdate||a.airDate||'');
+      // Kitsu currently contains future placeholder rows with no title/date.
+      // Do not present those placeholders as real released episodes.
+      if(!Number.isFinite(number)||number<=0||number>2000||(!title&&!aired))continue;
+      meaningful++;
       kitsuEpisodes.push({
-       mal_id:number,title:String(a.canonicalTitle||a.titles?.en||a.titles?.en_jp||('Episode '+number)),
-       aired:String(a.airdate||a.airDate||''),synopsis:String(a.synopsis||a.description||''),
+       mal_id:number,title:title||('Episode '+number),aired,synopsis:String(a.synopsis||a.description||''),
        images:{jpg:{image_url:String(a.thumbnail?.original||a.thumbnail?.large||a.thumbnail?.medium||'')}},
        ratingSource:'Kitsu',runtimeMinutes:Number(a.length)||undefined,sourceUrl:'https://kitsu.io/anime/'+String(anime.attributes?.slug||anime.id)
       });
      }
-     if(!pageData.links?.next||rows.length<limit)break;
-     await new Promise(resolve=>window.setTimeout(resolve,350));
+     return {rows:rows.length,meaningful};
+    };
+    const firstPage=await fetchKitsuPage(0);
+    const firstStats=addKitsuRows(firstPage);
+    const total=Math.min(Number(firstPage.meta?.count||1400),2000);
+    let emptyPages=firstStats.meaningful===0?1:0;
+    for(let offset=limit;offset<total&&offset<2000;){
+     const offsets=[offset,offset+limit,offset+limit*2,offset+limit*3].filter(x=>x<total&&x<2000);
+     const pages=await Promise.all(offsets.map(fetchKitsuPage));
+     let shouldStop=false;
+     for(let i=0;i<pages.length;i++){
+      const stats=addKitsuRows(pages[i]);
+      emptyPages=stats.meaningful===0?emptyPages+1:0;
+      if(emptyPages>=3){shouldStop=true;break}
+     }
+     offset+=offsets.length*limit;
+     if(shouldStop)break;
     }
     if(kitsuEpisodes.length)episodes=kitsuEpisodes;
    }catch(error){console.warn('[FRAME One Piece Kitsu episode catalogue]',error)}
@@ -342,7 +363,11 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    }));
   }
   if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
-  const included=episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=2000).sort((a:any,b:any)=>Number(a.mal_id)-Number(b.mal_id));
+  const included=[...new Map(episodes.filter((e:any)=>Number(e.mal_id)>0&&Number(e.mal_id)<=2000).sort((a:any,b:any)=>{
+   const aHasMetadata=Boolean(String(a.title||'').trim()&&String(a.title||'').trim()!=='Episode '+Number(a.mal_id))||Boolean(a.synopsis)||Boolean(a.aired)||Boolean(a.images?.jpg?.image_url);
+   const bHasMetadata=Boolean(String(b.title||'').trim()&&String(b.title||'').trim()!=='Episode '+Number(b.mal_id))||Boolean(b.synopsis)||Boolean(b.aired)||Boolean(b.images?.jpg?.image_url);
+   return Number(bHasMetadata)-Number(aHasMetadata);
+  }).map((e:any)=>[Number(e.mal_id),e])).values()].sort((a:any,b:any)=>Number(a.mal_id)-Number(b.mal_id));
   if(!included.length)throw new Error('The catalogue returned no usable episodes.');
   const arcs=[
    {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},{name:'Syrup Village',start:9,end:18},
