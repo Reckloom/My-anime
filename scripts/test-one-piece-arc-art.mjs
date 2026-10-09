@@ -10,7 +10,9 @@ const arcs = [
   { id: 'qa-one-piece-romance-dawn', title: 'Romance Dawn', currentPoster: 'https://example.invalid/root.jpg', candidates: [{ absoluteEpisode: 6, title: 'One Piece Episode 6', poster: 'https://one-piece.com/img/anime/story/img_story_006.jpg', backdrop: '' }] },
   { id: 'qa-one-piece-arlong-park', title: 'Arlong Park', currentPoster: 'https://example.invalid/root.jpg', candidates: [{ absoluteEpisode: 37, title: 'One Piece Episode 37', poster: 'https://one-piece.com/img/anime/story/img_story_037.jpg', backdrop: '' }] },
   { id: 'qa-one-piece-water-7', title: 'Water 7', currentPoster: 'https://example.invalid/root.jpg', candidates: [{ absoluteEpisode: 246, title: 'One Piece Episode 246', poster: 'https://one-piece.com/img/anime/story/img_story_246.jpg', backdrop: '' }] },
-  { id: 'qa-one-piece-dressrosa', title: 'Dressrosa', currentPoster: 'https://example.invalid/root.jpg', candidates: [{ absoluteEpisode: 629, title: 'One Piece Episode 629', poster: 'https://one-piece.com/o/assets/images/anime/tvstory/3952/story_img_1.jpg', backdrop: '' }] }
+  { id: 'qa-one-piece-dressrosa', title: 'Dressrosa', currentPoster: 'https://example.invalid/root.jpg', candidates: [{ absoluteEpisode: 629, title: 'One Piece Episode 629', poster: 'https://one-piece.com/o/assets/images/anime/tvstory/3952/story_img_1.jpg', backdrop: '' }] },
+  { id: 'one-piece-arc-422', title: 'Impel Down', currentPoster: 'https://example.invalid/root.jpg', candidates: [{ absoluteEpisode: 423, title: 'One Piece Episode 423', poster: 'https://one-piece.com/img/anime/story/img_story_423.jpg', backdrop: '' }] },
+  { id: 'one-piece-arc-430', title: 'Impel Down', currentPoster: 'https://example.invalid/root.jpg', candidates: [{ absoluteEpisode: 441, title: 'One Piece Episode 441', poster: 'https://one-piece.com/img/anime/story/img_story_441.jpg', backdrop: '' }] }
 ];
 
 const response = await fetch(projectUrl + '/functions/v1/media-discovery', {
