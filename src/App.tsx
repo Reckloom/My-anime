@@ -573,8 +573,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
-  if(item.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(item.title.trim())){
-   const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(x.title.trim()));
+  if(item.medium==='anime'&&/^naruto$/i.test(item.title.trim())){
+   const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
    try{return await buildNarutoHierarchy(existing||item)}catch(error){setAppMessage('Could not load Naruto hierarchy: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
   }
   if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
@@ -589,7 +589,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  useEffect(()=>{
   if(!cloudLibraryReady||!items.length)return;
-  const root=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(x.title.trim()));
+  const root=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
   if(!root)return;
   const parts=items.filter(x=>x.parentId===root.id&&x.sourceProvider==='frame-naruto-part');
   if(parts.some(x=>x.externalId==='naruto-part-original')&&parts.some(x=>x.externalId==='naruto-part-shippuden'))return;
