@@ -3,6 +3,7 @@ import {Check,ChevronLeft,ChevronRight,Edit3,ExternalLink,Heart,RefreshCw,Star,X
 import type {MediaAvailability,MediaItem,Status} from '../types';
 import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
 import {supabase} from '../lib/supabase';
+import {FrameEpisodeList} from './FrameEpisodeList';
 
 const labels:Record<Status,string>={watching:'Watching',reading:'Reading',playing:'Playing',completed:'Completed',planned:'Planned',paused:'Paused',dropped:'Dropped'};
 const units={anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as const;
@@ -143,6 +144,11 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
        {externalLinks.anilabId&&!externalLinks.anilabUrl&&<span className="detail-external-id">AniLab ID: {externalLinks.anilabId}</span>}
       </div>
      </section>}
+     {d.medium==='anime'&&externalLinks.malId&&<FrameEpisodeList malId={externalLinks.malId} currentProgress={d.progress} onMarkThrough={async episodeNumber=>{
+      const next={...d,progress:Math.min(max,episodeNumber)};
+      setD(next);setSaveMessage('Saving episode progress…');
+      try{const result=await save(next);setSaveMessage(result===false?'Could not save episode progress.':'Episode progress saved.')}catch{setSaveMessage('Could not save episode progress.')}
+     }}/>}
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
     </div>
    </div>
