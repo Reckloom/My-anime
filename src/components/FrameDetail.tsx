@@ -73,13 +73,14 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const[d,setD]=useState(item),[note,setNote]=useState(item.notes||''),[refreshing,setRefreshing]=useState(false),[refreshMessage,setRefreshMessage]=useState('');
  const[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[saveMessage,setSaveMessage]=useState('');
  const[hierarchyQuery,setHierarchyQuery]=useState('');
- const navigationHistory=useRef<Array<{item:MediaItem;drawerScrollTop:number;bodyScrollTop:number}>>([]);
- const pendingScrollRestore=useRef<{item:MediaItem;drawerScrollTop:number;bodyScrollTop:number}|null>(null);
+ const navigationHistory=useRef<Array<{item:MediaItem;overlayScrollTop:number;drawerScrollTop:number;bodyScrollTop:number;pageScrollTop:number}>>([]);
+ const pendingScrollRestore=useRef<{item:MediaItem;overlayScrollTop:number;drawerScrollTop:number;bodyScrollTop:number;pageScrollTop:number}|null>(null);
  const openRelated=(next:MediaItem)=>{
   if(next.id!==item.id){
+   const overlay=document.querySelector<HTMLElement>('.detail-overlay');
    const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
    const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
-   navigationHistory.current.push({item,drawerScrollTop:drawer?.scrollTop||0,bodyScrollTop:body?.scrollTop||0});
+   navigationHistory.current.push({item,overlayScrollTop:overlay?.scrollTop||0,drawerScrollTop:drawer?.scrollTop||0,bodyScrollTop:body?.scrollTop||0,pageScrollTop:window.scrollY||0});
   }
   navigate?.(next);
  };
@@ -100,14 +101,18 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  };
  useEffect(()=>{
   setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
+  const overlay=document.querySelector<HTMLElement>('.detail-overlay');
   const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
   const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
   const restore=pendingScrollRestore.current;
   if(restore&&restore.item.id===item.id){
+   if(overlay)overlay.scrollTop=restore.overlayScrollTop;
    if(drawer)drawer.scrollTop=restore.drawerScrollTop;
    if(body)body.scrollTop=restore.bodyScrollTop;
+   window.scrollTo(0,restore.pageScrollTop);
    pendingScrollRestore.current=null;
   }else{
+   if(overlay)overlay.scrollTop=0;
    if(drawer)drawer.scrollTop=0;
    if(body)body.scrollTop=0;
   }
