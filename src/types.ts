@@ -43,6 +43,15 @@ export interface EpisodeMetadata {
  synopsis?:string;
 }
 
+export interface ExternalMediaLinks {
+ imdbId?:string;
+ malId?:string;
+ anilabId?:string;
+ anilabUrl?:string;
+ officialUrl?:string;
+ newsUrl?:string;
+}
+
 export interface MediaItem{
  id:string; parentId?:string; metadataId?:string; anilistId?:number; sourceProvider?:string; externalId?:string;
  title:string; alternativeTitles?:string[]; description:string; poster:string; backdrop:string;
@@ -51,6 +60,7 @@ export interface MediaItem{
  genres:string[]; themes:string[]; studio?:string; source?:string; season?:string; duration?:number;
  airStart?:string; airEnd?:string; favorite:boolean; notes?:string; nextRelease?:string; nextReleaseNumber?:number;
  availability?:MediaAvailability;
+ externalLinks?:ExternalMediaLinks;
  notificationsEnabled?:boolean;
  releaseRadarState?:Record<string,unknown>;
  episode?:EpisodeMetadata;
