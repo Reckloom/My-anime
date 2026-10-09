@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {Check,ChevronLeft,ChevronRight,Edit3,ExternalLink,Heart,RefreshCw,Star,X} from 'lucide-react';
+import {ArrowLeft,Check,ChevronLeft,ChevronRight,Edit3,ExternalLink,Heart,RefreshCw,Star,X} from 'lucide-react';
 import type {MediaAvailability,MediaItem,Status} from '../types';
 import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
 import {supabase} from '../lib/supabase';
@@ -111,6 +111,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
   <div className="detail-modal-shell">
    {hasPrevious&&<button className="detail-nav-arrow detail-nav-prev" aria-label="Previous media" title="Previous media" onClick={goPrevious}><ChevronLeft size={26}/></button>}
    <aside className="detail-drawer detail-modal" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
+    <button className="detail-back-bubble" aria-label="Go back" title="Go back" onClick={close}><ArrowLeft size={16}/></button>
     <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
    <div className="detail-body">
     <img className="detail-poster" src={d.poster||'/frame-logo.svg'} alt={d.title} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
