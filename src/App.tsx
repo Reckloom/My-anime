@@ -140,6 +140,7 @@ export default function App(){
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
  const saveQueue=useRef(Promise.resolve(true));
  const onePieceAutoRef=useRef('');
+ const narutoAutoRef=useRef('');
  const onePieceArcArtworkRef=useRef('');
  const onePiecePosterCatalogueRef=useRef<Record<string,string>>({});
 
@@ -274,6 +275,59 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   });
   saveQueue.current=operation.catch(()=>true);
   return operation;
+ };
+
+ const buildNarutoHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
+  const rootId=rawRoot.id;
+  const originalId='naruto-part-original-'+rootId;
+  const shippudenId='naruto-part-shippuden-'+rootId;
+  const previousOriginal=items.find(x=>x.id===originalId||(x.parentId===rootId&&x.sourceProvider==='frame-naruto-part'&&x.externalId==='naruto-part-original'));
+  const previousShippuden=items.find(x=>x.id===shippudenId||(x.parentId===rootId&&x.sourceProvider==='frame-naruto-part'&&x.externalId==='naruto-part-shippuden'));
+  const originalProgress=Math.max(0,Math.min(220,previousOriginal?.progress??220));
+  const shippudenProgress=Math.max(0,Math.min(500,previousShippuden?.progress??170));
+  const original:MediaItem={
+   id:previousOriginal?.id||originalId,parentId:rootId,sourceProvider:'frame-naruto-part',externalId:'naruto-part-original',
+   title:'Naruto',description:'The original Naruto series — 220 episodes, including anime-original episodes and filler. Episode catalogue and progress are tracked inside this subpart.',
+   poster:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',backdrop:'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+   medium:'anime',status:originalProgress>=220?'completed':originalProgress>0?'watching':'planned',progress:originalProgress,total:220,customTotal:220,year:2002,
+   score:previousOriginal?.score,personalRating:previousOriginal?.personalRating,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],favorite:previousOriginal?.favorite??false,
+   notes:'FRAME_NARUTO_PART=original-v1. Original Naruto TV anime. Episode catalogue source: MyAnimeList / Jikan (MAL ID 20). Filler episodes remain included in the 220-episode numbering.',
+   availability:{watch:['https://www.crunchyroll.com/series/GY9PJ5KWR/naruto']},
+   externalLinks:{malId:'20',officialUrl:'https://naruto-official.com/en'}
+  };
+  const shippuden:MediaItem={
+   id:previousShippuden?.id||shippudenId,parentId:rootId,sourceProvider:'frame-naruto-part',externalId:'naruto-part-shippuden',
+   title:'Naruto Shippuden',description:'Naruto’s return and the next stage of the ninja world — 500 episodes, including anime-original episodes and filler. Episode catalogue and progress are tracked inside this subpart.',
+   poster:'https://cdn.myanimelist.net/images/anime/5/17407.jpg',backdrop:'https://cdn.myanimelist.net/images/anime/5/17407.jpg',
+   medium:'anime',status:shippudenProgress>=500?'completed':shippudenProgress>0?'watching':'planned',progress:shippudenProgress,total:500,customTotal:500,year:2007,
+   score:previousShippuden?.score,personalRating:previousShippuden?.personalRating,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],favorite:previousShippuden?.favorite??false,
+   notes:'FRAME_NARUTO_PART=shippuden-v1. Naruto Shippuden TV anime. Episode catalogue source: MyAnimeList / Jikan (MAL ID 1735). Filler episodes remain included in the 500-episode numbering.',
+   availability:{watch:['https://www.crunchyroll.com/series/GYQ4MW246/naruto-shippuden']},
+   externalLinks:{malId:'1735',officialUrl:'https://naruto-official.com/en'}
+  };
+  const priorRoot=items.find(x=>x.id===rootId)||rawRoot;
+  const root=normalise({
+   ...priorRoot,title:'Naruto',medium:'anime',total:720,customTotal:720,
+   progress:originalProgress+shippudenProgress,status:originalProgress+shippudenProgress>=720?'completed':'watching',
+   poster:priorRoot.poster||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+   backdrop:priorRoot.backdrop||'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+   year:2002,genres:['Action','Adventure','Fantasy'],themes:['Ninja','Martial Arts'],
+   description:'The complete Naruto anime library, organised into two direct subparts: Naruto (220 episodes) and Naruto Shippuden (500 episodes). Each subpart has its own poster, progress, status and searchable episode catalogue.',
+   externalLinks:{...(priorRoot.externalLinks||{}),officialUrl:'https://naruto-official.com/en'},
+   notes:[priorRoot.notes,'FRAME_NARUTO_HIERARCHY=v1. Main entry: Naruto. Subparts: Naruto (220 episodes) and Naruto Shippuden (500 episodes). Episode lists use MyAnimeList / Jikan metadata and keep filler episodes in the original numbering.'].filter(Boolean).join('\n\n')
+  });
+  const descendants=new Set<string>([rootId]);
+  let changed=true;
+  while(changed){changed=false;for(const entry of items){if(entry.parentId&&descendants.has(entry.parentId)&&!descendants.has(entry.id)){descendants.add(entry.id);changed=true}}}
+  const remaining=items.filter(x=>!descendants.has(x.id));
+  const ok=await save([root,original,shippuden,...remaining]);
+  if(ok){
+   narutoAutoRef.current=rootId+':ready';
+   setAppMessage('Naruto library ready: Naruto (220 episodes) + Naruto Shippuden (500 episodes), with separate progress and episode catalogues.');
+   window.setTimeout(()=>setAppMessage(''),7000);
+   setSelected(root);
+  }
+  return ok;
  };
  const ONE_PIECE_SERIES_POSTER='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const buildOnePieceHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
@@ -519,6 +573,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
+  if(item.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(item.title.trim())){
+   const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(x.title.trim()));
+   try{return await buildNarutoHierarchy(existing||item,Boolean(existing))}catch(error){setAppMessage('Could not load Naruto hierarchy: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
+  }
   if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
    const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
    if(existing)return await buildOnePieceHierarchy(existing,true);
@@ -529,6 +587,17 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(duplicate){setAppMessage('This title is already in your library.');window.setTimeout(()=>setAppMessage(''),3000);return false}
   return await save([item,...items]);
  };
+ useEffect(()=>{
+  if(!cloudLibraryReady||!items.length)return;
+  const root=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto(?: \\(tv\\))?$/i.test(x.title.trim()));
+  if(!root)return;
+  const parts=items.filter(x=>x.parentId===root.id&&x.sourceProvider==='frame-naruto-part');
+  if(parts.some(x=>x.externalId==='naruto-part-original')&&parts.some(x=>x.externalId==='naruto-part-shippuden'))return;
+  const key=root.id+':'+parts.length;
+  if(narutoAutoRef.current===key||narutoAutoRef.current===root.id+':ready')return;
+  narutoAutoRef.current=key;
+  void buildNarutoHierarchy(root,true).then(ok=>{if(!ok)narutoAutoRef.current=''}).catch(error=>{narutoAutoRef.current='';console.warn('[FRAME Naruto hierarchy]',error)});
+ },[cloudLibraryReady,items]);
  useEffect(()=>{
   if(!user?.id||!cloudLibraryReady||!items.length||!supabase)return;
   const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
