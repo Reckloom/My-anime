@@ -548,7 +548,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   onePieceArcArtworkRef.current=runKey;
   void (async()=>{
    try{
-    const posters:Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string}>={};
+    const posters:Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string;kind?:string;title?:string}>={};
     let failedBatches=0;
     // Keep each request small: sending every arc and all its episode metadata at
     // once can exceed edge-function/proxy request limits and abort the whole refresh.
@@ -557,7 +557,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      try{
       const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'arc-posters',provider:'series',source:'tmdb-tv',externalId:'37854',arcs:batch}});
       if(error)throw error;
-      const found=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string}>;
+      const found=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string;kind?:string;title?:string}>;
       Object.assign(posters,found);
      }catch(error){
       failedBatches++;
