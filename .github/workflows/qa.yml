@@ -22,6 +22,9 @@ jobs:
         run: npm install
       - name: Audit dependencies
         run: npm audit --audit-level=high
+      - name: Verify live One Piece arc artwork API
+        if: github.event_name != 'pull_request'
+        run: node scripts/test-one-piece-arc-art.mjs
       - name: Build FRAME for isolated browser tests
         env:
           VITE_FRAME_E2E: 'true'
