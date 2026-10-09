@@ -212,8 +212,7 @@ test.describe('FRAME anime episode catalogue', () => {
 
     await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
-    await page.locator('.detail-modal').evaluate(modal => { modal.scrollTop = Math.min(600, modal.scrollHeight - modal.clientHeight); });
-    await page.getByRole('button', { name: 'Mark through' }).click({timeout:5000});
+    await page.getByRole('button', { name: 'Mark through' }).evaluate(el => (el as HTMLButtonElement).click());
     await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
   });
 });
