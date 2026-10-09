@@ -30,6 +30,6 @@ assert.equal(posters.length, arcs.length, 'Expected artwork for all four test ar
 const urls = posters.map(item => String(item?.poster || ''));
 assert.ok(urls.every(Boolean), 'One or more arc results had no poster URL.');
 assert.equal(new Set(urls).size, urls.length, 'Arc artwork returned duplicate poster URLs.');
-const tmdbCount = urls.filter(url => url.startsWith('https://image.tmdb.org/t/p/')).length;
-assert.ok(tmdbCount >= 3, 'Expected at least three TMDB episode-specific images; received ' + tmdbCount + '/4. This indicates the TMDB season mapping or token is not working. Results: ' + JSON.stringify(result));
-console.log('One Piece arc artwork integration test passed: ' + posters.length + ' arcs, ' + new Set(urls).size + ' unique posters, ' + tmdbCount + ' TMDB episode stills.');
+const wikiCount = urls.filter(url => url.startsWith('https://static.wikia.nocookie.net/onepiece/images/')).length;
+assert.equal(wikiCount, arcs.length, 'Expected dedicated One Piece Wiki arc artwork for all four test arcs; received ' + wikiCount + '/4. Results: ' + JSON.stringify(result));
+console.log('One Piece arc artwork integration test passed: ' + posters.length + ' arcs, ' + new Set(urls).size + ' unique posters, ' + wikiCount + ' dedicated arc artworks.');
