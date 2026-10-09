@@ -412,7 +412,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   ];
   const rootId=root.id;
   const watchedThrough=1180;
-  const seriesTotal=Math.max(1180,Number(root.total)||0);
+  const seriesTotal=1180;
   const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(watchedThrough,seriesTotal),status:'watching'}];
   const assigned=new Set<number>();
   for(let index=0;index<arcs.length;index++){
@@ -440,6 +440,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    if(episodeMatch){
     const number=Number(episodeMatch[1]);
     return {...next,progress:number<=watchedThrough?1:Math.min(prior?.progress??next.progress,1),status:number<=watchedThrough?'completed':(prior?.status??next.status),personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
+   }
+   if(String(next.externalId||'').startsWith('one-piece-arc-')){
+    return {...next,progress:next.progress,status:next.status,personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
    }
    if(!prior)return next;
    return {...next,progress:Math.min(prior.progress,next.total??prior.total??0),status:prior.status,personalRating:prior.personalRating??next.personalRating,favorite:prior.favorite,notes:prior.notes??next.notes,customTotal:prior.customTotal??next.customTotal};
@@ -474,7 +477,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const children=items.filter(x=>x.parentId===root.id);
   const arcIds=new Set(children.filter(x=>String(x.externalId||'').startsWith('one-piece-arc-')).map(x=>x.id));
   const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
-  const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'))&&episodeChildren.length>=Math.max(1,Number(root.total)||1);
+  const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'))&&episodeChildren.length>=Math.max(1,(Number(root.total)||1180)-150);
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
   void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
