@@ -60,7 +60,7 @@ export function FrameEpisodeList({malId,currentProgress,onMarkThrough}:{malId:st
           {ep.mal_id<=currentProgress?<span className="frame-episode-watched">Watched</span>:<button type="button" className="secondary frame-episode-mark" disabled={savingEpisode!==null} onClick={()=>void markThrough(ep.mal_id)}>{savingEpisode===ep.mal_id?'Saving…':'Mark through'}</button>}
         </div>)}
       </div>
-      <div className="frame-episode-pagination"><button className="secondary" type="button" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page} of {lastPage}</span><button className="secondary" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(p=>Math.min(lastPage,p+1))}>Next <ChevronRight size={15}/></button></div>
+      <div className="frame-episode-pagination"><button className="secondary frame-episode-jump" type="button" disabled={page<=1||loading} onClick={()=>setPage(1)}>Oldest</button><button className="secondary" type="button" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page} of {lastPage}</span><button className="secondary" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(p=>Math.min(lastPage,p+1))}>Next <ChevronRight size={15}/></button><button className="secondary frame-episode-jump" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(lastPage)}>Latest</button></div>
     </>}
     <div className="frame-episode-list-foot"><CalendarDays size={13}/> Episode titles and dates are supplied by the external catalogue and may be incomplete or revised.</div>
   </section>;
