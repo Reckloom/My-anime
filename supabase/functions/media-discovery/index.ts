@@ -708,15 +708,23 @@ Deno.serve(async(req:Request)=>{
       const rawUrl=String(body?.url||'').trim();
       let source:URL;
       try{source=new URL(rawUrl)}catch{return new Response('Invalid image URL.',{status:400,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}})}
-      if(source.protocol!=='https:'||source.hostname!=='static.wikia.nocookie.net'||!source.pathname.startsWith('/onepiece/images/')){
-        return new Response('Image host is not allowed.',{status:403,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
+      const allowedWiki=source.hostname==='static.wikia.nocookie.net'&&source.pathname.startsWith('/onepiece/images/');
+      const allowedOfficialEpisode=source.hostname==='one-piece.com'&&(
+        /^\/img\/anime\/story\/img_story_\d+\.jpg$/i.test(source.pathname)||
+        /^\/o\/assets\/images\/anime\/tvstory\/[a-z0-9_-]+\/story_img_\d+\.jpg$/i.test(source.pathname)
+      );
+      const allowedVodAnime=source.hostname==='www.vodanime.com'&&/^\/media\/one-piece-episode-\d+-thumbnail-\d+\.jpg$/i.test(source.pathname);
+      const allowedIdn=source.hostname==='image.idn.media'&&/\.(?:jpe?g|png|webp|avif)$/i.test(source.pathname);
+      if(source.protocol!=='https:'||!(allowedWiki||allowedOfficialEpisode||allowedVodAnime||allowedIdn)){
+        return new Response('Image host or path is not allowed.',{status:403,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
       }
       const cacheHeaders={...HEADERS,'Cache-Control':'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400','X-Content-Type-Options':'nosniff'};
+      const referer=allowedWiki?'https://onepiece.fandom.com/':allowedOfficialEpisode?'https://one-piece.com/':allowedVodAnime?'https://www.vodanime.com/':'https://frame.reckloom.com/';
       let imageResponse:Response|undefined;
       try{
         imageResponse=await fetch(source.href,{headers:{
           Accept:'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-          Referer:'https://onepiece.fandom.com/',
+          Referer:referer,
           'User-Agent':'Mozilla/5.0 (compatible; FRAME artwork proxy)'
         },redirect:'follow'});
       }catch(error){console.warn('[FRAME poster proxy upstream]',error)}
