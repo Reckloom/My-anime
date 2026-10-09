@@ -331,6 +331,39 @@ async function searchTmdbSeries(query:string){
   }));
 }
 
+async function onePieceEpisodeCatalogue(id:string){
+  const series=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
+  const seasons=Array.isArray(series?.seasons)?series.seasons.filter((s:any)=>Number(s?.season_number)>0):[];
+  const all:any[]=[];
+  // Keep the request burst small to respect the metadata provider's rate limits.
+  for(let i=0;i<seasons.length;i+=4){
+    const batch=seasons.slice(i,i+4);
+    const results=await Promise.all(batch.map(async(s:any)=>{
+      const data=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'/season/'+encodeURIComponent(String(s.season_number))+'?language=en-US',tmdbHeaders());
+      return Array.isArray(data?.episodes)?data.episodes:[];
+    }));
+    for(const episodes of results)all.push(...episodes);
+  }
+  const episodes=all.filter((e:any)=>Number(e?.episode_number)>0).sort((a:any,b:any)=>
+    Number(a.season_number)-Number(b.season_number)||Number(a.episode_number)-Number(b.episode_number)
+  );
+  return {
+    provider:'tmdb-tv-episodes',externalId:String(series.id),title:String(series.name||series.original_name||'One Piece'),
+    seriesPoster:tmdbImage(series.poster_path),seriesBackdrop:tmdbImage(series.backdrop_path,'w1280'),
+    source:'TMDB',seriesUrl:'https://www.themoviedb.org/tv/'+series.id,
+    episodes:episodes.map((e:any,index:number)=>({
+      absoluteEpisode:index+1,tmdbId:String(e.id),title:String(e.name||('Episode '+(index+1))),
+      seasonNumber:Number(e.season_number)||1,episodeNumber:Number(e.episode_number)||index+1,
+      airDate:e.air_date?String(e.air_date):undefined,poster:tmdbImage(e.still_path,'w500'),
+      backdrop:tmdbImage(e.still_path,'original'),score:e.vote_average==null?null:Number(e.vote_average),
+      ratingCount:e.vote_count==null?0:Number(e.vote_count),ratingSource:'TMDB',
+      runtimeMinutes:e.runtime==null?undefined:Number(e.runtime),synopsis:clean(e.overview||''),
+      imdbEpisodeUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+(index+1)+' '+String(e.name||'')),
+      sourceUrl:'https://www.themoviedb.org/tv/'+series.id+'/season/'+Number(e.season_number)+'/episode/'+Number(e.episode_number)
+    }))
+  };
+}
+
 async function detailTmdbSeries(id:string){
   const data=await getJson('https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'?language=en-US',tmdbHeaders());
   const seasons=Array.isArray(data?.seasons)?data.seasons.reduce((n:number,x:any)=>n+Number(x?.episode_count||0),0):undefined;
@@ -540,6 +573,10 @@ Deno.serve(async(req:Request)=>{
     const action=String(body?.action||'search');
     const provider=String(body?.provider||'');
     if(!(['game','series','movie','book','visual-novel'].includes(provider)))return response({error:'Unsupported provider.'},400);
+
+    if(action==='episodes'&&provider==='series'&&String(body?.source||'')==='tmdb-tv'){
+      return response(await onePieceEpisodeCatalogue(String(body?.externalId||'37854')));
+    }
 
     if(action==='search'){
       const query=String(body?.query||'').trim();
