@@ -16,7 +16,6 @@ import {FrameLibraryImport} from './components/FrameLibraryImport';
 import {aniList,DETAIL_QUERY,cleanDescription,titleOf} from './anilist';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
-import {makeVinlandSagaDemo} from './data/vinlandSagaDemo';
 
 const poster='https://cdn.myanimelist.net/images/anime/10/47347.jpg';
 const types:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
@@ -199,7 +198,6 @@ export default function App(){
     if(created)setProfile({...created,frame_logo:created.frame_logo||'ultra-instinct'} as Profile);
    }
    const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();
-   if(prefs){setSortMode(String(prefs.default_sort||'rating'));setDensity(String(prefs.density||'comfortable'));const savedTheme=String(prefs.theme||'cinematic-archive');setTheme((['cinematic-archive','midnight-glass','clean-editorial','full-screen-epic','collectors-archive','modern-media-hub'].includes(savedTheme)?savedTheme:'cinematic-archive'));setAppearanceMode((['light','dark','system'].includes(String(prefs.appearance_mode))?String(prefs.appearance_mode):'dark') as 'light'|'dark'|'system')}
   };
   void load();
   return()=>{active=false};
@@ -237,14 +235,6 @@ export default function App(){
   });
   saveQueue.current=operation.catch(()=>true);
   return operation;
- };
- const seedVinlandDemo=async()=>{
-  const demo=makeVinlandSagaDemo();
-  const existingAnime=items.filter(x=>x.medium==='anime');
-  if(!window.confirm('Replace all anime entries in your FRAME library with Vinland Saga (2 seasons, 48 episodes)? Other media such as books and games will be kept. This cannot be undone.'))return;
-  const retained=items.filter(x=>x.medium!=='anime');
-  const ok=await save([...retained,...demo]);
-  if(ok){setAppMessage('Replaced '+existingAnime.length+' anime entries with Vinland Saga: 2 seasons and 48 episodes. Other media was kept.');window.setTimeout(()=>setAppMessage(''),6000)}
  };
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
@@ -368,8 +358,8 @@ export default function App(){
   </header>
   {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['friends','Friends'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
-   {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name} seedDemo={()=>void seedVinlandDemo()}/>}
-   {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)} seedDemo={()=>void seedVinlandDemo()}/>}
+   {page==='home'&&<Home items={shown} total={items.length} open={setSelected} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
+   {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={setSelected} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setDirectCall}/>}
@@ -397,25 +387,13 @@ function ManualEntryForm({close,onCreate,library}:{close:()=>void;onCreate:(item
  const submit=async()=>{if(!title.trim()||busy)return;const t=total>0?Math.min(2000,total):undefined;const max=medium==='movie'?1:(medium==='game'||medium==='visual-novel'?100:(t||2000));setBusy(true);try{await onCreate({id:crypto.randomUUID(),title:title.trim(),description,poster:posterUrl.trim(),backdrop:'',medium,status,progress:status==='completed'?(t||max):Math.max(0,Math.min(max,progress)),total:t,progressUnit:units[medium],genres:[],themes:[],favorite,personalRating,notes:notes.trim()||undefined,parentId:parentId||undefined})}finally{setBusy(false)}};
  return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><aside className="detail-drawer manual-entry-drawer" onMouseDown={e=>e.stopPropagation()}><button className="close-btn" onClick={close} aria-label="Close"><X/></button><div className="manual-entry-head"><small>MANUAL ENTRY</small><h2>Add anything to FRAME.</h2><p>Use this for media that no catalogue can identify. You can edit all of it later.</p></div><div className="call-form manual-entry-form"><label>Title<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. a local series, book, game…" /></label><label>Media type<select value={medium} onChange={e=>setMedium(e.target.value as Medium)}>{Object.entries(types).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><label>Status<select value={status} onChange={e=>setStatus(e.target.value as MediaItem['status'])}>{[['planned','Planned'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['paused','Paused'],['dropped','Dropped']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><div className="manual-two-col"><label>Progress<input type="number" min="0" max="2000" value={progress} onChange={e=>setProgress(Number(e.target.value)||0)}/></label><label>Total<input type="number" min="0" max="2000" value={total||''} onChange={e=>setTotal(Number(e.target.value)||0)} placeholder="Optional" /></label></div><label>Poster URL<input value={posterUrl} onChange={e=>setPosterUrl(e.target.value)} placeholder="https://…" /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional description…" /></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={personalRating??''} onChange={e=>setPersonalRating(e.target.value===''?undefined:Number(e.target.value)||0)} /></label><label>Parent entry<select value={parentId} onChange={e=>setParentId(e.target.value)}><option value="">None — top level</option>{library.slice().sort((a,b)=>a.title.localeCompare(b.title)).map(x=><option key={x.id} value={x.id}>{x.parentId?'↳ ':''}{x.title}</option>)}</select></label><label>Favorite<select value={favorite?'yes':'no'} onChange={e=>setFavorite(e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label><label>Notes<textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything you want to remember…" /></label><button className="primary" disabled={!title.trim()||busy} onClick={()=>void submit()}>{busy?<RefreshCw size={16} className="spin"/>:<CirclePlus size={16}/>} {busy?'Adding…':'Add to my library'}</button></div></aside></div>;
 }
-function Home({items,total,open,finder,go,name,seedDemo}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string;seedDemo:()=>void}){
+function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
  const active=items.filter(x=>['watching','reading','playing'].includes(x.status));
  const favorites=items.filter(x=>x.favorite);
  const topRated=[...items].sort((a,b)=>(b.personalRating??b.score??0)-(a.personalRating??a.score??0));
  return <div className="page home-page">
   <section className="home-intro"><div className="home-intro-copy"><small>FRAME HOME</small><h1>{'Welcome back'+(name?', '+name:'')+'.'}</h1><p>{total?'You have '+total+' '+(total===1?'title':'titles')+' in your library.':'Your library is empty. Add your first title to get started.'}</p></div><div className="home-intro-actions"><button className="primary" onClick={finder}><Search size={16}/>Add media</button><button className="secondary" onClick={()=>go('library')}><Library size={16}/>Open library</button><button className="secondary" onClick={()=>go('calls')}><Radio size={16}/>Global Call</button></div></section>
-  <section className="vinland-feature" aria-label="Featured library setup">
-   <div className="vinland-feature-art" aria-hidden="true"></div>
-   <div className="vinland-feature-content">
-    <div className="vinland-feature-kicker"><span></span> FEATURED COLLECTION · FRAME EDITION</div>
-    <h2>VINLAND<br/><em>SAGA</em></h2>
-    <p>A story of vengeance, war, and the search for a world beyond violence. Organised into two seasons and 48 episode entries, with episode summaries, air dates and IMDb rating snapshots.</p>
-    <div className="vinland-feature-meta"><span>2019—2023</span><i>•</i><span>2 SEASONS</span><i>•</i><span>48 EPISODES</span></div>
-    <div className="vinland-feature-actions"><button className="vinland-primary" onClick={seedDemo}><RefreshCw size={16}/> Replace anime library</button><button className="vinland-secondary" onClick={()=>go('library')}>View collection <ChevronRight size={16}/></button></div>
-    <small className="vinland-feature-note">Replaces anime entries only. Books, games, manga and other media are kept.</small>
-   </div>
-   <div className="vinland-feature-index">01 <span>/ 01</span></div>
-  </section>
-  <section className="home-overview" aria-label="Library overview"><div><b>{total}</b><span>Library</span></div><div><b>{active.length}</b><span>In progress</span></div><div><b>{items.filter(x=>x.status==='completed').length}</b><span>Completed</span></div><div><b>{favorites.length}</b><span>Favorites</span></div></section>
+<section className="home-overview" aria-label="Library overview"><div><b>{total}</b><span>Library</span></div><div><b>{active.length}</b><span>In progress</span></div><div><b>{items.filter(x=>x.status==='completed').length}</b><span>Completed</span></div><div><b>{favorites.length}</b><span>Favorites</span></div></section>
   {active.length>0&&<section className="home-shelf home-continue"><div className="section-title"><div><small>KEEP GOING</small><h2>Continue</h2></div><button className="text-action" onClick={()=>go('library')}>View library <ChevronRight size={14}/></button></div><div className="media-grid">{active.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
   {favorites.length>0&&<section className="home-shelf home-favorites"><div className="section-title"><div><small>PINNED</small><h2>Favorites</h2></div><span>{favorites.length}</span></div><div className="media-grid">{favorites.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
   <section className="home-tools"><div className="home-tools-head"><small>SHORTCUTS</small><h2>Go somewhere</h2></div><div className="home-tool-grid"><button onClick={finder}><Search size={19}/><span><b>Find media</b><small>Search every connected catalogue</small></span><ChevronRight size={15}/></button><button onClick={()=>go('discover')}><Compass size={19}/><span><b>Discover</b><small>Explore new titles and sources</small></span><ChevronRight size={15}/></button><button onClick={()=>go('radar')}><CalendarDays size={19}/><span><b>Release Radar</b><small>See tracked releases</small></span><ChevronRight size={15}/></button><button onClick={()=>go('calls')}><Radio size={19}/><span><b>Global Call</b><small>Join or start the public FRAME voice room</small></span><ChevronRight size={15}/></button></div></section>
@@ -431,7 +409,7 @@ function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;li
  return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><img src={item.poster||poster} alt={item.title} loading="lazy" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total||500)} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
 }
 
-function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add,seedDemo}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void;seedDemo:()=>void}){
+function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
  const statusFilters:[string,string][]=[['incomplete','Not 100%'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
  const mediaFilters:[string,string][]=[['all','All Media'],...Object.entries(types)];
  const toggleMedia=(id:string)=>{
@@ -452,7 +430,7 @@ function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add,see
  };
  const allMediaActive=!mediaFilters.slice(1).some(([key])=>filters.includes(key));
  return <div className="page library-page">
-  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><div className="library-heading-actions"><button className="vinland-library-action" type="button" onClick={seedDemo}><RefreshCw size={15}/> Reset anime collection to Vinland Saga</button><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div></div>
+  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><div className="library-heading-actions"><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div></div>
   <div className="library-controls">
    <div className="filter-groups">
     <div className="filter-group">
