@@ -416,15 +416,11 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     }else if(error)console.warn('[FRAME One Piece official poster catalogue]',error);
    }catch(error){console.warn('[FRAME One Piece official poster catalogue]',error)}
   }
-  // Last-resort catalogue: never fail with an empty episode list. The title and
-  // progress record are still real numbered episode entries; source metadata is
-  // clearly marked unavailable rather than fabricated.
+  // Never fabricate episode records when every upstream catalogue fails. A synthetic list
+  // looks complete but contains no real titles or artwork; fail clearly and preserve the
+  // user's existing library until a real episode catalogue is available.
   if(!episodes.length){
-   const fallbackCount=Math.max(1,Math.min(2000,Number(rawRoot.total||root.total)||1150));
-   episodes=Array.from({length:fallbackCount},(_,index)=>({
-    mal_id:index+1,title:'Episode '+(index+1),synopsis:'Episode '+(index+1)+' of One Piece. The connected catalogues did not return episode-level metadata during this import.',
-    ratingSource:'Metadata unavailable',sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+(index+1))
-   }));
+   throw new Error('One Piece episode catalogues are unavailable right now. No placeholder episodes were added. Please retry when Kitsu or MyAnimeList is reachable.');
   }
   if(catalogueSeriesPoster||catalogueSeriesBackdrop)root=normalise({...root,poster:catalogueSeriesPoster||root.poster,backdrop:catalogueSeriesBackdrop||root.backdrop});
   // Manga-canon episodes only. Pure filler, mixed canon/filler and anime-original
