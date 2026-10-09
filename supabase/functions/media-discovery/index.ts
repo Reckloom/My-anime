@@ -383,40 +383,58 @@ async function onePieceEpisodeCatalogue(id:string){
 }
 
 async function onePieceArcPosterCatalogue(id:string,rawArcs:any[]){
-  const catalogue=await onePieceEpisodeCatalogue(id);
-  const byAbsolute=new Map<number,any>((catalogue.episodes||[]).map((e:any)=>[Number(e.absoluteEpisode),e]));
-  const ranges=(Array.isArray(rawArcs)?rawArcs:[]).map((a:any)=>({
-    id:String(a?.id||''),
-    start:Math.max(1,Math.min(1180,Number(a?.start)||1)),
-    end:Math.max(1,Math.min(1180,Number(a?.end)||1))
-  })).filter((a:any)=>a.id&&a.end>=a.start);
-  const usedPaths=new Set<string>();
-  const output:Record<string,{poster:string;backdrop:string;episodeNumber:number;episodeTitle:string;sourceUrl:string}>={};
+  // Work only from episode candidates already present in the user's library.
+  // Do not rebuild the full series catalogue for a poster-only refresh.
+  const ranges=(Array.isArray(rawArcs)?rawArcs:[]).map((arc:any)=>({
+    id:String(arc?.id||''),title:String(arc?.title||'One Piece arc'),
+    currentPoster:String(arc?.currentPoster||''),
+    candidates:(Array.isArray(arc?.candidates)?arc.candidates:[]).map((e:any)=>({
+      absoluteEpisode:Number(e?.absoluteEpisode)||0,seasonNumber:Number(e?.seasonNumber)||0,
+      episodeNumber:Number(e?.episodeNumber)||0,title:String(e?.title||''),
+      poster:String(e?.poster||''),backdrop:String(e?.backdrop||''),tmdbEpisode:e?.tmdbEpisode===true
+    })).filter((e:any)=>e.absoluteEpisode>0)
+  })).filter((arc:any)=>arc.id&&arc.candidates.length);
+  const usedUrls=new Set<string>();
+  const output:Record<string,{poster:string;backdrop:string;episodeNumber:number;episodeTitle:string;sourceUrl:string;artworkSource:string}>={};
   for(let offset=0;offset<ranges.length;offset+=4){
     const batch=ranges.slice(offset,offset+4);
     await Promise.all(batch.map(async(arc:any)=>{
-      const midpoint=Math.floor((arc.start+arc.end)/2);
-      const candidates=Array.from({length:arc.end-arc.start+1},(_,i)=>byAbsolute.get(arc.start+i)).filter(Boolean)
-        .sort((a:any,b:any)=>Math.abs(Number(a.absoluteEpisode)-midpoint)-Math.abs(Number(b.absoluteEpisode)-midpoint))
-        .slice(0,3);
-      for(const episode of candidates){
+      // Prefer a TMDB alternate still, then use a related episode image from
+      // the same arc. Existing arc art, the series poster and other arc art
+      // are never reused as the chosen new poster.
+      for(const episode of arc.candidates){
+        if(!episode.tmdbEpisode||episode.seasonNumber<0||episode.episodeNumber<1)continue;
         try{
           const url='https://api.themoviedb.org/3/tv/'+encodeURIComponent(id)+'/season/'+encodeURIComponent(String(episode.seasonNumber))+'/episode/'+encodeURIComponent(String(episode.episodeNumber))+'/images';
           const data=await getJson(url,tmdbHeaders());
-          const primary=String(episode.poster||'').split('/w500').pop()||'';
-          const stills=(Array.isArray(data?.stills)?data.stills:[]).filter((x:any)=>String(x?.file_path||'').trim()&&String(x.file_path)!==primary)
+          const currentPath=String(episode.poster||'').match(/image\.tmdb\.org\/t\/p\/[^/]+(\/.*)$/)?.[1]||'';
+          const arcPath=String(arc.currentPoster||'').match(/image\.tmdb\.org\/t\/p\/[^/]+(\/.*)$/)?.[1]||'';
+          const stills=(Array.isArray(data?.stills)?data.stills:[])
+            .filter((x:any)=>String(x?.file_path||'').trim()&&String(x.file_path)!==currentPath&&String(x.file_path)!==arcPath)
             .sort((a:any,b:any)=>Number(b.vote_average||0)-Number(a.vote_average||0)||Number(b.width||0)-Number(a.width||0));
-          const still=stills.find((x:any)=>!usedPaths.has(String(x.file_path)));
-          if(!still)continue;
-          const path=String(still.file_path);
-          usedPaths.add(path);
-          output[arc.id]={poster:tmdbImage(path,'w500'),backdrop:tmdbImage(path,'original'),episodeNumber:Number(episode.absoluteEpisode),episodeTitle:String(episode.title||''),sourceUrl:'https://www.themoviedb.org/tv/'+id+'/season/'+Number(episode.seasonNumber)+'/episode/'+Number(episode.episodeNumber)};
-          break;
-        }catch(error){console.warn('[FRAME One Piece arc still]',arc.id,episode.absoluteEpisode,error)}
+          const still=stills.find((x:any)=>!usedUrls.has(tmdbImage(x.file_path,'w500')));
+          if(still){
+            const poster=tmdbImage(still.file_path,'w500');
+            usedUrls.add(poster);
+            output[arc.id]={poster,backdrop:tmdbImage(still.file_path,'original'),episodeNumber:episode.absoluteEpisode,episodeTitle:episode.title,sourceUrl:'https://www.themoviedb.org/tv/'+id+'/season/'+episode.seasonNumber+'/episode/'+episode.episodeNumber,artworkSource:'TMDB-alternative-still'};
+            return;
+          }
+        }catch(error){console.warn('[FRAME One Piece arc alternate still]',arc.id,episode.absoluteEpisode,error)}
+      }
+      // Fallback is intentionally local and fast: choose a distinct existing
+      // poster/backdrop from an episode belonging to this exact arc.
+      for(const episode of arc.candidates){
+        const candidates=[episode.poster,episode.backdrop].map((url:string)=>String(url||'').trim())
+          .filter((url:string,index:number,all:string[])=>url&&url!==arc.currentPoster&& !usedUrls.has(url)&&all.indexOf(url)===index);
+        const poster=candidates[0];
+        if(!poster)continue;
+        usedUrls.add(poster);
+        output[arc.id]={poster,backdrop:episode.backdrop&&episode.backdrop!==arc.currentPoster?episode.backdrop:poster,episodeNumber:episode.absoluteEpisode,episodeTitle:episode.title,sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+episode.absoluteEpisode+' '+episode.title),artworkSource:'related-episode-still'};
+        return;
       }
     }));
   }
-  return {source:'TMDB episode alternative stills',count:Object.keys(output).length,posters:output};
+  return {source:'TMDB alternative stills with related episode-art fallback',count:Object.keys(output).length,posters:output};
 }
 
 async function detailTmdbSeries(id:string){
