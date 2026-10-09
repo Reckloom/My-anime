@@ -526,7 +526,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  useEffect(()=>{
   if(!user?.id||!cloudLibraryReady||!items.length||!supabase)return;
-  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \\(tv\\))$/i.test(x.title.trim()));
+  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
   if(!root)return;
   const runKey=user.id+':'+root.id;
   if(onePieceArcArtworkRef.current===runKey)return;
@@ -535,11 +535,11 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const episodeItems=items.filter(x=>String(x.externalId||'').startsWith('one-piece-episode-'));
   const ranges=arcs.map(arc=>{
    const children=episodeItems.filter(x=>x.parentId===arc.id);
-   const numbers=children.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\\d+)$/)?.[1]||0)).filter(n=>n>0);
+   const numbers=children.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1]||0)).filter(n=>n>0);
    if(!numbers.length)return null;
    const midpoint=Math.floor((Math.min(...numbers)+Math.max(...numbers))/2);
    const candidates=children.map(child=>{
-    const number=Number(String(child.externalId||'').match(/^one-piece-episode-(\\d+)$/)?.[1]||0);
+    const number=Number(String(child.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1]||0);
     return {absoluteEpisode:number,seasonNumber:Number(child.episode?.seasonNumber)||0,episodeNumber:Number(child.episode?.episodeNumber)||0,title:child.title,poster:child.poster||'',backdrop:child.backdrop||'',tmdbEpisode:String(child.sourceProvider||'').startsWith('tmdb')};
    }).filter(candidate=>candidate.absoluteEpisode>0).sort((a,b)=>Math.abs(a.absoluteEpisode-midpoint)-Math.abs(b.absoluteEpisode-midpoint)).slice(0,4);
    return {id:arc.id,title:arc.title,currentPoster:arc.poster||'',candidates};
@@ -551,7 +551,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'arc-posters',provider:'series',source:'tmdb-tv',externalId:'37854',arcs:ranges}});
     if(error)throw error;
     const posters=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string}>;
-    const reserved=new Set<string>([String(root.poster||'')].filter(Boolean));
+    const reserved=new Set<string>([String(root.poster||''),...arcs.map(x=>String(x.poster||''))].filter(Boolean));
     const updates=new Map<string,MediaItem>();
     for(const arc of arcs){
      const art=posters[arc.id];
@@ -559,7 +559,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster))continue;
      reserved.add(poster);
      const sourceNote='FRAME_ARC_ARTWORK='+(art?.artworkSource||'related-episode-still')+'; representative episode '+String(art?.episodeNumber||'')+': '+String(art?.episodeTitle||arc.title)+(art?.sourceUrl?'; '+art.sourceUrl:'');
-     updates.set(arc.id,{...arc,poster,backdrop:String(art?.backdrop||poster),notes:[arc.notes?.split('\\n\\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\\n\\n')});
+     updates.set(arc.id,{...arc,poster,backdrop:String(art?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\\n\\n')});
     }
     if(!updates.size){
      setAppMessage('No different usable image was found for these sub-parts. Episode entries and progress remain unchanged.');
