@@ -3061,3 +3061,18 @@ hr,.divider{border-color:var(--frame-line)!important}
 :root[data-frame-theme="full-screen-epic"] .theme-preview,
 :root[data-frame-theme="collectors-archive"] .theme-preview,
 :root[data-frame-theme="modern-media-hub"] .theme-preview{outline-color:#d9bd8b!important}
+
+
+/* Functional finishing pass: usable overlays and drawer forms on short screens */
+.overlay{overflow-y:auto!important;overscroll-behavior:contain!important;display:flex!important;align-items:flex-start!important;justify-content:flex-end!important;padding:clamp(8px,2vw,22px)!important}
+.detail-drawer{max-height:calc(100dvh - clamp(16px,4vw,44px))!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important;position:relative!important}
+.manual-entry-drawer{width:min(560px,100%)!important;flex:0 0 min(560px,100%)!important;padding:clamp(20px,3vw,34px)!important}
+.manual-entry-form{padding-bottom:22px!important}
+.manual-entry-form>.primary{position:sticky!important;bottom:0!important;z-index:3!important;box-shadow:0 -12px 24px #101114!important;margin-top:8px!important}
+.manual-entry-head{padding-right:32px!important}
+@media(max-width:600px){
+ .overlay{padding:0!important}
+ .detail-drawer,.manual-entry-drawer{width:100%!important;max-height:100dvh!important;height:100dvh!important;border-radius:0!important;flex-basis:100%!important;padding:20px 16px calc(22px + env(safe-area-inset-bottom))!important}
+ .manual-entry-form .manual-two-col{grid-template-columns:1fr!important}
+ .manual-entry-form>.primary{bottom:0!important}
+}
