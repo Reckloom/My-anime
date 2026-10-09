@@ -549,6 +549,58 @@ async function detailBook(provider:string,id:string){
   throw new Error('Unsupported book source.');
 }
 
+let onePieceOfficialPosterCache:{expiresAt:number;posters:Record<string,string>;count:number;uniqueImages:number}|null=null;
+
+function addOfficialOnePiecePosterRows(html:string,posters:Record<string,string>){
+ const anchors=html.match(/<a\\b[^>]*>[\\s\\S]*?<\\/a>/gi)||[];
+ for(const card of anchors){
+  const opening=card.match(/^<a\\b[^>]*>/i)?.[0]||'';
+  if(!/el-card-block__container/.test(opening))continue;
+  const src=card.match(/<img\\b[^>]*src=["']([^"']+)["']/i)?.[1]||'';
+  if(!src)continue;
+  const heading=(card.match(/<h3\\b[^>]*>([\\s\\S]*?)<\\/h3>/i)?.[1]||'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&');
+  const episodePart=heading.match(/第\\s*([^話]{1,30})話/)?.[1]||'';
+  const normalized=episodePart.replace(/[０-９]/g,(char)=>String.fromCharCode(char.charCodeAt(0)-0xFEE0));
+  const numbers=(normalized.match(/\\d+/g)||[]).map(Number).filter((n)=>n>0&&n<=1180);
+  if(!numbers.length)continue;
+  const imageUrl=new URL(src,'https://one-piece.com').toString();
+  for(const number of numbers)if(!posters[String(number)])posters[String(number)]=imageUrl;
+ }
+}
+
+async function fetchOnePieceOfficialArchivePage(page:number){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),12000);
+ try{
+  const url='https://one-piece.com/anime/index.html?category=&page='+page+'&sort=asc';
+  const result=await fetch(url,{headers:{Accept:'text/html'},signal:controller.signal});
+  if(!result.ok)throw new Error('Official One Piece archive returned HTTP '+result.status+'.');
+  return await result.text();
+ }finally{clearTimeout(timer)}
+}
+
+async function onePieceOfficialPosterCatalogue(){
+ if(onePieceOfficialPosterCache&&onePieceOfficialPosterCache.expiresAt>Date.now())return {
+  posters:onePieceOfficialPosterCache.posters,count:onePieceOfficialPosterCache.count,
+  uniqueImages:onePieceOfficialPosterCache.uniqueImages,source:'ONE PIECE.com'
+ };
+ const posters:Record<string,string>={};
+ const first=await fetchOnePieceOfficialArchivePage(1);
+ addOfficialOnePiecePosterRows(first,posters);
+ const linkedPages=[...first.matchAll(/page=(\\d+)/g)].map((match)=>Number(match[1])).filter((n)=>n>1&&n<=60);
+ const maxPage=Math.max(1,...linkedPages);
+ for(let start=2;start<=maxPage;start+=8){
+  const batch=Array.from({length:Math.min(8,maxPage-start+1)},(_,index)=>start+index);
+  const pages=await Promise.all(batch.map(async(page)=>{
+   try{return await fetchOnePieceOfficialArchivePage(page)}catch(error){console.warn('[FRAME One Piece poster page '+page+']',error);return ''}
+  }));
+  for(const html of pages)if(html)addOfficialOnePiecePosterRows(html,posters);
+ }
+ const result={posters,count:Object.keys(posters).length,uniqueImages:new Set(Object.values(posters)).size,source:'ONE PIECE.com'};
+ onePieceOfficialPosterCache={...result,expiresAt:Date.now()+6*60*60*1000};
+ return result;
+}
+
 type DiscoveryResultLike=Record<string,unknown>;
 
 /* ---------------- Router ---------------- */
@@ -576,6 +628,10 @@ Deno.serve(async(req:Request)=>{
 
     if(action==='episodes'&&provider==='series'&&String(body?.source||'')==='tmdb-tv'){
       return response(await onePieceEpisodeCatalogue(String(body?.externalId||'37854')));
+    }
+
+    if(action==='episode-posters'&&provider==='series'&&String(body?.source||'')==='one-piece-official'){
+      return response(await onePieceOfficialPosterCatalogue());
     }
 
     if(action==='search'){
