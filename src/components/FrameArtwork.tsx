@@ -9,6 +9,7 @@ type Props={
 const cache=new Map<string,Promise<string>>();
 const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
+const isKitsuArtwork=(value?:string)=>{try{const host=new URL(String(value||'')).hostname.toLowerCase();return host==='kitsu.io'||host.endsWith('.kitsu.io')||host==='kitsu.app'||host.endsWith('.kitsu.app')}catch{return false}};
 const isHierarchyNode=(p:Props)=>isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'');
 const svgFallback=(title:string,medium:Medium)=>{
  const hash=[...title].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,7);
@@ -21,6 +22,7 @@ const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 async function resolve(p:Props):Promise<string>{
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  if(isNarutoHierarchy(p)){
+  if(isKitsuArtwork(p.poster))return p.poster!;
   if(p.parentTitle&&p.parentMedium)return await resolve({title:p.parentTitle,medium:p.parentMedium,poster:p.parentPoster,anilistId:p.parentAnilistId});
   return p.parentPoster||svgFallback(p.title,p.medium);
  }
