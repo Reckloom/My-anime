@@ -55,6 +55,17 @@ export interface ExternalMediaLinks {
  newsUrl?:string;
 }
 
+export interface AnimeCharacterProfile {
+ id?: number;
+ name: string;
+ nativeName?: string;
+ role?: string;
+ affiliation?: string;
+ image?: string;
+ description?: string;
+ sourceUrl?: string;
+}
+
 export interface MediaItem{
  id:string; parentId?:string; metadataId?:string; anilistId?:number; sourceProvider?:string; externalId?:string;
  title:string; alternativeTitles?:string[]; description:string; poster:string; backdrop:string;
@@ -65,6 +76,7 @@ export interface MediaItem{
  availability?:MediaAvailability;
  externalLinks?:ExternalMediaLinks;
  notificationsEnabled?:boolean;
+ characters?:AnimeCharacterProfile[];
  releaseRadarState?:Record<string,unknown>;
  episode?:EpisodeMetadata;
  game?:GameDetails;
