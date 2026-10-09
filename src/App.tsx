@@ -541,7 +541,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const candidates=children.map(child=>{
     const number=Number(String(child.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1]||0);
     return {absoluteEpisode:number,seasonNumber:Number(child.episode?.seasonNumber)||0,episodeNumber:Number(child.episode?.episodeNumber)||0,title:child.title,poster:child.poster||'',backdrop:child.backdrop||'',tmdbEpisode:String(child.sourceProvider||'').startsWith('tmdb')};
-   }).filter(candidate=>candidate.absoluteEpisode>0).sort((a,b)=>Math.abs(a.absoluteEpisode-midpoint)-Math.abs(b.absoluteEpisode-midpoint)).slice(0,4);
+   }).filter(candidate=>candidate.absoluteEpisode>0).sort((a,b)=>Number(Boolean(b.poster||b.backdrop))-Number(Boolean(a.poster||a.backdrop))||Math.abs(a.absoluteEpisode-midpoint)-Math.abs(b.absoluteEpisode-midpoint)).slice(0,6);
    return {id:arc.id,title:arc.title,currentPoster:arc.poster||'',candidates};
   }).filter((x):x is NonNullable<typeof x>=>Boolean(x));
   if(!ranges.length)return;
@@ -559,7 +559,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster))continue;
      reserved.add(poster);
      const sourceNote='FRAME_ARC_ARTWORK='+(art?.artworkSource||'related-episode-still')+'; representative episode '+String(art?.episodeNumber||'')+': '+String(art?.episodeTitle||arc.title)+(art?.sourceUrl?'; '+art.sourceUrl:'');
-     updates.set(arc.id,{...arc,poster,backdrop:String(art?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\\n\\n')});
+     updates.set(arc.id,{...arc,poster,backdrop:String(art?.backdrop||poster),notes:[arc.notes?.split('\n\nFRAME_ARC_ARTWORK=')[0],sourceNote].filter(Boolean).join('\n\n')});
     }
     if(!updates.size){
      setAppMessage('No different usable image was found for these sub-parts. Episode entries and progress remain unchanged.');
