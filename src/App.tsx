@@ -306,8 +306,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    {name:'Dressrosa',start:629,end:746},{name:'Silver Mine (Filler)',start:747,end:750},
    {name:'Zou',start:751,end:779},{name:'Marine Rookie (Filler)',start:780,end:782},
    {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:889},
-   {name:'Wano Country',start:890,end:1085},{name:'Cidre Guild (Filler)',start:895,end:896},
-   {name:'Romance Dawn Anniversary Special',start:907,end:907},{name:'Uta’s Past',start:1029,end:1030},
+   {name:'Cidre Guild (Filler)',start:895,end:896},{name:'Romance Dawn Anniversary Special',start:907,end:907},
+   {name:'Uta’s Past',start:1029,end:1030},{name:'Wano Country',start:890,end:1085},
    {name:'Egghead',start:1086,end:2000}
 
   ];
