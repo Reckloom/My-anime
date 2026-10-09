@@ -12,10 +12,12 @@ const themes = [
   'modern-media-hub',
 ];
 
-assert.match(app, /importVinlandSaga/, 'Vinland Saga must be available as an explicit library import');
-assert.match(app, /Add Vinland Saga guide/, 'Home must expose the Vinland Saga import action');
-assert.match(app, /tt10233448/, 'Vinland Saga import must use its IMDb series identifier');
-assert.match(app, /VINLAND_SAGA_SEASONS/, 'Vinland Saga import must include both season episode guides');
+assert.doesNotMatch(app, /importVinlandSaga|Add Vinland Saga guide|VINLAND_SAGA_SEASONS/,
+  'No anime should have a one-off special importer or dedicated Home button');
+assert.match(app, /Loading One Piece canon arcs and episode metadata/,
+  'One Piece must use the normal anime import flow for its arc/episode hierarchy');
+assert.match(app, /one-piece-episode-/,
+  'One Piece episodes must be stored as individual child media entries');
 assert.match(app, /dataset\.frameTheme=theme/, 'Selected theme must be applied to the document');
 assert.match(app, /setTheme\(id\);void persistSetting\('theme',id\)/,
   'Theme picker must apply and persist the selected theme');
@@ -27,4 +29,4 @@ for (const theme of themes) {
   assert.ok(css.includes(`data-frame-theme="${theme}"`), `Theme styles are missing ${theme}`);
 }
 
-console.log('FRAME checks passed: Vinland Saga bulk import available, six themes styled, theme changes applied/persisted, no duplicate preference reload.');
+console.log('FRAME checks passed: standard anime import flow, One Piece hierarchy, six themes styled, theme changes applied/persisted, no duplicate preference reload.');
