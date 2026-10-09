@@ -2734,3 +2734,6 @@ button,a{color:inherit}
 .episode-metadata-grid b{font-size:13px;overflow-wrap:anywhere}
 .episode-source-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--accent,#8db8ff);text-decoration:none}
 .episode-source-link:hover{text-decoration:underline}
+
+.library-heading-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+@media(max-width:640px){.library-heading-actions{width:100%;justify-content:stretch}.library-heading-actions>button{flex:1;justify-content:center}}
