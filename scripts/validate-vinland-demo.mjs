@@ -5,7 +5,7 @@ const source = readFileSync(new URL('../src/data/vinlandSagaDemo.ts', import.met
 const sectionOne = source.split('const seasonTwo:EpisodeRow[]=[')[0].split('const seasonOne:EpisodeRow[]=[')[1];
 const sectionTwo = source.split('const seasonTwo:EpisodeRow[]=[')[1].split('];')[0];
 const countRows = text => (text.match(/\{title:/g) || []).length;
-const countSummaries = text => (text.match(/summary:/g) || []).length;
+const countSummaries = text => (text.match(/^\\s*\\{title:.*summary:/gm) || []).length;
 
 assert.equal(countRows(sectionOne), 24, 'Season 1 should have 24 episodes');
 assert.equal(countRows(sectionTwo), 24, 'Season 2 should have 24 episodes');
