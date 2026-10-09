@@ -70,18 +70,14 @@ export default function App(){
  };
  const resetLibrary=async()=>{
   if(guest||!supabase)return;
-  if(!window.confirm('Permanently clear your own FRAME media library and its parts? Other users’ libraries will not be changed. This cannot be undone.'))return;
+  if(!window.confirm('Permanently clear your own FRAME media library and its seasons/parts? Other users’ libraries will not be changed. This cannot be undone.'))return;
   setResetBusy(true);
   try{
-   const {error:mediaError}=await supabase.from('media_items').delete().eq('user_id',uid);
-   if(mediaError)throw mediaError;
-   const {data:legacy,error:legacyRead}=await supabase.from('anime').select('id').eq('user_id',uid);
-   if(legacyRead&&legacyRead.code!=='42P01')throw legacyRead;
-   const legacyIds=(legacy||[]).map((x:any)=>x.id);
-   if(legacyIds.length){const {error:partsError}=await supabase.from('parts').delete().in('anime_id',legacyIds);if(partsError)throw partsError;const {error:animeError}=await supabase.from('anime').delete().eq('user_id',uid);if(animeError)throw animeError}
+   const {error}=await supabase.rpc('reset_my_media_library');
+   if(error)throw error;
    for(const key of ['frame-library','frame-library:guest','frame-library:'+uid])localStorage.removeItem(key);
    setItems([]);setSelected(null);setMessage('Your library is now empty. Your account and other users’ data are preserved.');
-  }catch(e){setMessage('Reset did not fully complete: '+(e instanceof Error?e.message:'unknown error'))}
+  }catch(e){setMessage('Reset failed: '+(e instanceof Error?e.message:'unknown error'))}
   finally{setResetBusy(false)}
  };
  const renderChildren=(parent:MediaItem,depth=0)=>childrenOf(parent.id).map(child=><div className="tree-node" key={child.id} style={{'--depth':depth} as React.CSSProperties}><button className={'tree-entry '+(selected===child.id?'active':'')} onClick={()=>setSelected(child.id)}><span className="tree-stem"/><span className="tree-title">{child.title}</span><span className="tree-progress">{child.progress}{child.total?'/'+child.total:''}</span><ChevronRight size={14}/></button>{renderChildren(child,depth+1)}</div>);
