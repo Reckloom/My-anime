@@ -499,7 +499,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const arcIds=new Set(children.filter(x=>String(x.externalId||'').startsWith('one-piece-arc-')).map(x=>x.id));
   const episodeChildren=items.filter(x=>Boolean(x.parentId&&arcIds.has(x.parentId))&&String(x.externalId||'').startsWith('one-piece-episode-'));
   const hasOnlyCanonEpisodes=episodeChildren.length>0&&episodeChildren.every(x=>{const match=String(x.externalId||'').match(/^one-piece-episode-(\d+)$/);return Boolean(match&&isOnePieceCanonEpisodeNumber(Number(match[1])));});
-  const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'))&&hasOnlyCanonEpisodes&&episodeChildren.length>=Math.max(1,(Number(root.total)||1180)-150);
+  const episodePosterUrls=episodeChildren.map(x=>String(x.poster||'').trim()).filter(Boolean);
+  const hasDistinctEpisodePosters=episodePosterUrls.length===episodeChildren.length&&new Set(episodePosterUrls).size===episodeChildren.length;
+  const hasRealHierarchy=children.some(x=>x.sourceProvider==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-'))&&hasOnlyCanonEpisodes&&hasDistinctEpisodePosters&&episodeChildren.length>=Math.max(1,(Number(root.total)||1180)-150);
   if(hasRealHierarchy){onePieceAutoRef.current=user.id+':'+root.id;return}
   onePieceAutoRef.current=user.id+':'+root.id;
   void buildOnePieceHierarchy(root,true).catch(error=>{onePieceAutoRef.current='';console.warn('[FRAME One Piece hierarchy]',error)});
