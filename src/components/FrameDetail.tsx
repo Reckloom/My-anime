@@ -103,8 +103,11 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  };
  useEffect(()=>{
   setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
-  // Restore after React has committed the newly selected item's content; restoring
-  // immediately can clamp scrollTop to the previous item's shorter height.
+ },[item.id]);
+ useEffect(()=>{
+  // Wait until d.id matches the newly selected item, so the DOM has the correct
+  // content height before restoring a saved scroll position.
+  if(d.id!==item.id)return;
   const frame=window.requestAnimationFrame(()=>{
    const overlay=document.querySelector<HTMLElement>('.detail-overlay');
    const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
@@ -123,7 +126,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    }
   });
   return()=>window.cancelAnimationFrame(frame);
- },[item.id]);
+ },[item.id,d.id]);
  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[]);
  const progress=(n:number)=>setD(game?{...d,progress:n,game:d.game?{...d.game,storyProgress:n}:undefined}:{...d,progress:Math.max(0,Math.min(max,n))});
  const setTotal=(value:number)=>{const n=Math.max(1,Math.min(2000,value||1));setD({...d,total:n,customTotal:n,progress:Math.min(d.progress,n)})};
