@@ -172,7 +172,7 @@ Deno.serve(async req=>{
           type:'release',
           title:releaseTitle+' · Episode '+episode,
           body:'A new tracked episode is available now.',
-          href:'radar',
+          href:'media:'+item.id,
           dedupe_key:'release:'+schedule.mediaId+':'+episode
         },{onConflict:'user_id,dedupe_key',ignoreDuplicates:true});
         if(!error)notifications++;
@@ -184,7 +184,7 @@ Deno.serve(async req=>{
             type:'release',
             title:releaseTitle+' · Episode '+episode+' tomorrow',
             body:'Tracked episode scheduled for '+new Date(schedule.airingAt*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}),
-            href:'radar',
+            href:'media:'+item.id,
             dedupe_key:'upcoming:'+schedule.mediaId+':'+episode+':24h'
           },{onConflict:'user_id,dedupe_key',ignoreDuplicates:true});
           if(!error)reminders++;
