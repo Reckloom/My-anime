@@ -66,7 +66,7 @@ function localItem(media:AniListSearchResult):MediaItem{
  const title=titleOf(media);
  const alternatives=[media.title.english,media.title.romaji,media.title.native,...(media.synonyms||[])].filter((x):x is string=>Boolean(x&&x!==title));
  return{
-   id:crypto.randomUUID(),anilistId:ext.sourceProvider==='jikan'?undefined:media.id,sourceProvider:ext.sourceProvider||'anilist',externalId:ext.sourceProvider==='jikan'?String(ext.jikanId||media.id):String(media.id),title,
+   id:crypto.randomUUID(),anilistId:ext.sourceProvider==='jikan'?undefined:media.id,sourceProvider:ext.sourceProvider||'anilist',externalId:ext.sourceProvider==='jikan'?String(ext.jikanId||media.id):String(media.id),title,externalLinks:media.idMal?{malId:String(media.idMal)}:undefined,
    alternativeTitles:[...new Set(alternatives)],description:cleanDescription(media.description),
    poster:media.coverImage?.extraLarge||'',backdrop:media.bannerImage||'',
    medium:media.type==='MANGA'?mangaMedium(media):(media.format==='MOVIE'?'movie':'anime'),status:'planned',progress:0,
@@ -111,7 +111,7 @@ function mapJikanMedia(x:any,type:CatalogType):AniListSearchResult{
  const genres=Array.isArray(x?.genres)?x.genres.map((g:any)=>String(g?.name||'')).filter(Boolean):[];
  const start=x?.aired?.from?new Date(x.aired.from):null;
  const end=x?.aired?.to?new Date(x.aired.to):null;
- return {id:Number(x?.mal_id||0),type:isManga?'MANGA':'ANIME',format,
+ return {id:Number(x?.mal_id||0),idMal:Number(x?.mal_id||0),type:isManga?'MANGA':'ANIME',format,
   title:{romaji:String(x?.title||''),english:x?.title_english?String(x.title_english):null,native:x?.title_japanese?String(x.title_japanese):null,userPreferred:String(x?.title||'')},
   synonyms:Array.isArray(x?.title_synonyms)?x.title_synonyms.map(String):[],description:x?.synopsis?String(x.synopsis):null,
   coverImage:{extraLarge:String(x?.images?.jpg?.large_image_url||x?.images?.jpg?.image_url||'')},bannerImage:null,genres,
