@@ -58,7 +58,7 @@ for (const source of episodeSamples) {
     signal: AbortSignal.timeout(45000)
   });
   assert.equal(res.status, 200, 'Episode poster proxy failed for ' + source + ' (HTTP ' + res.status + ').');
-  assert.match(res.headers.get('content-type') || '', /^image\\//i, 'Episode proxy returned non-image data for ' + source + '.');
+  assert.match(res.headers.get('content-type') || '', /^image\//i, 'Episode proxy returned non-image data for ' + source + '.');
   const bytes = await res.arrayBuffer();
   assert.ok(bytes.byteLength > 1000, 'Episode proxy returned too few bytes for ' + source + ' (' + bytes.byteLength + ').');
   console.log('Episode artwork source verified: ' + new URL(source).hostname + ' · ' + bytes.byteLength + ' bytes.');
