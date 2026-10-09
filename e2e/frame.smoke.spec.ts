@@ -222,7 +222,8 @@ test.describe('FRAME anime episode catalogue', () => {
     const geometry = await page.locator('.detail-modal').evaluate(modal => {
       const panel = modal.querySelector('.frame-episode-list') as HTMLElement | null;
       const button = modal.querySelector('.frame-episode-mark') as HTMLElement | null;
-      if (panel) modal.scrollTop = Math.max(0, panel.offsetTop - 20);
+      const before = modal.getBoundingClientRect();
+      if (panel) modal.scrollTop += panel.getBoundingClientRect().top - before.top - 20;
       if (button) button.scrollIntoView({ block: 'center', behavior: 'auto' });
       const rect = button?.getBoundingClientRect();
       const modalRect = modal.getBoundingClientRect();
@@ -232,7 +233,7 @@ test.describe('FRAME anime episode catalogue', () => {
         hit: rect ? document.elementFromPoint(rect.left + rect.width/2, rect.top + rect.height/2)?.tagName : null };
     });
     console.log('Episode QA geometry:', geometry);
-    await page.getByRole('button', { name: 'Mark through' }).click({force:true});
+    await page.getByRole('button', { name: 'Mark through' }).click({timeout:5000});
     console.log('Episode QA: clicked mark-through');
     await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
   });
