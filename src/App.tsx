@@ -180,7 +180,7 @@ export default function App(){
     // Do not auto-import the guest cache after authentication; it can contain
     // obsolete browser-only records. The account library is the source of truth.
     if(guestItems.length)localStorage.removeItem('frame-library:guest');
-    const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();if(prefs&&typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);
+if(prefs&&typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);
     const effectivePrefs={...(prefs||{}),...guestPrefs};
     if(Object.keys(effectivePrefs).length){
      setSortMode(String(effectivePrefs.default_sort||'rating'));setDensity(String(effectivePrefs.density||'comfortable'));
