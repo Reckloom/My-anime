@@ -22,7 +22,9 @@ jobs:
         run: npm install
       - name: Audit dependencies
         run: npm audit --audit-level=high
-      - name: Build FRAME
+      - name: Build FRAME for isolated browser tests
+        env:
+          VITE_FRAME_E2E: 'true'
         run: npm run build
       - name: Install Playwright test runner
         run: npm install --no-save --no-package-lock @playwright/test
