@@ -45,4 +45,22 @@ assert.match(imageResponse.headers.get('content-type') || '', /^image\//i, 'Post
 const imageBytes = await imageResponse.arrayBuffer();
 assert.ok(imageBytes.byteLength > 1000, 'Poster proxy returned an empty or suspiciously small image (' + imageBytes.byteLength + ' bytes).');
 console.log('One Piece poster proxy test passed: image response is ' + imageBytes.byteLength + ' bytes (' + imageResponse.headers.get('content-type') + ').');
+
+const episodeSamples = [
+  'https://one-piece.com/img/anime/story/img_story_001.jpg',
+  'https://www.vodanime.com/media/one-piece-episode-6-thumbnail-3419070.jpg?v=1787086569',
+  'https://image.idn.media/one-piece/episode-1180.jpg'
+];
+for (const source of episodeSamples) {
+  const episodeUrl = projectUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(source);
+  const res = await fetch(episodeUrl, {
+    headers: { apikey: publishableKey, Authorization: 'Bearer ' + publishableKey },
+    signal: AbortSignal.timeout(45000)
+  });
+  assert.equal(res.status, 200, 'Episode poster proxy failed for ' + source + ' (HTTP ' + res.status + ').');
+  assert.match(res.headers.get('content-type') || '', /^image\\//i, 'Episode proxy returned non-image data for ' + source + '.');
+  const bytes = await res.arrayBuffer();
+  assert.ok(bytes.byteLength > 1000, 'Episode proxy returned too few bytes for ' + source + ' (' + bytes.byteLength + ').');
+  console.log('Episode artwork source verified: ' + new URL(source).hostname + ' · ' + bytes.byteLength + ' bytes.');
+}
 console.log('One Piece arc artwork integration test passed: ' + posters.length + ' arcs, ' + new Set(urls).size + ' unique posters, ' + wikiCount + ' dedicated arc artworks.');
