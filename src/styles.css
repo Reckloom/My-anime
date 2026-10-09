@@ -3353,3 +3353,9 @@ hr,.divider{border-color:var(--frame-line)!important}
 .frame-notification-media-bubble.empty-media-bubble{border-style:dashed;background:#ffffff02}
 .frame-notification-media-bubble.empty-media-bubble .frame-notification-media-head{background:transparent;border-bottom:0}
 .frame-notification-media-bubble.empty-media-bubble .frame-notification-media-head b{color:#c1c1cd}
+
+
+.frame-notification-item>.frame-notification-item-actions{display:flex;align-items:center;gap:3px;min-width:0}
+.frame-notification-copy b{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.frame-notification-item-actions button span{white-space:nowrap}
+.frame-notification-subtitle{color:var(--frame-muted)!important;font-size:10px!important;letter-spacing:0!important;font-weight:500!important}
