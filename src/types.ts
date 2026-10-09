@@ -37,6 +37,7 @@ export interface EpisodeMetadata {
  ratingCount?:number;
  imdbEpisodeUrl?:string;
  googleImageSearchUrl?:string;
+ posterSource?:string;
  imdbId?:string;
  directors?:string[];
  writers?:string[];
