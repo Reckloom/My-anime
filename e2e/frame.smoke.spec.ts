@@ -216,8 +216,11 @@ test.describe('FRAME anime episode catalogue', () => {
     console.log('Episode QA: One Piece detail opened');
 
     await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Mark through' }).click();
-    await expect(page.getByText('Watched', { exact: true })).toBeVisible();
+    console.log('Episode QA: Episodes heading visible');
+    await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
+    console.log('Episode QA: episode row visible; mark buttons =', await page.getByRole('button', { name: 'Mark through' }).count());
+    await page.getByRole('button', { name: 'Mark through' }).click({timeout:5000});
+    console.log('Episode QA: clicked mark-through');
+    await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
   });
 });
