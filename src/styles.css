@@ -3363,3 +3363,6 @@ hr,.divider{border-color:var(--frame-line)!important}
 /* Keep the details drawer independently scrollable on touch devices and in browsers with smooth page scrolling. */
 .detail-modal{overflow-y:auto!important;overflow-x:hidden!important;scroll-behavior:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .frame-episode-list{scroll-margin-block:16px}
+
+.frame-episode-list-rows{max-height:min(46vh,420px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding-right:4px;scrollbar-width:thin}
+@media(max-width:760px){.frame-episode-list-rows{max-height:42dvh}}
