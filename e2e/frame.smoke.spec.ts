@@ -52,12 +52,12 @@ test.describe('FRAME core smoke flow', () => {
 
     await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
-    await page.getByRole('button', { name: /Nothing Dot-matrix industrial/ }).click();
+    await page.getByRole('button', { name: /6 · Modern Media Hub/ }).click();
     await page.getByRole('button', { name: 'Dark', exact: true }).click();
 
     await page.reload();
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
-    await expect(page.getByText('Nothing is active.', { exact: true })).toBeVisible();
+    await expect(page.getByText('6 · Modern Media Hub is active.', { exact: true })).toBeVisible();
   });
 
   test('makes Discover shortcuts useful', async ({ page }) => {
@@ -85,8 +85,8 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: /Nothing Dot-matrix industrial/ }).click();
-    await expect(page.getByText('Nothing is active.', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /6 · Modern Media Hub/ }).click();
+    await expect(page.getByText('6 · Modern Media Hub is active.', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Dark', exact: true }).click();
     await page.getByRole('combobox').last().selectOption('compact');
