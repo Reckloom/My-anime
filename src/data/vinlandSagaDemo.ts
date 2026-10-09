@@ -65,7 +65,7 @@ function episodeItem(rootId:string,seasonId:string,seasonNumber:number,row:Episo
   poster:'https://cdn.myanimelist.net/images/anime/2/76662.jpg',backdrop:'',medium:'anime',status:'planned',progress:0,total:1,
   year:seasonNumber===1?2019:2023,score:row.rating,genres:['Adventure','Drama'],themes:[],studio:seasonNumber===1?'WIT Studio':'MAPPA',source:'IMDb episode rating',
   season:'Season '+seasonNumber,favorite:false,progressUnit:'episodes',
-  episode:{seasonNumber,episodeNumber,episodeCode:'S'+seasonNumber+'.E'+episodeNumber,airDate:row.date,ratingSource:'IMDb',imdbId:undefined}
+  episode:{seasonNumber,episodeNumber,episodeCode:'S'+seasonNumber+'.E'+episodeNumber,airDate:row.date,ratingSource:'IMDb',imdbEpisodeUrl:'https://www.imdb.com/title/tt10233448/episodes/?season='+seasonNumber,imdbId:undefined}
  };
 }
 export function makeVinlandSagaDemo():MediaItem[]{
