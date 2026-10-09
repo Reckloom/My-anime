@@ -3314,3 +3314,36 @@ hr,.divider{border-color:var(--frame-line)!important}
 .frame-episode-pagination{flex-wrap:wrap}
 .frame-episode-jump{font-size:.72rem!important;padding-inline:9px!important}
 @media(max-width:480px){.frame-episode-pagination{justify-content:space-between}.frame-episode-pagination span{order:5;width:100%;text-align:center}.frame-episode-jump{flex:1}.frame-episode-pagination>button:not(.frame-episode-jump){flex:1;justify-content:center}}
+
+
+/* FRAME notification center: searchable, grouped, persistent media bubbles */
+.frame-notification-panel{width:min(440px,calc(100vw - 24px));max-height:min(78vh,760px);display:flex;flex-direction:column;overflow:hidden}
+.frame-notification-panel>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.frame-notification-subtitle{display:block;margin-top:5px;color:var(--muted,#9696a4);font-size:11px;letter-spacing:0}
+.frame-notification-search{display:flex;align-items:center;gap:9px;margin:12px 14px 8px;padding:10px 12px;border:1px solid #ffffff18;border-radius:12px;background:#ffffff07;color:#a5a5b4}
+.frame-notification-search input{min-width:0;width:100%;border:0;outline:0;background:transparent;color:inherit;font-size:13px}
+.frame-notification-search button{display:grid;place-items:center;border:0;background:transparent;color:inherit;padding:2px}
+.frame-notification-list{overflow:auto;overscroll-behavior:contain;padding:10px;display:grid;gap:10px}
+.frame-notification-media-bubble{border:1px solid #ffffff17;border-radius:15px;background:linear-gradient(145deg,#ffffff0a,#ffffff03);overflow:hidden}
+.frame-notification-media-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;background:#ffffff06;border-bottom:1px solid #ffffff0d}
+.frame-notification-media-head>div{display:grid;gap:4px;min-width:0}
+.frame-notification-media-head b{font-size:13px;overflow-wrap:anywhere}
+.frame-notification-media-head small{font-size:10px;color:#9a9aa8}
+.frame-notification-media-head>button,.frame-notification-panel>header>div:last-child button{display:grid;place-items:center;flex:none;border:1px solid #ffffff14;border-radius:8px;background:#ffffff07;color:#b8b8c4;padding:6px}
+.frame-notification-item{display:flex;align-items:stretch;gap:4px;padding:7px 8px;border-bottom:1px solid #ffffff0a}
+.frame-notification-item:last-child{border-bottom:0}
+.frame-notification-item.unread{background:linear-gradient(90deg,#a78bfa12,transparent 85%)}
+.frame-notification-open{flex:1;min-width:0;display:flex;align-items:flex-start;gap:9px;text-align:left;border:0;border-radius:9px;background:transparent;padding:7px 5px;color:inherit}
+.frame-notification-open:hover{background:#ffffff07}
+.frame-notification-type-icon{display:grid;place-items:center;flex:none;width:27px;height:27px;border-radius:9px;background:#a78bfa18;color:#c4b5fd;font-size:16px}
+.frame-notification-copy{display:grid;gap:4px;min-width:0;flex:1}
+.frame-notification-copy b{font-size:12px;line-height:1.35}
+.frame-notification-copy>span{font-size:11px;line-height:1.5;color:#b1b1be;overflow-wrap:anywhere}
+.frame-notification-copy small{font-size:10px;color:#858593}
+.frame-notification-open>svg{flex:none;margin-top:4px;color:#858593}
+.frame-notification-item-actions{display:flex;align-items:center;gap:3px;flex:none}
+.frame-notification-item-actions button{display:flex;align-items:center;justify-content:center;gap:4px;border:0;border-radius:7px;background:transparent;color:#aaaaba;padding:6px;font-size:10px}
+.frame-notification-item-actions button:hover,.frame-notification-media-head>button:hover{background:#ffffff10;color:#fff}
+.frame-notification-item-actions .frame-notification-dismiss:hover{color:#fca5a5;background:#ef444418}
+.frame-notification-button.has-unread i{box-shadow:0 0 0 3px #09090d}
+@media(max-width:560px){.frame-notification-panel{position:fixed;top:70px;left:12px;right:12px;width:auto;max-height:calc(100dvh - 84px);z-index:1000}.frame-notification-item-actions{gap:0}.frame-notification-item-actions button{padding:6px 4px}.frame-notification-item-actions button span{display:none}}
