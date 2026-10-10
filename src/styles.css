@@ -3558,3 +3558,19 @@ hr,.divider{border-color:var(--frame-line)!important}
 .frame-anime-episode-row>span:first-child{isolation:isolate}
 .frame-anime-episode-row .frame-anime-episode-number{z-index:1}
 .frame-anime-episode-row .frame-anime-episode-copy small{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+
+/* Arc sections keep the arc artwork and its episode cards together. */
+.frame-anime-arc-groups{display:grid;gap:12px;min-width:0}
+.frame-anime-arc-group{min-width:0;border:1px solid var(--frame-line,rgba(255,255,255,.09));border-radius:16px;background:var(--frame-surface,rgba(255,255,255,.02));overflow:hidden}
+.frame-anime-arc-heading{display:grid;grid-template-columns:88px minmax(0,1fr) 18px;gap:12px;align-items:center;padding:12px;cursor:pointer;list-style:none}
+.frame-anime-arc-heading::-webkit-details-marker{display:none}
+.frame-anime-arc-heading>svg{transition:transform .18s ease;color:var(--frame-muted,#8d8d96)}
+.frame-anime-arc-group[open]>.frame-anime-arc-heading>svg{transform:rotate(90deg)}
+.frame-anime-arc-cover{position:relative;display:block;width:88px;height:58px;overflow:hidden;border-radius:10px;background:var(--frame-surface-2,#171717)}
+.frame-anime-arc-cover .frame-episode-artwork{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.frame-anime-arc-copy{display:grid;gap:4px;min-width:0}
+.frame-anime-arc-copy>b{font-size:13px;line-height:1.35}
+.frame-anime-arc-copy>small{font-size:10px;line-height:1.45;color:var(--frame-muted,#8d8d96);overflow-wrap:anywhere}
+.frame-anime-arc-group>.frame-anime-episode-rows{padding:0 12px 12px}
+@media(max-width:520px){.frame-anime-arc-heading{grid-template-columns:68px minmax(0,1fr) 16px;gap:9px;padding:9px}.frame-anime-arc-cover{width:68px;height:52px}.frame-anime-arc-group>.frame-anime-episode-rows{padding:0 8px 8px}}
