@@ -16,25 +16,26 @@ type EpisodeResponse={
 };
 
 async function fetchJikan(url:string,signal:AbortSignal):Promise<Response>{
-  let lastError:unknown;
-  for(let attempt=0;attempt<4;attempt++){
-    try{
-      const response=await fetch(url,{signal,headers:{Accept:'application/json'}});
-      if((response.status===429||response.status>=500)&&attempt<3){
-        await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
-        if(signal.aborted)throw new DOMException('Aborted','AbortError');
-        continue;
-      }
-      return response;
-    }catch(error){
-      if(signal.aborted)throw error;
-      lastError=error;
-      if(attempt<3)await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
-    }
+  if(signal.aborted)throw new DOMException('Aborted','AbortError');
+  if(!supabase)throw new Error('The episode service is not configured.');
+  let body:Record<string,unknown>;
+  if(url.includes('/anime?q=')){
+    const query=decodeURIComponent((url.split('q=')[1]||'').split('&')[0]);
+    const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'search',query}});
+    if(error)throw error;
+    if(data?.error)throw new Error(String(data.error));
+    body={data:Array.isArray(data?.results)?data.results:[]};
+  }else{
+    const match=url.match(/anime\/(\d+)\/episodes\?page=(\d+)/);
+    if(!match)throw new Error('Unsupported episode lookup request.');
+    const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'episode-page',malId:Number(match[1]),page:Number(match[2])}});
+    if(error)throw error;
+    if(data?.error)throw new Error(String(data.error));
+    body={data:Array.isArray(data?.data)?data.data:[],pagination:data?.pagination||{}};
   }
-  throw lastError instanceof Error?lastError:new Error('Anime episode service is temporarily unavailable.');
+  if(signal.aborted)throw new DOMException('Aborted','AbortError');
+  return new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json'}});
 }
-
 export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{malId?:string;title:string;currentProgress:number;onMarkThrough:(episode:number)=>Promise<void>}){
   const [resolvedMalId,setResolvedMalId]=useState(malId||'');
   const [resolving,setResolving]=useState(!malId);
