@@ -316,6 +316,33 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
     }
     current = [...byNumber.values()].sort((a, b) => a.number - b.number);
   }
+
+  // Jikan provides episode titles but usually no still image. Enrich missing
+  // artwork (and source-only placeholder titles) from Kitsu without replacing
+  // a real title or synopsis already supplied by the primary source.
+  if (current.some(row => !row.poster || row.source === 'AniList count fallback')) {
+    try {
+      const kitsu = await loadKitsuEpisodes(media);
+      const kitsuByNumber = new Map(kitsu.rows.map(row => [row.number, row]));
+      current = current.map(row => {
+        const visual = kitsuByNumber.get(row.number);
+        if (!visual) return row;
+        const placeholder = row.source === 'AniList count fallback';
+        const title = placeholder && hasRealEpisodeTitle(visual.title, visual.number) ? visual.title : row.title;
+        return {
+          ...row,
+          title,
+          airDate: row.airDate || visual.airDate,
+          synopsis: row.synopsis || visual.synopsis,
+          poster: row.poster || visual.poster,
+          source: placeholder && title !== row.title ? 'Kitsu' : row.source,
+          sourceUrl: placeholder && title !== row.title ? visual.sourceUrl : row.sourceUrl
+        };
+      });
+    } catch {
+      // Keep the verified title/count data even when Kitsu artwork is unavailable.
+    }
+  }
   const maxSourceNumber = current.reduce((n, row) => Math.max(n, row.number), 0);
   const countMismatch = expected > 0 && finished && current.length !== Math.min(2000, expected);
   const airingMismatch = !finished && nextEpisode > 0 && maxSourceNumber < nextEpisode - 1;
