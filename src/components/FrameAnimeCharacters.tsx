@@ -4,6 +4,18 @@ import type { AnimeCharacterProfile } from '../types';
 import { aniList, CHARACTERS_QUERY } from '../anilist';
 import { posterImageSrc } from '../posterImage';
 
+type AniListCharacterEdge = {
+  role?: string | null;
+  node?: {
+    id?: number;
+    name?: { full?: string | null; native?: string | null };
+    image?: { large?: string | null };
+    description?: string | null;
+    siteUrl?: string | null;
+  };
+};
+type AniListCharacterResponse = { Media?: { characters?: { edges?: AniListCharacterEdge[] } } };
+
 function CharacterPortrait({character}:{character:AnimeCharacterProfile}) {
   const [failed,setFailed]=useState(false);
   useEffect(()=>setFailed(false),[character.image,character.name]);
@@ -30,7 +42,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
       return () => { active = false; };
     }
     setLoading(true);
-    aniList<{Media?:{characters?:{edges?:Array<{role?:string|null;node?:{id?:number;name?:{full?:string|null;native?:string|null};image?:{large?:string|null};description?:string|null;siteUrl?:string|null}}}>}}>(CHARACTERS_QUERY,{id:anilistId})
+    aniList<AniListCharacterResponse>(CHARACTERS_QUERY,{id:anilistId})
       .then(result => {
         const edges = result.Media?.characters?.edges || [];
         const mapped = edges.filter(edge => edge.node?.name?.full).map(edge => ({
