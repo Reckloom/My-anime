@@ -717,7 +717,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
   const storedProgress = useState<StoredProgress>(() => {
     if (!userId) return { completedKeys: [], warnings: {} };
     try {
-      const raw = localStorage.getItem('frame-anime-catalogue:v1:' + userId);
+      const raw = localStorage.getItem('frame-anime-catalogue:v2:' + userId);
       const parsed = raw ? JSON.parse(raw) as StoredProgress : null;
       return parsed && Array.isArray(parsed.completedKeys) ? { completedKeys: parsed.completedKeys, warnings: parsed.warnings || {}, updatedAt: parsed.updatedAt } : { completedKeys: [], warnings: {} };
     } catch { return { completedKeys: [], warnings: {} }; }
@@ -735,7 +735,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
     if (!userId) return;
     try {
       const payload: StoredProgress = { completedKeys: keys, warnings, updatedAt: new Date().toISOString() };
-      localStorage.setItem('frame-anime-catalogue:v1:' + userId, JSON.stringify(payload));
+      localStorage.setItem('frame-anime-catalogue:v2:' + userId, JSON.stringify(payload));
     } catch { /* Import still works when browser storage is unavailable. */ }
   };
 
