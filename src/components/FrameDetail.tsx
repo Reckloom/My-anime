@@ -238,7 +238,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const altTitles=listValue(d.alternativeTitles);
  const genres=listValue(d.genres);
  const themes=listValue(d.themes);
- const parentCandidates=useMemo(()=>library.filter(canUseAsParent),[library,d.id,d.parentId]);
+ const parentCandidates=useMemo(()=>{const byId=new Map(library.map(x=>[x.id,x]));return library.filter(candidate=>{if(candidate.id===d.id)return false;let cursor:MediaItem|undefined=candidate,hops=0;while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=byId.get(cursor.parentId);hops++;}return true;});},[library,d.id]);
  const navItems=navigationItems?.length?navigationItems:[item];
  const navIndex=Math.max(0,navItems.findIndex(x=>x.id===item.id));
  const hasPrevious=navItems.length>1;
