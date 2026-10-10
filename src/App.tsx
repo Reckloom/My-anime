@@ -112,7 +112,7 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
   const isEpisodeHierarchyItem=current.sourceProvider==='frame-anime-episode'
    || /:episode:\d+$/.test(externalId)
    || /^(?:one-piece|naruto)-episode-\d+$/i.test(externalId);
-  const isStoryArc=current.sourceProvider==='frame-story-arc';
+  const isStoryArc=current.sourceProvider==='frame-story-arc'||current.sourceProvider==='frame-naruto-arc'||/^one-piece-arc-/i.test(externalId);
   const mergedParentId=(isEpisodeHierarchyItem||isStoryArc)
    ?(current.parentId??incoming.parentId):(incoming.parentId??current.parentId);
   merged[index]=normalise({...current,id:current.id,parentId:mergedParentId,metadataId:current.metadataId??incoming.metadataId,status:incoming.status||current.status,progress:incoming.progress??current.progress,total:incoming.total??current.total,customTotal:incoming.customTotal??current.customTotal,personalRating:incoming.personalRating??current.personalRating,favorite:incoming.favorite??current.favorite,notes:incoming.notes??current.notes});
