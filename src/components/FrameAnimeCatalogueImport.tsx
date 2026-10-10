@@ -504,7 +504,12 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       const malId = Number(media.idMal) > 0 ? Number(media.idMal) : undefined;
       for (const episode of episodes) {
         const episodeExternalId = 'anilist:' + Number(media.id) + ':episode:' + episode.number;
-        const existingEpisode = library.find(x => x.sourceProvider === 'frame-anime-episode' && x.externalId === episodeExternalId);
+        const existingEpisode = library.find(x =>
+          (x.sourceProvider === 'frame-anime-episode' && x.externalId === episodeExternalId) ||
+          (Number(x.episode?.episodeNumber) === episode.number &&
+            Boolean(malId && String(x.externalLinks?.malId || '') === String(malId) &&
+              x.medium === 'anime' && x.id !== id))
+        );
         const episodeId = existingEpisode?.id || ('frame-anime-episode-' + Number(media.id) + '-' + episode.number + '-' + scope);
         const code = 'EP ' + pad(episode.number);
         const episodeMeta: EpisodeMetadata = {
