@@ -27,12 +27,10 @@ const svgFallback=(title:string,medium:Medium)=>{
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 async function resolve(p:Props):Promise<string>{
- const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode){
-  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
-  return svgFallback(p.title,p.medium);
- }
- const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
+ // Prefer saved artwork. Re-querying AniList for every card creates a burst of
+ // unnecessary requests when a large library is rendered.
+ if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
+  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  if(isNarutoHierarchy(p)){
   if(p.poster&&!isPlaceholderArtwork(p.poster))return p.poster;
   return svgFallback(p.title,p.medium);
@@ -76,10 +74,10 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
  return current;
 }
 function safeInitialArtwork(p:Props){
- if(isNarutoHierarchy(p))return !isPlaceholderArtwork(p.poster)?p.poster!:svgFallback(p.title,p.medium);
- if(isHierarchyNode(p))return !isPlaceholderArtwork(p.poster)?p.poster!:svgFallback(p.title,p.medium);
+ if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
+ if(isNarutoHierarchy(p)||isHierarchyNode(p))return svgFallback(p.title,p.medium);
  if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
- return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
+ return p.parentPoster||svgFallback(p.title,p.medium);
 }
 export function FrameArtwork(p:Props){
  const [src,setSrc]=useState(()=>safeInitialArtwork(p));
