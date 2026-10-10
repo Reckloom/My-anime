@@ -32,7 +32,7 @@ async function resolve(p:Props):Promise<string>{
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
  if(hasSavedPoster&&(!['anime','manga','manhwa','light-novel'].includes(p.medium)||isHierarchyNode(p)))return p.poster;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return hasSavedPoster?p.poster!:svgFallback(p.title,p.medium);
+ if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
   const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  if(isNarutoHierarchy(p)){
   if(hasSavedPoster)return p.poster!;
