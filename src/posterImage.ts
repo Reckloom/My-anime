@@ -11,7 +11,7 @@ export function posterImageSrc(value?: string | null): string {
     const wikiEpisodeArtwork =
       parsed.protocol === 'https:' &&
       parsed.hostname === 'static.wikia.nocookie.net' &&
-      parsed.pathname.startsWith('/onepiece/images/');
+      /^\/[a-z0-9_-]+\/images\/.+\.(?:jpe?g|png|webp|avif|gif)(?:\/|$)/i.test(parsed.pathname);
     const officialEpisodeArtwork =
       parsed.protocol === 'https:' &&
       parsed.hostname === 'one-piece.com' &&
