@@ -56,8 +56,8 @@ async function characters(names: unknown) {
   return { characters: results, matched: results.filter(item => item.image).length, requested: list.length };
 }
 async function episodes(anime: string) {
-  const id = anime === 'naruto-shippuden' ? 1735 : anime === 'naruto' ? 20 : 0;
-  if (!id) throw new Error('Unsupported Naruto series.');
+  const id = anime === 'naruto-shippuden' ? 1735 : anime === 'naruto' ? 20 : anime === 'one-piece' ? 21 : 0;
+  if (!id) throw new Error('Unsupported anime series.');
   const all: any[] = [];
   let page = 1;
   let lastPage = 1;
@@ -70,11 +70,12 @@ async function episodes(anime: string) {
     if (page <= lastPage) await new Promise(resolve => setTimeout(resolve, 350));
   }
   const clean = all.map((item: any) => ({
-    number: Number(item.mal_id), title: String(item.title || item.title_english || '').trim(),
-    airDate: item.aired?.from ? String(item.aired.from).slice(0, 10) : '',
+    number: Number(item.mal_id), mal_id: Number(item.mal_id), title: String(item.title || item.title_english || '').trim(),
+    airDate: item.aired?.from ? String(item.aired.from).slice(0, 10) : '', aired: item.aired || null,
     synopsis: String(item.synopsis || '').trim(),
     image: String(item.images?.jpg?.image_url || item.images?.webp?.image_url || ''),
-    url: String(item.url || ''), score: null,
+    images: item.images || {}, url: String(item.url || ''), score: Number(item.score) || null,
+    ratingSource: 'MyAnimeList / Jikan',
   })).filter((item: any) => Number.isInteger(item.number) && item.number > 0 && item.title);
   if (!clean.length) throw new Error('The anime provider returned no episode records.');
   return { anime, episodes: clean, total: clean.length, source: 'Jikan / MyAnimeList' };
