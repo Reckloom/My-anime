@@ -539,14 +539,14 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     for (const [order, name, start, end, summary] of BLEACH_ARCS) {
       const arcEpisodes = bleachEpisodes.filter(episode => episode.number >= start && episode.number <= end);
       if (!arcEpisodes.length) continue;
-      const arcId = 'frame-bleach-arc-' + order + '-' + scope;
+      const arcId = 'frame-story-arc-bleach-' + String(order).padStart(2, '0') + '-' + scope;
       bleachArcIds.set(order, arcId);
       const existingArc = library.find(item => item.id === arcId);
       const poster = arcEpisodes.find(episode => episode.poster)?.poster || '';
       incoming.push({
         id: arcId,
         parentId: rootId,
-        sourceProvider: 'frame-bleach-arc',
+        sourceProvider: 'frame-story-arc',
         externalId: 'bleach-arc-' + String(order).padStart(2, '0'),
         title: name,
         description: summary,
@@ -560,7 +560,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
         genres: existingArc?.genres || [],
         themes: existingArc?.themes || [],
         favorite: existingArc?.favorite || false,
-        source: 'FRAME curated Bleach story arc',
+        source: 'FRAME curated story arc',
         externalLinks: existingArc?.externalLinks || {}
       });
     }
