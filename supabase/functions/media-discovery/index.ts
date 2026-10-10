@@ -718,12 +718,14 @@ Deno.serve(async(req:Request)=>{
       );
       const allowedVodAnime=source.hostname==='www.vodanime.com'&&/^\/media\/one-piece-episode-\d+-thumbnail-\d+\.jpg$/i.test(source.pathname);
       const allowedIdn=source.hostname==='image.idn.media'&&/\.(?:jpe?g|png|webp|avif)$/i.test(source.pathname);
-      if(source.protocol!=='https:'||!(allowedWiki||allowedOfficialEpisode||allowedVodAnime||allowedIdn)){
+      const allowedTvdb=source.hostname==='artworks.thetvdb.com'&&/^\/banners\/episodes\/\d+\/\d+\.(?:jpe?g|png|webp)$/i.test(source.pathname);
+      const allowedKitsu=source.hostname==='media.kitsu.app'&&/^\/episode\/\d+\/thumbnail\/[a-f0-9]{32}\.(?:jpe?g|png|webp)$/i.test(source.pathname);
+      if(source.protocol!=='https:'||!(allowedWiki||allowedOfficialEpisode||allowedVodAnime||allowedIdn||allowedTvdb||allowedKitsu)){
         return new Response('Image host or path is not allowed.',{status:403,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
       }
       const cacheHeaders={...HEADERS,'Cache-Control':'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400','X-Content-Type-Options':'nosniff'};
       const wikiSlug=allowedWiki?(source.pathname.split('/')[1]||'onepiece'):'';
-      const referer=allowedWiki?'https://'+wikiSlug+'.fandom.com/':allowedOfficialEpisode?'https://one-piece.com/':allowedVodAnime?'https://www.vodanime.com/':'https://frame.reckloom.com/';
+      const referer=allowedWiki?'https://'+wikiSlug+'.fandom.com/':allowedOfficialEpisode?'https://one-piece.com/':allowedVodAnime?'https://www.vodanime.com/':allowedTvdb?'https://thetvdb.com/':allowedKitsu?'https://kitsu.io/':'https://frame.reckloom.com/';
       let imageResponse:Response|undefined;
       try{
         imageResponse=await fetch(source.href,{headers:{
