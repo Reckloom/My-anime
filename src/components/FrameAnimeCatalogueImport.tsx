@@ -568,7 +568,9 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
         };
         incoming.push({
           id: episodeId,
-          parentId: id,
+          // Preserve an existing curated arc assignment when a catalogue refresh
+          // revisits the same episode; never flatten a nested episode onto its part.
+          parentId: existingEpisode?.parentId || id,
           sourceProvider: 'frame-anime-episode',
           externalId: episodeExternalId,
           title: 'Episode ' + pad(episode.number) + ' — ' + episode.title,
