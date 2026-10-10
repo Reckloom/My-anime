@@ -53,7 +53,6 @@ const rows=[
 [48,'Zephyr','Z','Former Marine instructor','Neo Marines; Film Z','A film-original former Marine instructor whose story examines his strict ideals.','Pursue his vision of justice'],
 [49,'Gild Tesoro','Gold King','Casino magnate','Gran Tesoro; Film Gold','A film-original character who controls gold and rules a vast entertainment ship.','Gain wealth and control'],
 [50,'Uta','World’s Most Beloved Singer','Singer','Film Red; connected to Red-Haired Pirates','A singer whose extraordinary voice and music are central to Film Red.','Create a happier world through music'],
-[51,'Kung-Fu Dugong','Kung-Fu Dugong','Martial-arts animal','Alabasta and other adventures','A seal-like animal known for martial arts and for respecting those who defeat it.','Keep training and improving']
  ,
 [52,'Loki','Accursed Prince / Sun God','Prince of Elbaph','Warland Kingdom; Elbaph royal family','A giant prince tied to Elbaph’s royal history and the legendary Devil Fruit. He idolizes Rocks D. Xebec.','Pursue his own idea of the Sun God'],
 [53,'Rocks D. Xebec','Captain of the Rocks Pirates','Legendary pirate captain','Rocks Pirates','The infamous captain who gathered future emperors and other legendary pirates under one flag. His ambition made him a major threat to the world order.','Become King of the World'],
@@ -113,6 +112,8 @@ export function FrameCharacterArchive(){
    'Issho':['Issho','Fujitora'],
    'Charlotte Katakuri':['Charlotte Katakuri','Katakuri'],
    'Ochoku':['Ochoku','Wang Zhi'],
+   'Zephyr':['Zephyr','Z (One Piece Film: Z)'],
+   'Gild Tesoro':['Gild Tesoro','Tesoro (One Piece Film: Gold)'],
   };
   // Only query the character's own wiki page. Episode and technique pages
   // can return scene art, which is not a valid character portrait.
@@ -205,8 +206,8 @@ export function FrameCharacterArchive(){
       const image=(page.imageinfo?.[0]?.thumburl||page.imageinfo?.[0]?.url||'').replace(/\\_/g,'_');
       const matches=words.filter(word=>key.includes(normalize(word))).length;
       const score=matches+( /anime/i.test(title)?3:0)+( /infobox|portrait/i.test(title)?5:0);
-      return {title,image,score,matches,required:words.length};
-     }).filter(candidate=>candidate.image.startsWith('https://')&&candidate.matches===candidate.required&&candidate.score>0&&!/fan.?art|figure|statue|toy|plush|card|logo|icon|symbol|wanted|merch|cosplay|wallpaper|collectible|compared|versus|vs|group|crew|family|confronts|attacks|size|diagram|concept/i.test(candidate.title))
+      const primary=words.some(word=>normalize(word).length>=4&&key.includes(normalize(word))); return {title,image,score,matches,primary};
+     }).filter(candidate=>candidate.image.startsWith('https://')&&candidate.primary&&candidate.matches>0&&candidate.score>0&&!/fan.?art|figure|statue|toy|plush|card|logo|icon|symbol|wanted|merch|cosplay|wallpaper|collectible|compared|versus|vs|group|crew|family|confronts|attacks|size|diagram|concept/i.test(candidate.title))
        .sort((a,b)=>b.score-a.score);
      return {character,image:candidates[0]?.image||''};
     }catch{return {character,image:''}}
