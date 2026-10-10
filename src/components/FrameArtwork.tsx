@@ -16,7 +16,6 @@ async function withArtworkLimit<T>(job:()=>Promise<T>):Promise<T>{
 }
 const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
-const isKitsuArtwork=(value?:string)=>{try{const host=new URL(String(value||'')).hostname.toLowerCase();return host==='kitsu.io'||host.endsWith('.kitsu.io')||host==='kitsu.app'||host.endsWith('.kitsu.app')}catch{return false}};
 const isPlaceholderArtwork=(value?:string)=>!value||/(?:^|\\/)frame-logo\\.svg(?:[?#]|$)/i.test(value);
 const isHierarchyNode=(p:Props)=>isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'');
 const svgFallback=(title:string,medium:Medium)=>{
