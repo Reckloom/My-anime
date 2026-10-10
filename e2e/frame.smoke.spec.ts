@@ -186,6 +186,11 @@ test.describe('FRAME quick actions', () => {
 
 test.describe('FRAME anime episode catalogue', () => {
   test('shows episodes on an existing AniList anime entry and saves watched progress', async ({ page }) => {
+    await page.route('https://example.com/luffy.png', route => route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18" fill="red"/></svg>'
+    }));
     await page.route('**/functions/v1/anime-catalogue', async route => {
       const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -198,6 +203,16 @@ test.describe('FRAME anime episode catalogue', () => {
         return;
       }
       const body = route.request().postDataJSON() as { action?: string };
+      if (body.action === 'anime-characters') {
+        await route.fulfill({
+          status: 200, headers,
+          body: JSON.stringify({
+            characters: [{ id: 1, name: 'Monkey D. Luffy', role: 'MAIN', image: 'https://example.com/luffy.png', sourceUrl: 'https://anilist.co/character/1' }],
+            matched: 1, requested: 1, source: 'AniList'
+          })
+        });
+        return;
+      }
       if (body.action === 'episode-page') {
         await route.fulfill({
           status: 200, headers,
@@ -231,6 +246,7 @@ test.describe('FRAME anime episode catalogue', () => {
     await onePieceCard.click();
 
     await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByAltText('Monkey D. Luffy portrait')).toBeVisible({timeout:5000});
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
     await page.getByRole('button', { name: 'Mark through' }).evaluate(el => (el as HTMLButtonElement).click());
     await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
