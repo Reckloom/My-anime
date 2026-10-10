@@ -322,7 +322,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
  useEffect(()=>{
   if(!items.length||(supabase&&user?.id&&!cloudLibraryReady)||popularitySyncRef.current===uid)return;
-  const missing=items.filter(item=>item.anilistId&&!Number.isFinite(item.popularity)&&!/^one piece(?: \\(tv\\))?$/i.test(item.title.trim()));
+  const missing=items.filter(item=>item.anilistId&&!Number.isFinite(item.popularity)&&!/^one piece(?: \(tv\))?$/i.test(item.title.trim()));
   if(!missing.length){popularitySyncRef.current=uid;return}
   popularitySyncRef.current=uid;
   let cancelled=false;
