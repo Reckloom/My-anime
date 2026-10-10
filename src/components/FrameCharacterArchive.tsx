@@ -95,29 +95,61 @@ export function FrameCharacterArchive(){
   let active=true;
   const normalize=(value:string)=>value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g,'');
   const aliases:Record<string,string[]>={
-   'Charlotte Linlin (Big Mom / Olin)':['Big Mom','Charlotte Linlin'],
-   'Edward Newgate':['Whitebeard','Edward Newgate'],
-   'Marshall D. Teach':['Blackbeard','Marshall D. Teach'],
-   'Trafalgar D. Water Law':['Trafalgar Law','Trafalgar D. Water Law'],
-   'Donquixote Rosinante':['Corazon','Donquixote Rosinante'],
-   'Monkey D. Garp':['Garp','Monkey D. Garp'],
-   'Silvers Rayleigh':['Rayleigh','Silvers Rayleigh'],
-   'Shimotsuki Ryuma':['Ryuma','Shimotsuki Ryuma'],
+   'Charlotte Linlin (Big Mom / Olin)':['Charlotte Linlin','Big Mom'],
+   'Edward Newgate':['Edward Newgate','Whitebeard'],
+   'Marshall D. Teach':['Marshall D. Teach','Blackbeard'],
+   'Trafalgar D. Water Law':['Trafalgar D. Water Law','Trafalgar Law','Law'],
+   'Donquixote Rosinante':['Donquixote Rosinante','Corazon'],
+   'Monkey D. Garp':['Monkey D. Garp','Garp'],
+   'Silvers Rayleigh':['Silvers Rayleigh','Rayleigh'],
+   'Shimotsuki Ryuma':['Shimotsuki Ryuma','Ryuma'],
    'Figarland Garling':['Saint Figarland Garling','Figarland Garling'],
-   'King Harald':['Harald','King Harald'],
-   'Tony Tony Chopper':['Chopper','Tony Tony Chopper'],
-   'Nefertari D. Lily':['Nefertari Lily','Lily','Nefertari D. Lily'],
-   'Borsalino':['Kizaru','Borsalino'],
-   'Sakazuki':['Akainu','Sakazuki'],
-   'Kuzan':['Aokiji','Kuzan'],
-   'Issho':['Fujitora','Issho'],
-   'Charlotte Katakuri':['Katakuri','Charlotte Katakuri'],
-   'Ochoku':['Wang Zhi','Ochoku']
+   'King Harald':['King Harald','Harald'],
+   'Tony Tony Chopper':['Tony Tony Chopper','Chopper'],
+   'Nefertari D. Lily':['Nefertari D. Lily','Nefertari Lily','Lily'],
+   'Borsalino':['Borsalino','Kizaru'],
+   'Sakazuki':['Sakazuki','Akainu'],
+   'Kuzan':['Kuzan','Aokiji'],
+   'Issho':['Issho','Fujitora'],
+   'Charlotte Katakuri':['Charlotte Katakuri','Katakuri'],
+   'Ochoku':['Ochoku','Wang Zhi'],
+   'Donquixote Rosinante':['Donquixote Rosinante','Corazon']
+  };
+  const wikiTitle=(name:string)=>{
+   if(name==='Sanji')return 'Sanji/Abilities_and_Powers';
+   if(name==='Monkey D. Luffy')return 'Monkey_D._Luffy/Abilities_and_Powers';
+   return (aliases[name]?.[0]||name).replace(/ /g,'_');
   };
   const load=async()=>{
    const result:Record<string,string>={};
+   // Prefer anime/manga character-page artwork from the One Piece Wiki. For
+   // Sanji and Luffy, request their ability pages to bias toward signature-form
+   // artwork rather than generic profile portraits.
+   const titleOwners=new Map<string,string>();
+   const requests=characters.map(character=>{
+    const title=wikiTitle(character.name);
+    titleOwners.set(normalize(title.replace(/_/g,' ')),character.name);
+    return {character,title};
+   });
+   for(let start=0;start<requests.length;start+=35){
+    const batch=requests.slice(start,start+35);
+    try{
+     const titles=batch.map(x=>x.title).join('|');
+     const url='https://onepiece.fandom.com/api.php?action=query&format=json&prop=pageimages&piprop=thumbnail%7Coriginal&pithumbsize=900&titles='+encodeURIComponent(titles)+'&origin=*';
+     const response=await fetch(url,{headers:{Accept:'application/json'}});
+     if(!response.ok)continue;
+     const json=await response.json() as {query?:{pages?:Record<string,{title?:string;thumbnail?:{source?:string};original?:{source?:string}}>}};
+     Object.values(json.query?.pages||{}).forEach(page=>{
+      const owner=titleOwners.get(normalize((page.title||'').replace(/_/g,' ')));
+      const image=page.original?.source||page.thumbnail?.source;
+      if(owner&&image)result[owner]=image;
+     });
+    }catch{/* continue to the independent AniList fallback */}
+   }
+   // Fill every missing portrait from AniList using alias-aware exact matching.
    for(let start=0;start<characters.length;start+=10){
-    const batch=characters.slice(start,start+10);
+    const batch=characters.slice(start,start+10).filter(character=>!result[character.name]);
+    if(!batch.length)continue;
     const fields=batch.map((character,index)=>{
      const search=(aliases[character.name]?.[0]||character.name).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
      return 'c'+index+': Character(search: "'+search+'", sort: SEARCH_MATCH) { name { full } image { large } }';
@@ -134,7 +166,7 @@ export function FrameCharacterArchive(){
       const compatible=allowed.some(name=>name.length>5&&(name.includes(foundName)||foundName.includes(name)));
       if(found?.image?.large&&foundName&&(exact||compatible))result[character.name]=found.image.large;
      });
-    }catch{/* keep trying the next small batch if AniList is temporarily unavailable */}
+    }catch{/* missing sources are shown as a labelled fallback, never as another character */}
    }
    if(active)setPortraits(result);
   };
