@@ -94,20 +94,34 @@ export function FrameCharacterArchive(){
  useEffect(()=>{
   let active=true;
   const load=async()=>{
-   const titles=characters.map(c=>c.name==='Charlotte Linlin (Big Mom / Olin)'?'Charlotte Linlin':c.name==='Trafalgar D. Water Law'?'Trafalgar D. Water Law':c.name);
    const found:Record<string,string>={};
-   for(let i=0;i<titles.length;i+=40){
-    const batch=titles.slice(i,i+40);
+   const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
+   const aliases:Record<string,string>={
+    'Monkey D. Luffy':'Monkey D. Luffy','Roronoa Zoro':'Roronoa Zoro',
+    'Tony Tony Chopper':'Tony Tony Chopper','Charlotte Linlin (Big Mom / Olin)':'Charlotte Linlin',
+    'Trafalgar D. Water Law':'Trafalgar Law','Nefertari D. Lily':'Nefertari Lily',
+    'Shimotsuki Ryuma':'Ryuma','Edward Newgate':'Edward Newgate','Marshall D. Teach':'Marshall D. Teach'
+   };
+   // Small batches keep the wiki API requests reliable and prevent one long request
+   // from causing the entire character archive to lose its portraits.
+   for(let i=0;i<characters.length;i+=8){
+    const batch=characters.slice(i,i+8);
+    const titles=batch.map(c=>aliases[c.name]||c.name);
     try{
-     const url='https://onepiece.fandom.com/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail& pithumbsize=480&titles='+encodeURIComponent(batch.join('|')).replace(/%20/g,'%20');
-     const response=await fetch(url.replace('& pithumbsize','&pithumbsize'));
+     const params=new URLSearchParams({action:'query',format:'json',origin:'*',redirects:'1',prop:'pageimages',piprop:'thumbnail',pithumbsize:'480',titles:titles.join('|')});
+     const response=await fetch('https://onepiece.fandom.com/api.php?'+params.toString());
      if(!response.ok)continue;
      const data=await response.json();
-     for(const page of Object.values(data?.query?.pages||{}) as any[]){
-      const title=String(page.title||'');const source=page.thumbnail?.source;
-      if(source){const character=characters.find(c=>c.name.toLowerCase()===title.toLowerCase()||(c.name==='Charlotte Linlin (Big Mom / Olin)'&&title.toLowerCase()==='charlotte linlin'));
-       if(character)found[character.name]=source;
-      }
+     const pages=Object.values(data?.query?.pages||{}) as any[];
+     for(const page of pages){
+      const source=page.thumbnail?.source||page.original?.source;
+      if(!source)continue;
+      const title=String(page.title||'');
+      const character=batch.find(c=>{
+       const requested=aliases[c.name]||c.name;
+       return normalize(c.name)===normalize(title)||normalize(requested)===normalize(title);
+      });
+      if(character)found[character.name]=source;
      }
     }catch{}
    }
