@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ExternalLink, Users } from 'lucide-react';
 import type { AnimeCharacterProfile } from '../types';
 import { aniList, CHARACTERS_QUERY } from '../anilist';
+import { supabase } from '../lib/supabase';
 import { posterImageSrc } from '../posterImage';
 
 type AniListCharacterEdge = {
@@ -15,6 +16,40 @@ type AniListCharacterEdge = {
   };
 };
 type AniListCharacterResponse = { Media?: { characters?: { edges?: AniListCharacterEdge[] } } };
+
+async function fetchAnimeCharacters(anilistId: number): Promise<AnimeCharacterProfile[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.functions.invoke('anime-catalogue', {
+        body: { action: 'anime-characters', anilistId },
+      });
+      if (!error && Array.isArray(data?.characters)) {
+        return data.characters.filter((character: any) => character?.name).map((character: any) => ({
+          id: Number(character.id) || undefined,
+          name: String(character.name),
+          nativeName: character.nativeName ? String(character.nativeName) : undefined,
+          role: character.role ? String(character.role) : undefined,
+          image: character.image ? String(character.image) : undefined,
+          description: character.description ? String(character.description) : undefined,
+          sourceUrl: character.sourceUrl ? String(character.sourceUrl) : undefined,
+        }));
+      }
+    } catch {
+      // Use the public AniList endpoint as a fallback if the server proxy is unavailable.
+    }
+  }
+  const result = await aniList<AniListCharacterResponse>(CHARACTERS_QUERY, { id: anilistId });
+  const edges = result.Media?.characters?.edges || [];
+  return edges.filter(edge => edge.node?.name?.full).map(edge => ({
+    id: edge.node!.id,
+    name: String(edge.node!.name!.full),
+    nativeName: edge.node!.name!.native || undefined,
+    role: edge.role || undefined,
+    image: edge.node!.image?.large || undefined,
+    description: edge.node!.description || undefined,
+    sourceUrl: edge.node!.siteUrl || undefined,
+  }));
+}
 
 function CharacterPortrait({character}:{character:AnimeCharacterProfile}) {
   const [failed,setFailed]=useState(false);
@@ -43,18 +78,8 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
       return () => { active = false; };
     }
     setLoading(true);
-    aniList<AniListCharacterResponse>(CHARACTERS_QUERY,{id:anilistId})
-      .then(result => {
-        const edges = result.Media?.characters?.edges || [];
-        const mapped = edges.filter(edge => edge.node?.name?.full).map(edge => ({
-          id: edge.node!.id,
-          name: String(edge.node!.name!.full),
-          nativeName: edge.node!.name!.native || undefined,
-          role: edge.role || undefined,
-          image: edge.node!.image?.large || undefined,
-          description: edge.node!.description || undefined,
-          sourceUrl: edge.node!.siteUrl || undefined
-        }));
+    fetchAnimeCharacters(anilistId)
+      .then(mapped => {
         if (active) {
           const normalizeName = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
           const merged = characters.map(existing => {
