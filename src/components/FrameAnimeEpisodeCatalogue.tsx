@@ -7,6 +7,14 @@ const PAGE_SIZE = 100;
 
 type ArcRange = { name: string; start: number; end: number; summary: string };
 const ARC_RANGES: Record<string, ArcRange[]> = {
+  'erased': [
+    {name:'Revival & the 1988 Kidnappings',start:1,end:6,summary:'Satoru is sent back to childhood and tries to prevent a classmate’s disappearance.'},
+    {name:'Unmasking the Killer',start:7,end:12,summary:'The investigation moves toward identifying the killer and resolving the mystery.'}
+  ],
+  'hells paradise': [
+    {name:'Island Arc',start:1,end:6,summary:'The condemned criminals and their executioners arrive on the mysterious island.'},
+    {name:'Lord Tensen Arc',start:7,end:13,summary:'The survivors learn more about the island and face its powerful rulers.'}
+  ],
   'hajime no ippo': [
     {name:'Early Days & Debut',start:1,end:12,summary:'Ippo begins boxing and takes his first steps into the sport.'},
     {name:'First Rounder',start:13,end:19,summary:'Ippo enters the Rookie King Tournament and faces stronger opponents.'},
