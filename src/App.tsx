@@ -703,10 +703,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const ungrouped=sourceRows.filter((row:any)=>Number.isInteger(Number(row.number))&&!assigned.has(Number(row.number)));
    if(ungrouped.length){
     const arcId='frame-'+anime+'-arc-other';
-    created.push({id:arcId,parentId:rootId,sourceProvider:'frame-naruto-arc',externalId:arcId,title:'Other episodes',description:'Episodes not assigned to a named range.',poster:root.poster||'',medium:'anime',status:'planned',progress:0,total:ungrouped.length,source:'Jikan / MyAnimeList',favorite:false});
+    created.push({id:arcId,parentId:rootId,sourceProvider:'frame-naruto-arc',externalId:arcId,title:'Other episodes',description:'Episodes not assigned to a named range.',poster:root.poster||'',backdrop:root.backdrop||'',medium:'anime',status:'planned',progress:0,total:ungrouped.length,genres:root.genres||[],themes:root.themes||[],source:'Jikan / MyAnimeList',favorite:false});
     for(const row of ungrouped){
      const number=Number(row.number),id=anime+'-episode-'+number,prior=items.find(x=>x.externalId===id||x.id===id);
-     created.push({id,parentId:arcId,sourceProvider:'frame-naruto-episode',externalId:id,title:'Episode '+String(number).padStart(3,'0')+' — '+String(row.title||('Episode '+number)),description:String(row.synopsis||''),poster:String(row.image||prior?.poster||''),medium:'anime',status:prior?.status||'planned',progress:prior?.progress??0,total:1,source:'Jikan / MyAnimeList',favorite:prior?.favorite||false,episode:{episodeNumber:number,episodeCode:'EP '+String(number).padStart(4,'0'),airDate:row.airDate||undefined,synopsis:String(row.synopsis||'')}});
+     created.push({id,parentId:arcId,sourceProvider:'frame-naruto-episode',externalId:id,title:'Episode '+String(number).padStart(3,'0')+' — '+String(row.title||('Episode '+number)),description:String(row.synopsis||''),poster:String(row.image||prior?.poster||''),medium:'anime',status:prior?.status||'planned',progress:prior?.progress??0,total:1,source:'Jikan / MyAnimeList',favorite:prior?.favorite||false,episode:{seasonNumber:1,episodeNumber:number,episodeCode:'EP '+String(number).padStart(4,'0'),airDate:row.airDate||undefined,synopsis:String(row.synopsis||'')}});
     }
    }
    const descendantIds=new Set<string>([rootId]);let changed=true;
