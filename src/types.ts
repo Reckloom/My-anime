@@ -69,7 +69,7 @@ export interface AnimeCharacterProfile {
 export interface MediaItem{
  id:string; parentId?:string; metadataId?:string; anilistId?:number; sourceProvider?:string; externalId?:string;
  title:string; alternativeTitles?:string[]; description:string; poster:string; backdrop:string;
- medium:Medium; status:Status; progress:number; total?:number; year?:number; score?:number;
+ medium:Medium; status:Status; progress:number; total?:number; year?:number; score?:number; popularity?:number;
  personalRating?:number; progressUnit?:string; customTotal?:number;
  genres:string[]; themes:string[]; studio?:string; source?:string; season?:string; duration?:number;
  airStart?:string; airEnd?:string; favorite:boolean; notes?:string; nextRelease?:string; nextReleaseNumber?:number;
