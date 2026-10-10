@@ -854,7 +854,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const part=arc?partById.get(String(arc.parentId||'')):undefined;
     const current=String(item.poster||'');
     const sameAsPart=!current||current===part?.poster||current.toLowerCase().includes('frame-logo.svg');
-    return sameAsPart?{...item,poster:arcPoster,backdrop:arcPoster,episode:{...item.episode,posterSource:'naruto-arc-artwork-fallback',posterVersion:'naruto-episodes-v2'}}:item;
+    return sameAsPart?{...item,poster:arcPoster,backdrop:arcPoster,episode:item.episode?{...item.episode,posterSource:'naruto-arc-artwork-fallback',posterVersion:'naruto-episodes-v2'}:undefined}:item;
    });
    const ok=await save(updated);
    if(!ok)narutoArtworkRef.current='';
