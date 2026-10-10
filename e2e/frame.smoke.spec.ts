@@ -121,7 +121,14 @@ test.describe('FRAME artwork identity', () => {
       99999: { title: 'Monkey D. Luffy', image: 'https://cdn.example.test/luffy.jpg' }
     };
     await page.route('https://graphql.anilist.co', async route => {
-      const request = route.request().postDataJSON() as { variables?: { id?: number; search?: string } };
+      const request = route.request().postDataJSON() as { variables?: { id?: number; ids?: number[]; search?: string } };
+      if (Array.isArray(request.variables?.ids)) {
+        await route.fulfill({
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify({ data: { Page: { media: [] } } })
+        });
+        return;
+      }
       if (request.variables?.id) {
         const media = catalog[Number(request.variables.id)];
         if (!media) { await route.continue(); return; }
