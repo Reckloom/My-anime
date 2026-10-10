@@ -184,7 +184,9 @@ export default function App(){
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
 
  useEffect(()=>{
-  try{localStorage.setItem(storageKey,JSON.stringify(items))}catch{}
+  // Browser storage is synchronous; debounce full-library snapshots so rapid UI changes do not repeatedly block the main thread.
+  const timer=window.setTimeout(()=>{try{localStorage.setItem(storageKey,JSON.stringify(items))}catch{}},350);
+  return()=>window.clearTimeout(timer);
  },[items,storageKey]);
  useEffect(()=>{if(!guest)return;try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};if(typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);if(prefs.default_sort)setSortMode(String(prefs.default_sort));if(prefs.density)setDensity(String(prefs.density));if(prefs.theme&&['cinematic-archive','midnight-glass','clean-editorial','full-screen-epic','collectors-archive','modern-media-hub'].includes(String(prefs.theme)))setTheme(String(prefs.theme));if(prefs.appearance_mode&&['light','dark','system'].includes(String(prefs.appearance_mode)))setAppearanceMode(String(prefs.appearance_mode) as 'light'|'dark'|'system')}catch{}},[guest]);
 
@@ -281,7 +283,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    window.setTimeout(()=>setAppMessage(''),4000);
    return false;
   }
-  const next=dedupeMediaItems(list.map(normalise));itemsRef.current=next;setItems(next);try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
+  const next=dedupeMediaItems(list.map(normalise));itemsRef.current=next;setItems(next);
   const client=supabase;
   if(!client||!user?.id)return true;
   const operation=saveQueue.current.then(async()=>{
