@@ -186,7 +186,34 @@ test.describe('FRAME quick actions', () => {
 
 test.describe('FRAME anime episode catalogue', () => {
   test('shows episodes on an existing AniList anime entry and saves watched progress', async ({ page }) => {
-    await page.route('https://api.jikan.moe/v4/anime/21/episodes*', route => route.fulfill({
+    await page.route('**/functions/v1/anime-catalogue', async route => {
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Content-Type': 'application/json'
+      };
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 204, headers, body: '' });
+        return;
+      }
+      const body = route.request().postDataJSON() as { action?: string };
+      if (body.action === 'episode-page') {
+        await route.fulfill({
+          status: 200, headers,
+          body: JSON.stringify({
+            data: [{ mal_id: 1, title: 'Romance Dawn', aired: '1999-10-20', filler: false, recap: false }],
+            pagination: { last_visible_page: 1, has_next_page: false },
+            source: 'Jikan / MyAnimeList'
+          })
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200, headers,
+        body: JSON.stringify({ results: [{ mal_id: 21, title: 'One Piece', title_english: 'One Piece' }] })
+      });
+    });
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
