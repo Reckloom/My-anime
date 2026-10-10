@@ -214,13 +214,6 @@ test.describe('FRAME anime episode catalogue', () => {
         body: JSON.stringify({ results: [{ mal_id: 21, title: 'One Piece', title_english: 'One Piece' }] })
       });
     });
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        data: [{ mal_id: 1, title: 'Romance Dawn', aired: '1999-10-20', filler: false, recap: false }],
-        pagination: { last_visible_page: 1, has_next_page: false }
-      })
-    }));
 
     await page.addInitScript(() => {
       localStorage.setItem('frame-guest', '1');
