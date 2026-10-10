@@ -7,6 +7,17 @@ const PAGE_SIZE = 100;
 
 type ArcRange = { name: string; start: number; end: number; summary: string };
 const ARC_RANGES: Record<string, ArcRange[]> = {
+  'fullmetal alchemist brotherhood': [
+    {name:'The Elric Brothers',start:1,end:14,summary:'The brothers search for the Philosopher’s Stone and uncover the cost of forbidden alchemy.'},
+    {name:'The Homunculi’s Shadow',start:15,end:32,summary:'New allies and enemies reveal more about the conspiracy behind the Homunculi.'},
+    {name:'The Promised Day',start:33,end:64,summary:'The country’s hidden plan comes to a head as the brothers fight for Amestris.'}
+  ],
+  'parasyte the maxim': [
+    {name:'Migi Introduction & Mother’s Death',start:1,end:7,summary:'Shinichi and Migi form an uneasy partnership after the parasite invasion reaches his home.'},
+    {name:'Kana',start:8,end:12,summary:'Kana senses that Shinichi has changed as his relationship with Migi evolves.'},
+    {name:'Tamura Reiko',start:13,end:18,summary:'A highly intelligent parasite studies human society and Shinichi’s unusual nature.'},
+    {name:'Gotou & the Finale',start:19,end:24,summary:'The conflict escalates as Shinichi faces the most dangerous parasites.'}
+  ],
   'black clover': [
     {name:'Magic Knights Entrance',start:1,end:13,summary:'Asta and Yuno begin their journeys toward becoming Wizard King.'},
     {name:'Dungeon Exploration',start:14,end:19,summary:'The Black Bulls and Golden Dawn explore a dangerous dungeon.'},
