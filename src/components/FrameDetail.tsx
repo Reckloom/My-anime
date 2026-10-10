@@ -108,15 +108,20 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     const overlay=document.querySelector<HTMLElement>('.detail-overlay');
     const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
     const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
-    // Restore continuously while React swaps the selected item and its
-    // content reflows. The selected-item heading can lag behind the prop, so
-    // gating on its text can prevent restoration forever on slower devices.
-    if(overlay)overlay.scrollTop=Math.min(previous.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
-    if(drawer)drawer.scrollTop=Math.min(previous.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
-    if(body)body.scrollTop=Math.min(previous.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
-    window.scrollTo(0,previous.pageScrollTop);
+    // Do not restore against the outgoing sub-part's shorter layout. Wait
+    // until React has actually rendered the destination heading and hierarchy.
+    // Otherwise the browser clamps the saved offset to zero and the old offset
+    // is lost before the parent entry's content has returned.
+    const heading=document.querySelector<HTMLElement>('#frame-detail-title');
+    const destinationReady=heading?.textContent?.trim()===previous.item.title;
     restoreAttempts++;
-    if(restoreAttempts>=30)window.clearInterval(restoreTimer);
+    if(destinationReady){
+     if(overlay)overlay.scrollTop=Math.min(previous.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
+     if(drawer)drawer.scrollTop=Math.min(previous.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
+     if(body)body.scrollTop=Math.min(previous.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
+     window.scrollTo(0,previous.pageScrollTop);
+    }
+    if(restoreAttempts>=60)window.clearInterval(restoreTimer);
    },80);
    return;
   }
