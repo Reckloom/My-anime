@@ -548,7 +548,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
         id: arcId,
         parentId: rootId,
         sourceProvider: 'frame-story-arc',
-        externalId: 'bleach-arc-' + String(order).padStart(2, '0'),
+        externalId: 'frame-story-arc-bleach-' + String(order).padStart(2, '0'),
         title: name,
         description: summary,
         poster,
