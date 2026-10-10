@@ -477,7 +477,12 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const media = chosen[index];
     const existingEpisodes = catalogues.get(Number(media.id))?.rows || [];
     const existingNarutoPart = narutoPartFor(media);
-    const id = existingNarutoPart?.id || (index === 0 ? rootId : mediaIdFor(media, task, userId, library, false, rootId));
+    // Naruto's franchise root already owns explicit "Naruto" and "Naruto Shippuden"
+    // subparts. Episode rows must be children of those parts, never of the root,
+    // and the root must never be re-imported as its own child.
+    const id = task.key === 'naruto'
+      ? (existingNarutoPart?.id || ('frame-naruto-part-' + Number(media.id) + '-' + scope))
+      : (index === 0 ? rootId : mediaIdFor(media, task, userId, library, false, rootId));
     itemIds.set(Number(media.id), id);
   }
 
@@ -503,7 +508,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     incoming.push(mapMediaItem(media, {
       id,
       parentId: task.key === 'naruto'
-        ? (index === 0 ? (narutoPartFor(media)?.parentId || rootExisting?.id) : rootExisting?.id)
+        ? rootId
         : index === 0
           ? undefined
           : (itemIds.get(parentByMediaId.get(Number(media.id)) ?? Number(rootDetails.id)) || rootId),
