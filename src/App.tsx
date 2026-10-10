@@ -827,7 +827,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const closeDetail=()=>{
   setSelected(null);
-  if(history.state?.frameDetailId)history.replaceState({framePage:page},'',window.location.href);
+  if(history.state?.frameDetailId)history.replaceState({framePage:history.state.framePage},'',window.location.href);
  };
  const pageHistoryReady=useRef(false);
  useEffect(()=>{
