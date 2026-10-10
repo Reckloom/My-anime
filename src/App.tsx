@@ -325,7 +325,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   // Backfill AniList IDs for every root anime, not just titles missing popularity.
   // Release Radar reads anilist_id from Supabase, so this also connects legacy/manual
   // entries to episode schedules. New AniList-search additions already carry their ID.
-  type AnimeMetadata={anilistId?:number;popularity?:number;score?:number};
+  type AnimeMetadata={anilistId?:number;popularity?:number;score?:number;titles?:string[]};
   const missing=items.filter(item=>item.medium==='anime'&&!item.parentId&&
    (!Number.isInteger(item.anilistId)||!Number.isFinite(item.popularity)));
   const syncKey=uid+':'+missing.map(item=>item.id+':'+(item.anilistId??item.title)+':'+(item.popularity??'')).sort().join('|');
@@ -334,7 +334,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   popularitySyncRef.current=syncKey;
   let cancelled=false;
   const normalizeTitle=(value:string)=>value.toLocaleLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,'');
-  const popularityQuery='query ($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id popularity averageScore title{romaji english native userPreferred}}}}';
+  const popularityQuery='query ($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id popularity averageScore title{romaji english native userPreferred} synonyms}}}';
   const titleQuery='query ($search:String){Page(page:1,perPage:10){media(search:$search,type:ANIME,sort:[SEARCH_MATCH]){id popularity averageScore title{romaji english native userPreferred} synonyms}}}';
   void(async()=>{
    const updatesByAniListId=new Map<number,AnimeMetadata>();
@@ -348,10 +348,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      const response=await aniList<any>(popularityQuery,{ids});
      for(const row of Array.isArray(response?.Page?.media)?response.Page.media:[]){
       const id=Number(row?.id);if(!Number.isInteger(id))continue;
-      updatesByAniListId.set(id,{anilistId:id,popularity:row.popularity==null?undefined:Number(row.popularity),score:row.averageScore==null?undefined:Number(row.averageScore)/10});
+      updatesByAniListId.set(id,{anilistId:id,popularity:row.popularity==null?undefined:Number(row.popularity),score:row.averageScore==null?undefined:Number(row.averageScore)/10,titles:[row.title?.romaji,row.title?.english,row.title?.native,row.title?.userPreferred,...(Array.isArray(row.synonyms)?row.synonyms:[])].filter(Boolean).map(String)});
      }
     }
-    const unresolved=missing.filter(item=>!Number.isInteger(item.anilistId)||!updatesByAniListId.has(Number(item.anilistId))||!Number.isFinite(updatesByAniListId.get(Number(item.anilistId))?.popularity));
+    const unresolved=missing.filter(item=>{const data=Number.isInteger(item.anilistId)?updatesByAniListId.get(Number(item.anilistId)):undefined;const names=[item.title,...(item.alternativeTitles||[])].map(normalizeTitle).filter(Boolean);return !data||!Number.isFinite(data.popularity)||!data.titles?.some(title=>names.includes(normalizeTitle(title)));});
     for(let offset=0;offset<unresolved.length;offset+=4){
      if(cancelled)return;
      const batch=unresolved.slice(offset,offset+4);
@@ -366,7 +366,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
        });
        if(match&&Number.isInteger(Number(match.id))){
         const id=Number(match.id);
-        const data:AnimeMetadata={anilistId:id,popularity:match.popularity==null?undefined:Number(match.popularity),score:match.averageScore==null?undefined:Number(match.averageScore)/10};
+        const data:AnimeMetadata={anilistId:id,popularity:match.popularity==null?undefined:Number(match.popularity),score:match.averageScore==null?undefined:Number(match.averageScore)/10,titles:[match.title?.romaji,match.title?.english,match.title?.native,match.title?.userPreferred,...(Array.isArray(match.synonyms)?match.synonyms:[])].filter(Boolean).map(String)};
         updatesByAniListId.set(id,data);
         updatesByItemId.set(item.id,data);
        }
@@ -377,7 +377,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const current=itemsRef.current;
     const enriched=current.map(item=>{
      if(item.medium!=='anime'||item.parentId)return item;
-     const data=updatesByItemId.get(item.id)||(Number.isInteger(item.anilistId)?updatesByAniListId.get(Number(item.anilistId)):undefined);
+     const byId=Number.isInteger(item.anilistId)?updatesByAniListId.get(Number(item.anilistId)):undefined;const names=[item.title,...(item.alternativeTitles||[])].map(normalizeTitle).filter(Boolean);const data=updatesByItemId.get(item.id)||(byId?.titles?.some(title=>names.includes(normalizeTitle(title)))?byId:undefined);
      if(!data)return item;
      const resolvedId=data.anilistId??item.anilistId;
      return {...item,anilistId:resolvedId,sourceProvider:item.sourceProvider||'anilist',externalId:item.externalId||(resolvedId?String(resolvedId):undefined),popularity:data.popularity??item.popularity,score:data.score??item.score};
