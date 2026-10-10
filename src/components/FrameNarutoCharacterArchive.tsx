@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useState} from 'react';
 import {ExternalLink,Search,Users,X} from 'lucide-react';
 import {supabase} from '../lib/supabase';
+import {posterImageSrc} from '../posterImage';
 
 type NarutoCharacter={name:string;role:string;affiliation:string;bio:string;ability:string;image?:string;description?:string};
 const seed:Omit<NarutoCharacter,'image'|'description'>[]=[
@@ -40,7 +41,7 @@ function NarutoPortrait({character,large=false}:{character:NarutoCharacter;large
  const [failed,setFailed]=useState(false);
  useEffect(()=>setFailed(false),[character.image,character.name]);
  const initials=character.name.split(/\\s+/).map(x=>x[0]).slice(0,2).join('');
- if(character.image&&!failed)return <img src={character.image} alt={character.name} loading="lazy" onError={()=>setFailed(true)}/>;
+ if(character.image&&!failed)return <img src={posterImageSrc(character.image)} alt={character.name} loading="lazy" onError={()=>setFailed(true)}/>;
  return <span className={'naruto-character-initials'+(large?' large':'')} style={{display:'grid',placeItems:'center',width:large?150:'100%',height:large?190:'100%',minHeight:large?190:170,fontSize:large?'2.5rem':'2.1rem',fontWeight:800,letterSpacing:'.08em',background:'linear-gradient(145deg,#172a46,#30204b 58%,#0b111f)',color:'#f5f3ff'}}>{initials}</span>;
 }
 export function FrameNarutoCharacterArchive(){
