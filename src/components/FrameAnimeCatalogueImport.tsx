@@ -538,7 +538,8 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const bleachEpisodes = catalogues.get(Number(bleachMedia?.id))?.rows || [];
     for (const [order, name, start, end, summary] of BLEACH_ARCS) {
       const arcEpisodes = bleachEpisodes.filter(episode => episode.number >= start && episode.number <= end);
-      if (!arcEpisodes.length) continue;
+      // Keep the complete curated arc structure even if an upstream episode source
+      // temporarily omits a range; source warnings still make an incomplete import visible.
       const arcId = 'frame-story-arc-bleach-' + String(order).padStart(2, '0') + '-' + scope;
       bleachArcIds.set(order, arcId);
       const existingArc = library.find(item => item.id === arcId);
