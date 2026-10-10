@@ -322,66 +322,74 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
  useEffect(()=>{
   if(!items.length||(supabase&&user?.id&&!cloudLibraryReady))return;
-  // Rank the user's existing anime too, including legacy entries without an AniList ID.
-  // The previous version excluded One Piece and only backfilled records with IDs,
-  // leaving major titles with no popularity value and therefore sorting them by score.
-  const missing=items.filter(item=>item.medium==='anime'&&!item.parentId&&!Number.isFinite(item.popularity));
-  const syncKey=uid+':'+missing.map(item=>item.id+':'+(item.anilistId??item.title)).sort().join('|');
+  // Backfill AniList IDs for every root anime, not just titles missing popularity.
+  // Release Radar reads anilist_id from Supabase, so this also connects legacy/manual
+  // entries to episode schedules. New AniList-search additions already carry their ID.
+  type AnimeMetadata={anilistId?:number;popularity?:number;score?:number};
+  const missing=items.filter(item=>item.medium==='anime'&&!item.parentId&&
+   (!Number.isInteger(item.anilistId)||!Number.isFinite(item.popularity)));
+  const syncKey=uid+':'+missing.map(item=>item.id+':'+(item.anilistId??item.title)+':'+(item.popularity??'')).sort().join('|');
   if(popularitySyncRef.current===syncKey)return;
   if(!missing.length){popularitySyncRef.current=syncKey;return}
   popularitySyncRef.current=syncKey;
   let cancelled=false;
-  const normalizeTitle=(value:string)=>value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const normalizeTitle=(value:string)=>value.toLocaleLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,'');
   const popularityQuery='query ($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id popularity averageScore title{romaji english native userPreferred}}}}';
   const titleQuery='query ($search:String){Page(page:1,perPage:10){media(search:$search,type:ANIME,sort:[SEARCH_MATCH]){id popularity averageScore title{romaji english native userPreferred} synonyms}}}';
   void(async()=>{
-   const updatesByAniListId=new Map<number,{popularity?:number;score?:number}>();
-   const updatesByItemId=new Map<string,{anilistId?:number;popularity?:number;score?:number}>();
+   const updatesByAniListId=new Map<number,AnimeMetadata>();
+   const updatesByItemId=new Map<string,AnimeMetadata>();
    try{
-    const withIds=missing.filter(item=>Number.isFinite(item.anilistId));
+    const withIds=missing.filter(item=>Number.isInteger(item.anilistId)&&!Number.isFinite(item.popularity));
     for(let offset=0;offset<withIds.length;offset+=40){
      if(cancelled)return;
-     const ids=withIds.slice(offset,offset+40).map(item=>Number(item.anilistId)).filter(Number.isFinite);
+     const ids=withIds.slice(offset,offset+40).map(item=>Number(item.anilistId)).filter(Number.isInteger);
      if(!ids.length)continue;
      const response=await aniList<any>(popularityQuery,{ids});
      for(const row of Array.isArray(response?.Page?.media)?response.Page.media:[]){
-      const id=Number(row?.id);if(!Number.isFinite(id))continue;
-      updatesByAniListId.set(id,{popularity:row.popularity==null?undefined:Number(row.popularity),score:row.averageScore==null?undefined:Number(row.averageScore)/10});
+      const id=Number(row?.id);if(!Number.isInteger(id))continue;
+      updatesByAniListId.set(id,{anilistId:id,popularity:row.popularity==null?undefined:Number(row.popularity),score:row.averageScore==null?undefined:Number(row.averageScore)/10});
      }
     }
-    const unresolved=missing.filter(item=>!Number.isFinite(item.anilistId)||!updatesByAniListId.has(Number(item.anilistId)));
+    const unresolved=missing.filter(item=>!Number.isInteger(item.anilistId)||!updatesByAniListId.has(Number(item.anilistId))||!Number.isFinite(updatesByAniListId.get(Number(item.anilistId))?.popularity));
     for(let offset=0;offset<unresolved.length;offset+=4){
      if(cancelled)return;
      const batch=unresolved.slice(offset,offset+4);
      await Promise.all(batch.map(async item=>{
-      const response=await aniList<any>(titleQuery,{search:item.title});
-      const candidates=Array.isArray(response?.Page?.media)?response.Page.media:[];
-      const names=[item.title,...(item.alternativeTitles||[])].map(normalizeTitle).filter(Boolean);
-      const match=candidates.find((candidate:any)=>{
-       const candidateNames=[candidate?.title?.romaji,candidate?.title?.english,candidate?.title?.native,candidate?.title?.userPreferred,...(Array.isArray(candidate?.synonyms)?candidate.synonyms:[])].map((name:any)=>normalizeTitle(String(name||''))).filter(Boolean);
-       return candidateNames.some((name:string)=>names.includes(name));
-      });
-      if(match&&Number.isFinite(Number(match.id))){
-       const data={anilistId:Number(match.id),popularity:match.popularity==null?undefined:Number(match.popularity),score:match.averageScore==null?undefined:Number(match.averageScore)/10};
-       updatesByAniListId.set(data.anilistId,data);
-       updatesByItemId.set(item.id,data);
-      }
+      try{
+       const response=await aniList<any>(titleQuery,{search:item.title});
+       const candidates=Array.isArray(response?.Page?.media)?response.Page.media:[];
+       const names=[item.title,...(item.alternativeTitles||[])].map(normalizeTitle).filter(Boolean);
+       const match=candidates.find((candidate:any)=>{
+        const candidateNames=[candidate?.title?.romaji,candidate?.title?.english,candidate?.title?.native,candidate?.title?.userPreferred,...(Array.isArray(candidate?.synonyms)?candidate.synonyms:[])].map((name:any)=>normalizeTitle(String(name||''))).filter(Boolean);
+        return candidateNames.some((name:string)=>names.includes(name));
+       });
+       if(match&&Number.isInteger(Number(match.id))){
+        const id=Number(match.id);
+        const data:AnimeMetadata={anilistId:id,popularity:match.popularity==null?undefined:Number(match.popularity),score:match.averageScore==null?undefined:Number(match.averageScore)/10};
+        updatesByAniListId.set(id,data);
+        updatesByItemId.set(item.id,data);
+       }
+      }catch(error){console.warn('[FRAME AniList ID backfill]',item.title,error)}
      }));
     }
     if(cancelled)return;
     const current=itemsRef.current;
     const enriched=current.map(item=>{
-     const data=updatesByItemId.get(item.id)||(Number.isFinite(item.anilistId)?updatesByAniListId.get(Number(item.anilistId)):undefined);
-     return data?{...item,anilistId:item.anilistId??('anilistId'in data?data.anilistId:undefined),sourceProvider:item.sourceProvider||'anilist',externalId:item.externalId||('anilistId'in data?String(data.anilistId):undefined),popularity:data.popularity??item.popularity,score:data.score??item.score}:item;
+     if(item.medium!=='anime'||item.parentId)return item;
+     const data=updatesByItemId.get(item.id)||(Number.isInteger(item.anilistId)?updatesByAniListId.get(Number(item.anilistId)):undefined);
+     if(!data)return item;
+     const resolvedId=data.anilistId??item.anilistId;
+     return {...item,anilistId:resolvedId,sourceProvider:item.sourceProvider||'anilist',externalId:item.externalId||(resolvedId?String(resolvedId):undefined),popularity:data.popularity??item.popularity,score:data.score??item.score};
     });
     if(enriched.some((item,index)=>item!==current[index]))await save(enriched);
    }catch(error){
     popularitySyncRef.current='';
-    console.warn('[FRAME popularity ranking]',error);
+    console.warn('[FRAME AniList ID/popularity backfill]',error);
    }
   })();
   return()=>{cancelled=true};
- },[items.length,uid,cloudLibraryReady,user?.id]);
+ },[items,uid,cloudLibraryReady,user?.id]);
 
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
