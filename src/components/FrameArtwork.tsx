@@ -1,5 +1,6 @@
 import {useEffect,useState} from 'react';
 import type {MediaItem,Medium} from '../types';
+import {posterImageSrc} from '../posterImage';
 import {ANILIST_URL,type AniListMedia,SEARCH_QUERY,DETAIL_QUERY} from '../anilist';
 
 type Props={
@@ -86,5 +87,5 @@ export function FrameArtwork(p:Props){
  const [src,setSrc]=useState(()=>safeInitialArtwork(p));
  useEffect(()=>{let active=true;void resolve(p).then(value=>{if(active)setSrc(value)});return()=>{active=false}},[p.title,p.medium,p.poster,p.anilistId,p.parentPoster,p.parentTitle,p.parentMedium,p.parentAnilistId,p.sourceProvider,p.externalId]);
  const fallback=safeInitialArtwork(p);
- return <img className={p.className} src={src} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=fallback!==src?fallback:svgFallback(p.title,p.medium)}}/>;
+ return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=posterImageSrc(fallback!==src?fallback:svgFallback(p.title,p.medium))}}/>;
 }
