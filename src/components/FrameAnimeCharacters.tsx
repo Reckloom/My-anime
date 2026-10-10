@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Users } from 'lucide-react';
 import type { AnimeCharacterProfile } from '../types';
 import { aniList, CHARACTERS_QUERY } from '../anilist';
@@ -83,6 +83,8 @@ function shortDescription(value?: string) {
 }
 
 export function FrameAnimeCharacters({ title, characters, anilistId }: { title: string; characters: AnimeCharacterProfile[]; anilistId?: number }) {
+  const characterSignature = characters.map(character => [character.id || '', character.name, character.image || ''].join(':')).join('|');
+  const stableCharacters = useMemo(() => characters, [characterSignature]);
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
@@ -91,7 +93,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     let active = true;
     setRemoteCharacters([]);
     setFailed(false);
-    const needsRemote = characters.length === 0 || characters.some(character => !character.image);
+    const needsRemote = stableCharacters.length === 0 || stableCharacters.some(character => !character.image);
     if (!needsRemote || !anilistId) {
       setLoading(false);
       return () => { active = false; };
@@ -101,7 +103,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
       .then(mapped => {
         if (active) {
           const normalizeName = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
-          const merged = characters.map(existing => {
+          const merged = stableCharacters.map(existing => {
             const match = mapped.find(remote => normalizeName(remote.name) === normalizeName(existing.name));
             return match ? {
               ...match,
@@ -122,9 +124,9 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
       .catch(() => { if (active) setFailed(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [anilistId, characters.length]);
+  }, [anilistId, stableCharacters]);
 
-  const profiles = remoteCharacters.length ? remoteCharacters : characters;
+  const profiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
   if (!profiles.length && !loading && !failed) return null;
   return <section className="frame-anime-characters detail-section" aria-label={title + ' character profiles'}>
     <div className="detail-section-head">
