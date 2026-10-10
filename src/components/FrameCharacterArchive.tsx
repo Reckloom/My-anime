@@ -149,7 +149,7 @@ export function FrameCharacterArchive(){
     }
     Object.values(json.query?.pages||{}).forEach(page=>{
      const owner=canonicalOwners.get(normalize((page.title||'').replace(/_/g,' ')));
-     const image=(page.original?.source||page.thumbnail?.source)?.replace(/\\_/g,'_');
+     const image=undefined; // Never trust generic wiki page thumbnails as character portraits; exact AniList matches below or initials fallback.
      if(owner&&image&&!usedImages.has(image)){
       result[owner]=image;
       usedImages.add(image);
