@@ -57,6 +57,11 @@ async function resolve(p:Props):Promise<string>{
     const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:SEARCH_QUERY,variables:{search:p.title,page:1,perPage:8,type}})});
     if(response.ok){const json=await response.json() as {data?:{Page?:{media?:AniListMedia[]}}};const results=json.data?.Page?.media||[];const target=normal(p.title);media=results.find(m=>[m.title.english,m.title.romaji,m.title.native,m.title.userPreferred,...(m.synonyms||[])].some(v=>v&&normal(v)===target));}
    }
+   const idTitleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
+   if(!idTitleMatches){
+    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:SEARCH_QUERY,variables:{search:p.title,page:1,perPage:8,type}})});
+    if(response.ok){const json=await response.json() as {data?:{Page?:{media?:AniListMedia[]}}};const results=json.data?.Page?.media||[];const target=normal(p.title);const exact=results.find(m=>m.type===type&&[m.title.english,m.title.romaji,m.title.native,m.title.userPreferred,...(m.synonyms||[])].some(v=>v&&normal(v)===target));if(exact)media=exact;}
+   }
    const image=media?.coverImage?.extraLarge;
    const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
   if(image&&media?.type===type&&titleMatches)return image;
