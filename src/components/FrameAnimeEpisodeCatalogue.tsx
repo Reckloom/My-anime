@@ -7,6 +7,26 @@ const PAGE_SIZE = 100;
 
 type ArcRange = { name: string; start: number; end: number; summary: string };
 const ARC_RANGES: Record<string, ArcRange[]> = {
+  'hajime no ippo': [
+    {name:'Early Days & Debut',start:1,end:12,summary:'Ippo begins boxing and takes his first steps into the sport.'},
+    {name:'First Rounder',start:13,end:19,summary:'Ippo enters the Rookie King Tournament and faces stronger opponents.'},
+    {name:'Finals',start:20,end:28,summary:'The Rookie King Tournament reaches its decisive matches.'},
+    {name:'Rocky of Naniwa',start:29,end:34,summary:'Ippo faces a new challenger from Osaka.'},
+    {name:'Two Rookie Kings',start:35,end:40,summary:'The rivalry between the season’s standout rookies develops.'},
+    {name:'Speed Star',start:41,end:44,summary:'Ippo prepares for a technically demanding opponent.'},
+    {name:'White Fang',start:45,end:50,summary:'Ippo faces the formidable Volg Zangief.'},
+    {name:'Challenge for the Throne',start:51,end:57,summary:'The next stage of Ippo’s climb through the featherweight ranks begins.'},
+    {name:'Road Back',start:58,end:64,summary:'Ippo and the gym prepare for new challenges.'},
+    {name:'Mountain Training',start:65,end:70,summary:'Intense training prepares Ippo for the championship fight.'},
+    {name:'Lallapallooza',start:71,end:75,summary:'Ippo and Sendo meet in a climactic rematch.'}
+  ],
+  'spy family': [
+    {name:'Introduction',start:1,end:2,summary:'Loid begins Operation Strix and forms an unusual family.'},
+    {name:'Admissions Interview',start:3,end:5,summary:'The Forger family faces Eden Academy’s admissions process.'},
+    {name:'Eden Beginnings',start:6,end:7,summary:'Anya starts school and begins making connections.'},
+    {name:'Secret Police',start:8,end:9,summary:'Yuri’s visit brings the family’s secrets closer to the surface.'},
+    {name:'Stella Star',start:10,end:12,summary:'Anya tries to earn her first Stella Star at Eden Academy.'}
+  ],
   'fullmetal alchemist brotherhood': [
     {name:'The Elric Brothers',start:1,end:14,summary:'The brothers search for the Philosopher’s Stone and uncover the cost of forbidden alchemy.'},
     {name:'The Homunculi’s Shadow',start:15,end:32,summary:'New allies and enemies reveal more about the conspiracy behind the Homunculi.'},
