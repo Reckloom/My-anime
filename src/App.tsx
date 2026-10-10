@@ -298,13 +298,17 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    );
    if(found<0){merged.push(item);changed.set(item.id,item);continue}
    const current=merged[found];
-   const total=item.total!=null?item.total:current.total;
-   const progress=Math.max(0,Math.min(Math.max(Number(current.progress)||0,Number(item.progress)||0),Number(total)||2000));
+   // Source refreshes may update catalogue metadata and totals, but the user's
+   // progress/status are authoritative. Never mark episodes watched or rewind
+   // progress just because an import batch contains different defaults.
+   const customTotal=current.customTotal??item.customTotal;
+   const total=customTotal!=null?customTotal:(item.total!=null?item.total:current.total);
+   const progress=Math.max(0,Number(current.progress)||0);
    const next=normalise({
     ...current,...item,id:current.id,parentId:item.parentId??current.parentId,
     metadataId:current.metadataId??item.metadataId,total,
-    customTotal:item.customTotal??item.total??current.customTotal,progress,
-    status:item.status||current.status,personalRating:current.personalRating??item.personalRating,
+    customTotal,progress,
+    status:current.status||item.status,personalRating:current.personalRating??item.personalRating,
     favorite:current.favorite,notes:current.notes??item.notes,
     poster:item.poster&&item.poster!=='/frame-logo.svg'?item.poster:current.poster||item.poster,
     backdrop:item.backdrop||current.backdrop,description:item.description||current.description,
