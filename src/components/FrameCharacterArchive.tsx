@@ -77,6 +77,76 @@ const rows=[
 ] as const;
 const characters:Character[]=rows.map(r=>({id:r[0],name:r[1],alias:r[2],role:r[3],crew:r[4],bio:r[5],goal:r[6]}));
 const popularityOrder=['Monkey D. Luffy','Sanji','Roronoa Zoro','Nami','Tony Tony Chopper','Nico Robin','Usopp','Franky','Brook','Jinbe','Shanks','Portgas D. Ace','Trafalgar D. Water Law','Boa Hancock','Gol D. Roger'] as const;
+const portraitSources:Record<string,string>={
+  "Marco": "https://static.wikia.nocookie.net/onepiece/images/4/4a/Polo_Marco_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/172?cb=20221010015200",
+  "Kaido": "https://static.wikia.nocookie.net/onepiece/images/2/2d/Kaidou_Anime_Infobox.png/revision/latest/scale-to-width-down/464?cb=20231102015517",
+  "Zephyr": "https://static.wikia.nocookie.net/onepiece/images/0/0f/Z_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20130704135054",
+  "Captain John": "https://static.wikia.nocookie.net/onepiece/images/b/b1/John_Anime_Infobox.png/revision/latest/scale-to-width-down/419?cb=20250803182808",
+  "Imu": "https://static.wikia.nocookie.net/onepiece/images/d/d4/Nerona_Imu_Manga_Infobox.png/revision/latest/scale-to-width-down/372?cb=20260419150637",
+  "Kozuki Toki": "https://static.wikia.nocookie.net/onepiece/images/a/ad/Kouzuki_Toki_Anime_Infobox.png/revision/latest/scale-to-width-down/187?cb=20240923154828",
+  "Nefertari D. Lily": "https://static.wikia.nocookie.net/onepiece/images/a/a5/Nefertari_D._Lili_Anime_Infobox.png/revision/latest/scale-to-width-down/409?cb=20240908021318",
+  "Charlotte Linlin (Big Mom / Olin)": "https://static.wikia.nocookie.net/onepiece/images/d/d8/Charlotte_Linlin_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20180423150804",
+  "Trafalgar D. Water Law": "https://static.wikia.nocookie.net/onepiece/images/4/4d/Trafalgar_D._Water_Law_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/213?cb=20230124163510",
+  "Monkey D. Luffy": "https://static.wikia.nocookie.net/onepiece/images/6/6d/Monkey_D._Luffy_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/229?cb=20260611004637",
+  "Roronoa Zoro": "https://static.wikia.nocookie.net/onepiece/images/5/52/Roronoa_Zoro_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/180?cb=20241029161719",
+  "Rob Lucci": "https://static.wikia.nocookie.net/onepiece/images/d/d7/Rob_Lucci_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/258?cb=20230102052113",
+  "Nico Robin": "https://static.wikia.nocookie.net/onepiece/images/b/bc/Nico_Robin_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/267?cb=20260913163501",
+  "Nami": "https://static.wikia.nocookie.net/onepiece/images/6/68/Nami_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/286?cb=20260315214841",
+  "Shanks": "https://static.wikia.nocookie.net/onepiece/images/6/66/Shanks_Anime_Infobox.png/revision/latest/scale-to-width-down/334?cb=20240829145447",
+  "Sanji": "https://static.wikia.nocookie.net/onepiece/images/b/b6/Sanji_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/160?cb=20240122012744",
+  "Tony Tony Chopper": "https://static.wikia.nocookie.net/onepiece/images/a/af/Tony_Tony_Chopper_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/375?cb=20240720150824",
+  "Usopp": "https://static.wikia.nocookie.net/onepiece/images/3/35/Usopp_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/258?cb=20221127233827",
+  "Benn Beckman": "https://static.wikia.nocookie.net/onepiece/images/1/12/Benn_Beckman_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20240623091906",
+  "Gol D. Roger": "https://static.wikia.nocookie.net/onepiece/images/2/24/Gol_D._Roger_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20230612100153",
+  "Sengoku": "https://static.wikia.nocookie.net/onepiece/images/2/24/Sengoku_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/348?cb=20210208064630",
+  "Sakazuki": "https://static.wikia.nocookie.net/onepiece/images/d/d7/Sakazuki_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/287?cb=20220829052511",
+  "Borsalino": "https://static.wikia.nocookie.net/onepiece/images/1/14/Borsalino_Anime_Infobox.png/revision/latest/scale-to-width-down/238?cb=20190603023753",
+  "Koby": "https://static.wikia.nocookie.net/onepiece/images/b/b8/Koby_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/360?cb=20241114130518",
+  "Marshall D. Teach": "https://static.wikia.nocookie.net/onepiece/images/f/ff/Marshall_D._Teach_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/422?cb=20240128044952",
+  "Monkey D. Garp": "https://static.wikia.nocookie.net/onepiece/images/e/e1/Monkey_D._Garp_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20230207160645",
+  "Donquixote Doflamingo": "https://static.wikia.nocookie.net/onepiece/images/7/7e/Donquixote_Doflamingo_Anime_Infobox.png/revision/latest/scale-to-width-down/413?cb=20231017082245",
+  "Enel": "https://static.wikia.nocookie.net/onepiece/images/a/ad/Enel_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20230520213625",
+  "Franky": "https://static.wikia.nocookie.net/onepiece/images/8/8c/Franky_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/480?cb=20241110020715",
+  "Jinbe": "https://static.wikia.nocookie.net/onepiece/images/8/81/Jinbe_Anime_Infobox.png/revision/latest/scale-to-width-down/376?cb=20170521201349",
+  "Kuzan": "https://static.wikia.nocookie.net/onepiece/images/d/d6/Kuzan_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/391?cb=20240811021341",
+  "Carrot": "https://static.wikia.nocookie.net/onepiece/images/e/e2/Carrot_Anime_Infobox.png/revision/latest/scale-to-width-down/181?cb=20180826142459",
+  "Brook": "https://static.wikia.nocookie.net/onepiece/images/4/41/Brook_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/205?cb=20161016160925",
+  "Perona": "https://static.wikia.nocookie.net/onepiece/images/4/4a/Perona_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/226?cb=20260921004558",
+  "Eustass Kid": "https://static.wikia.nocookie.net/onepiece/images/4/47/Eustass_Kid_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/403?cb=20240505021859",
+  "Silvers Rayleigh": "https://static.wikia.nocookie.net/onepiece/images/b/b1/Silvers_Rayleigh_Anime_Infobox.png/revision/latest/scale-to-width-down/251?cb=20230601221758",
+  "Sabo": "https://static.wikia.nocookie.net/onepiece/images/c/c2/Sabo_Anime_Infobox.png/revision/latest/scale-to-width-down/317?cb=20230804035141",
+  "Boa Hancock": "https://static.wikia.nocookie.net/onepiece/images/f/f0/Boa_Hancock_Anime_Infobox.png/revision/latest/scale-to-width-down/233?cb=20230126022456",
+  "Shiki": "https://static.wikia.nocookie.net/onepiece/images/3/32/Shiki_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20230826192523",
+  "Dracule Mihawk": "https://static.wikia.nocookie.net/onepiece/images/b/bf/Dracule_Mihawk_Anime_Infobox.png/revision/latest/scale-to-width-down/309?cb=20151222105910",
+  "Issho": "https://static.wikia.nocookie.net/onepiece/images/e/e8/Issho_Anime_Infobox.png/revision/latest/scale-to-width-down/295?cb=20220718140829",
+  "Donquixote Rosinante": "https://static.wikia.nocookie.net/onepiece/images/7/71/Donquixote_Rosinante_Anime_Infobox.png/revision/latest/scale-to-width-down/324?cb=20150802160734",
+  "Gild Tesoro": "https://static.wikia.nocookie.net/onepiece/images/9/91/Gild_Tesoro_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20190404152956",
+  "Kouzuki Oden": "https://static.wikia.nocookie.net/onepiece/images/7/7a/Kouzuki_Oden_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20210425071747",
+  "Charlotte Katakuri": "https://static.wikia.nocookie.net/onepiece/images/2/2e/Charlotte_Katakuri_Anime_Infobox.png/revision/latest/scale-to-width-down/320?cb=20230204155539",
+  "Portgas D. Ace": "https://static.wikia.nocookie.net/onepiece/images/4/4f/Portgas_D._Ace_Anime_Infobox.png/revision/latest/scale-to-width-down/287?cb=20240629132600",
+  "Nefertari Vivi": "https://static.wikia.nocookie.net/onepiece/images/0/09/Nefertari_Vivi_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/175?cb=20190505023647",
+  "King": "https://static.wikia.nocookie.net/onepiece/images/8/8f/King_Anime_Infobox.png/revision/latest/scale-to-width-down/288?cb=20230423142631",
+  "Buggy": "https://static.wikia.nocookie.net/onepiece/images/f/f7/Buggy_Anime_Post_Timeskip_Infobox.png/revision/latest/scale-to-width-down/480?cb=20240813025900",
+  "Yamato": "https://static.wikia.nocookie.net/onepiece/images/b/bd/Yamato_Anime_Infobox.png/revision/latest/scale-to-width-down/323?cb=20260126165014",
+  "Crocodile": "https://static.wikia.nocookie.net/onepiece/images/f/fd/Crocodile_Anime_Infobox.png/revision/latest/scale-to-width-down/382?cb=20230125235528",
+  "Edward Newgate": "https://static.wikia.nocookie.net/onepiece/images/b/b7/Edward_Newgate_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20220926165737",
+  "Uta": "https://static.wikia.nocookie.net/onepiece/images/0/06/Uta_Anime_Infobox.png/revision/latest/scale-to-width-down/310?cb=20250818013702",
+  "Gecko Moria": "https://static.wikia.nocookie.net/onepiece/images/b/be/Gecko_Moria_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20181127062446",
+  "Gloriosa": "https://static.wikia.nocookie.net/onepiece/images/2/29/Gloriosa_Anime_Infobox.png/revision/latest/scale-to-width-down/271?cb=20250820070441",
+  "Fisher Tiger": "https://static.wikia.nocookie.net/onepiece/images/c/c5/Fisher_Tiger_Anime_Infobox.png/revision/latest/scale-to-width-down/387?cb=20230214162116",
+  "Kong": "https://static.wikia.nocookie.net/onepiece/images/6/6b/Kong_Anime_Infobox.png/revision/latest/scale-to-width-down/455?cb=20220920203131",
+  "Nika": "https://static.wikia.nocookie.net/onepiece/images/0/06/Nika_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20240407020958",
+  "Neptune": "https://static.wikia.nocookie.net/onepiece/images/4/40/Neptune_Anime_Infobox.png/revision/latest/scale-to-width-down/399?cb=20131206042454",
+  "Joy Boy": "https://static.wikia.nocookie.net/onepiece/images/5/5a/Joy_Boy_Anime_Infobox.png/revision/latest/scale-to-width-down/434?cb=20251221044647",
+  "Loki": "https://static.wikia.nocookie.net/onepiece/images/e/e9/Loki_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20260728232529",
+  "Scopper Gaban": "https://static.wikia.nocookie.net/onepiece/images/f/f0/Scopper_Gaban_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20260712160645",
+  "Buckingham Stussy": "https://static.wikia.nocookie.net/onepiece/images/c/c6/Buckingham_Stussy_Anime_Infobox.png/revision/latest/scale-to-width-down/448?cb=20190623142809",
+  "Zunesha": "https://static.wikia.nocookie.net/onepiece/images/4/4e/Zunesha_Anime_Infobox.png/revision/latest/scale-to-width-down/480?cb=20190117233721",
+  "Streusen": "https://static.wikia.nocookie.net/onepiece/images/3/34/Streusen_Anime_Infobox.png/revision/latest/scale-to-width-down/369?cb=20180423083412",
+  "Rocks D. Xebec": "https://static.wikia.nocookie.net/onepiece/images/f/fb/Rocks_D._Xebec_Manga_Infobox.png/revision/latest/scale-to-width-down/480?cb=20260228213945",
+  "Ochoku": "https://static.wikia.nocookie.net/onepiece/images/5/5f/Ochoku_Manga_Infobox.png/revision/latest/scale-to-width-down/442?cb=20250720151507",
+  "Figarland Garling": "https://static.wikia.nocookie.net/onepiece/images/9/9d/Figarland_Garling_Anime_Infobox.png/revision/latest/scale-to-width-down/407?cb=20251228161247"
+};
 const characterInitials=(name:string)=>name.split(/\s+/).map(x=>x[0]).slice(0,2).join('');
 function CharacterPortrait({name,image,large=false}:{name:string;image?:string;large?:boolean}){
  const [failed,setFailed]=useState(false);
@@ -90,46 +160,7 @@ const google=(name:string)=>'https://www.google.com/search?q='+encodeURIComponen
 export function FrameCharacterArchive(){
  const [query,setQuery]=useState('');
  const [selected,setSelected]=useState<Character|null>(null);
- const [portraits,setPortraits]=useState<Record<string,string>>({});
- useEffect(()=>{
-  let active=true;
-  const load=async()=>{
-   const found:Record<string,string>={};
-   const normalize=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,'');
-   const aliases:Record<string,string>={
-    'Monkey D. Luffy':'Monkey D. Luffy','Roronoa Zoro':'Roronoa Zoro',
-    'Tony Tony Chopper':'Tony Tony Chopper','Charlotte Linlin (Big Mom / Olin)':'Charlotte Linlin',
-    'Trafalgar D. Water Law':'Trafalgar Law','Nefertari D. Lily':'Nefertari Lily',
-    'Shimotsuki Ryuma':'Ryuma','Edward Newgate':'Edward Newgate','Marshall D. Teach':'Marshall D. Teach'
-   };
-   // Small batches keep the wiki API requests reliable and prevent one long request
-   // from causing the entire character archive to lose its portraits.
-   for(let i=0;i<characters.length;i+=8){
-    const batch=characters.slice(i,i+8);
-    const titles=batch.map(c=>aliases[c.name]||c.name);
-    try{
-     const params=new URLSearchParams({action:'query',format:'json',origin:'*',redirects:'1',prop:'pageimages',piprop:'thumbnail',pithumbsize:'480',titles:titles.join('|')});
-     const response=await fetch('https://onepiece.fandom.com/api.php?'+params.toString());
-     if(!response.ok)continue;
-     const data=await response.json();
-     const pages=Object.values(data?.query?.pages||{}) as any[];
-     for(const page of pages){
-      const source=page.thumbnail?.source||page.original?.source;
-      if(!source)continue;
-      const title=String(page.title||'');
-      const character=batch.find(c=>{
-       const requested=aliases[c.name]||c.name;
-       return normalize(c.name)===normalize(title)||normalize(requested)===normalize(title);
-      });
-      if(character)found[character.name]=source;
-     }
-    }catch{}
-   }
-   if(active)setPortraits(found);
-  };
-  void load();
-  return()=>{active=false};
- },[]);
+ const portraits=portraitSources;
 
 
  const visible=useMemo(()=>{const q=query.trim().toLowerCase();return characters.filter(c=>!q||[c.name,c.alias,c.role,c.crew,c.bio].join(' ').toLowerCase().includes(q)).sort((a,b)=>{const ai=popularityOrder.indexOf(a.name as typeof popularityOrder[number]),bi=popularityOrder.indexOf(b.name as typeof popularityOrder[number]);if(ai!==-1||bi!==-1)return (ai===-1?999:ai)-(bi===-1?999:bi);return a.id-b.id})},[query]);
