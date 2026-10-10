@@ -104,10 +104,9 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     const overlay=document.querySelector<HTMLElement>('.detail-overlay');
     const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
     const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
-    const heading=document.querySelector<HTMLElement>('.detail-overlay #frame-detail-title');
-    // Do not apply the saved position to the child drawer while React is still
-    // transitioning to the target item. Wait until the restored item is mounted.
-    if(!heading||heading.textContent?.trim()!==previous.item.title.trim())return;
+    // Restore continuously while React swaps the selected item and its
+    // content reflows. The selected-item heading can lag behind the prop, so
+    // gating on its text can prevent restoration forever on slower devices.
     if(overlay)overlay.scrollTop=Math.min(previous.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
     if(drawer)drawer.scrollTop=Math.min(previous.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
     if(body)body.scrollTop=Math.min(previous.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
