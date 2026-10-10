@@ -312,3 +312,66 @@ test.describe('FRAME detail navigation and scroll', () => {
     });
   });
 });
+
+
+test.describe('FRAME browser detail history', () => {
+  test('browser Back closes anime details without jumping from Library to Home', async ({ page }) => {
+    const rootId = 'qa-anime-root';
+    const fixture = [
+      {
+        id: rootId,
+        sourceProvider: 'frame-story-arc',
+        externalId: 'qa-anime-root',
+        title: 'FRAME QA Anime',
+        description: 'Navigation history fixture',
+        poster: '/frame-logo.svg',
+        backdrop: '',
+        medium: 'anime',
+        status: 'planned',
+        progress: 0,
+        total: 12,
+        genres: [],
+        themes: [],
+        favorite: false,
+        notes: ''
+      },
+      {
+        id: 'qa-anime-season-2',
+        parentId: rootId,
+        sourceProvider: 'frame-story-arc',
+        externalId: 'qa-anime-season-2',
+        title: 'Season 2',
+        description: 'Child season fixture',
+        poster: '/frame-logo.svg',
+        backdrop: '',
+        medium: 'anime',
+        status: 'planned',
+        progress: 0,
+        total: 12,
+        genres: [],
+        themes: [],
+        favorite: false,
+        notes: ''
+      }
+    ];
+    await page.addInitScript((items) => {
+      localStorage.setItem('frame-guest', '1');
+      localStorage.setItem('frame-library:guest', JSON.stringify(items));
+    }, fixture);
+
+    await page.goto('/');
+    await navigatePrimary(page, 'Library');
+    const card = page.locator('.media-card').filter({ hasText: 'FRAME QA Anime' }).first();
+    await expect(card).toBeVisible();
+    await card.click();
+    await expect(page.getByRole('heading', { name: 'FRAME QA Anime', exact: true })).toBeVisible();
+
+    await page.locator('.hierarchy-part-card').filter({ hasText: 'Season 2' }).evaluate(el => (el as HTMLButtonElement).click());
+    await expect(page.getByRole('heading', { name: 'Season 2', exact: true })).toBeVisible();
+
+    await page.goBack();
+    await expect(page.locator('.detail-overlay')).toHaveCount(0);
+    await expect(page.locator('h1').filter({ hasText: /^Library$/ })).toBeVisible();
+    await expect(page.locator('h1').filter({ hasText: /Welcome back/ })).toHaveCount(0);
+  });
+});
