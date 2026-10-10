@@ -40,6 +40,37 @@ const ARC_RANGES: Record<string, ArcRange[]> = {
     {name:'Battle of Trost',start:3,end:13,summary:'The cadets fight to reclaim Trost after the breach.'},
     {name:'57th Exterior Scouting Mission',start:14,end:21,summary:'The Scouts investigate a dangerous mission beyond the walls.'},
     {name:'Stohess District',start:22,end:25,summary:'A confrontation in Stohess raises new questions about the Titans.'}
+  ],
+  'dragon ball': [
+    {name:'Emperor Pilaf Saga',start:1,end:13,summary:'Goku meets Bulma and begins the search for the Dragon Balls.'},
+    {name:'21st Tenkaichi Budokai',start:14,end:28,summary:'Goku enters his first major martial arts tournament.'},
+    {name:'Red Ribbon Army Saga',start:29,end:68,summary:'Goku confronts the Red Ribbon Army in pursuit of the Dragon Balls.'},
+    {name:'Fortuneteller Baba Saga',start:69,end:83,summary:'Goku’s group faces a series of unusual fighters.'},
+    {name:'22nd Tenkaichi Budokai',start:84,end:101,summary:'The next World Martial Arts Tournament brings new rivals.'},
+    {name:'King Piccolo Saga',start:102,end:122,summary:'A dangerous new enemy threatens the world.'},
+    {name:'Piccolo Jr. / 23rd Tenkaichi Budokai',start:123,end:153,summary:'Goku prepares for the next tournament and a decisive rematch.'}
+  ],
+  'my hero academia': [
+    {name:'Entrance Exam',start:1,end:4,summary:'Izuku takes the first steps toward becoming a hero.'},
+    {name:'Quirk Apprehension Test',start:5,end:6,summary:'Class 1-A faces its first test under Aizawa.'},
+    {name:'Battle Trial',start:7,end:8,summary:'Students test their abilities in a hero-versus-villain exercise.'},
+    {name:'USJ Incident',start:9,end:13,summary:'Class 1-A faces a real villain attack.'}
+  ],
+  'chainsaw man': [
+    {name:'Introduction',start:1,end:3,summary:'Denji’s life changes when he becomes Chainsaw Man.'},
+    {name:'Bat Devil',start:4,end:5,summary:'Denji takes on a dangerous devil-hunting mission.'},
+    {name:'Eternity Devil',start:6,end:7,summary:'A mission traps the team in a seemingly endless space.'},
+    {name:'Katana Man',start:8,end:12,summary:'A sudden attack forces Public Safety into a new conflict.'}
+  ],
+  'mashle magic and muscles': [
+    {name:'Easton Entrance Exam',start:1,end:3,summary:'Mash enters a magic academy despite having no magic.'},
+    {name:'Magia Lupus',start:4,end:12,summary:'Mash and his friends confront a powerful student group.'}
+  ],
+  'tokyo revengers': [
+    {name:'Toman Introduction',start:1,end:5,summary:'Takemichi discovers time travel and becomes involved with Toman.'},
+    {name:'Moebius',start:6,end:12,summary:'A clash with Moebius puts Toman’s future at risk.'},
+    {name:'Valhalla',start:13,end:21,summary:'The Bloody Halloween conflict reshapes Toman.'},
+    {name:'Black Dragon',start:22,end:24,summary:'A new gang conflict begins to emerge.'}
   ]
 };
 const normalizeArcTitle = (value: string) => value.toLocaleLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
