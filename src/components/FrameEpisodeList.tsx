@@ -1,4 +1,5 @@
 import {useEffect,useState} from 'react';
+import {supabase} from '../lib/supabase';
 import {CalendarDays,ChevronLeft,ChevronRight,LoaderCircle,RefreshCw} from 'lucide-react';
 
 type JikanEpisode={
