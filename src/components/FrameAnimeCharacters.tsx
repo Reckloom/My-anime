@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, Users } from 'lucide-react';
 import type { AnimeCharacterProfile } from '../types';
+import { aniList, CHARACTERS_QUERY } from '../anilist';
 import { posterImageSrc } from '../posterImage';
 
 function CharacterPortrait({character}:{character:AnimeCharacterProfile}) {
@@ -15,15 +16,51 @@ function shortDescription(value?: string) {
   return value.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 }
 
-export function FrameAnimeCharacters({ title, characters }: { title: string; characters: AnimeCharacterProfile[] }) {
-  if (!characters.length) return null;
+export function FrameAnimeCharacters({ title, characters, anilistId }: { title: string; characters: AnimeCharacterProfile[]; anilistId?: number }) {
+  const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
+  const [loading,setLoading] = useState(false);
+  const [failed,setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setRemoteCharacters([]);
+    setFailed(false);
+    if (characters.length || !anilistId) {
+      setLoading(false);
+      return () => { active = false; };
+    }
+    setLoading(true);
+    aniList<{Media?:{characters?:{edges?:Array<{role?:string|null;node?:{id?:number;name?:{full?:string|null;native?:string|null};image?:{large?:string|null};description?:string|null;siteUrl?:string|null}}}>}}>(CHARACTERS_QUERY,{id:anilistId})
+      .then(result => {
+        const edges = result.Media?.characters?.edges || [];
+        const mapped = edges.filter(edge => edge.node?.name?.full).map(edge => ({
+          id: edge.node!.id,
+          name: String(edge.node!.name!.full),
+          nativeName: edge.node!.name!.native || undefined,
+          role: edge.role || undefined,
+          image: edge.node!.image?.large || undefined,
+          description: edge.node!.description || undefined,
+          sourceUrl: edge.node!.siteUrl || undefined
+        }));
+        if (active) {
+          setRemoteCharacters(mapped);
+          setFailed(mapped.length === 0);
+        }
+      })
+      .catch(() => { if (active) setFailed(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [anilistId, characters.length]);
+
+  const profiles = characters.length ? characters : remoteCharacters;
+  if (!profiles.length && !loading && !failed) return null;
   return <section className="frame-anime-characters detail-section" aria-label={title + ' character profiles'}>
     <div className="detail-section-head">
       <div><small>CHARACTER ARCHIVE</small><h3>Characters</h3></div>
-      <span>{characters.length} profiles</span>
+      <span>{loading ? 'Loading…' : profiles.length ? profiles.length + ' profiles' : 'Unavailable'}</span>
     </div>
-    <div className="frame-anime-character-grid">
-      {characters.map((character, index) => <article className="frame-anime-character-card" key={(character.id || character.name) + '-' + index}>
+    {profiles.length > 0 ? <div className="frame-anime-character-grid">
+      {profiles.map((character, index) => <article className="frame-anime-character-card" key={(character.id || character.name) + '-' + index}>
         <div className="frame-anime-character-portrait">
           <CharacterPortrait character={character} />
         </div>
@@ -35,7 +72,7 @@ export function FrameAnimeCharacters({ title, characters }: { title: string; cha
           {character.sourceUrl && <a href={character.sourceUrl} target="_blank" rel="noreferrer">Character source <ExternalLink size={11}/></a>}
         </div>
       </article>)}
-    </div>
-    <p className="frame-anime-character-footnote">Profiles and portraits are linked to AniList character metadata. Missing portraits are left blank rather than substituted with unrelated artwork.</p>
+    </div> : <p className="frame-anime-character-footnote">{loading ? 'Loading verified character names and portraits from AniList…' : 'Character profiles could not be loaded right now. Try reopening this anime later.'}</p>}
+    <p className="frame-anime-character-footnote">Character names, roles and portraits are supplied by AniList. Missing portraits are shown as placeholders instead of unrelated artwork.</p>
   </section>;
 }
