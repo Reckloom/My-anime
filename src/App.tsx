@@ -365,6 +365,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
  // Naruto catalogue builder intentionally removed until the separate verified rebuild.
 
+ const ONE_PIECE_SERIES_POSTER='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const buildOnePieceHierarchy=async(rawRoot:MediaItem,existingRoot=false)=>{
   let root=normalise({...rawRoot,poster:ONE_PIECE_SERIES_POSTER,
    description:[rawRoot.description,'One Piece anime library: the main entry holds series-level details, while arc entries contain the episode catalogue with titles, synopses, air dates, available stills and episode scores. IMDb links are included for checking IMDb directly; scores displayed in FRAME are explicitly labelled with their actual source.'].filter(Boolean).join('\n\n'),
