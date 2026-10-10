@@ -4,6 +4,45 @@ import type { MediaItem } from '../types';
 import { FrameArtwork } from './FrameArtwork';
 
 const PAGE_SIZE = 100;
+
+type ArcRange = { name: string; start: number; end: number; summary: string };
+const ARC_RANGES: Record<string, ArcRange[]> = {
+  'bleach': [
+    {name:'Agent of the Shinigami',start:1,end:20,summary:'Ichigo becomes a substitute Soul Reaper and begins protecting Karakura Town.'},
+    {name:'Soul Society: The Sneak Entry',start:21,end:41,summary:'Ichigo and his friends enter Soul Society to rescue Rukia.'},
+    {name:'Soul Society: The Rescue',start:42,end:63,summary:'The rescue mission reaches its turning point inside the Soul Society.'},
+    {name:'The Bount',start:64,end:91,summary:'A new enemy group emerges in the human world.'},
+    {name:'Bount Assault on Soul Society',start:92,end:109,summary:'The Bount conflict moves into Soul Society.'},
+    {name:'Arrancar: The Arrival',start:110,end:131,summary:'The Arrancar threat reaches Karakura Town.'},
+    {name:'Hueco Mundo: Sneak Entry',start:132,end:151,summary:'The rescue mission enters Hueco Mundo.'},
+    {name:'Hueco Mundo: The Fierce Fight',start:152,end:167,summary:'The battles in Hueco Mundo intensify.'},
+    {name:'The New Captain Shusuke Amagai',start:168,end:189,summary:'A new captain takes command of the Third Division.'},
+    {name:'Arrancar vs. Shinigami',start:190,end:205,summary:'The conflict between the Arrancar and Soul Reapers escalates.'},
+    {name:'The Past',start:206,end:212,summary:'A look back at the origins of the Visored and the Soul Reaper world.'},
+    {name:'Decisive Battle of Karakura',start:213,end:229,summary:'The battle for Karakura Town reaches a critical stage.'},
+    {name:'Zanpakuto: The Alternate Tale',start:230,end:265,summary:'The Zanpakuto spirits become central to a new conflict.'},
+    {name:'Arrancar: Downfall',start:266,end:316,summary:'The Arrancar conflict approaches its conclusion.'},
+    {name:'Gotei 13 Invading Army',start:317,end:342,summary:'A new threat targets the Gotei 13.'},
+    {name:'The Lost Substitute Shinigami',start:343,end:366,summary:'Ichigo faces the consequences of losing his Soul Reaper powers.'}
+  ],
+  'death note': [
+    {name:'L Arc',start:1,end:25,summary:'Light and L engage in a high-stakes battle of deduction.'},
+    {name:'Near and Mello Arc',start:26,end:37,summary:'L’s successors continue the investigation into Kira.'}
+  ],
+  'jujutsu kaisen': [
+    {name:'Fearsome Womb',start:1,end:8,summary:'Yuji enters the world of jujutsu sorcerers.'},
+    {name:'Vs. Mahito',start:9,end:13,summary:'Yuji confronts a curse whose abilities challenge his understanding of people.'},
+    {name:'Kyoto Goodwill Event',start:14,end:21,summary:'Tokyo and Kyoto students meet for their inter-school event.'},
+    {name:'Death Painting',start:22,end:24,summary:'A new mission brings the students into conflict with cursed wombs.'}
+  ],
+  'attack on titan': [
+    {name:'Fall of Shiganshina',start:1,end:2,summary:'Humanity’s fragile safety is shattered by a sudden attack.'},
+    {name:'Battle of Trost',start:3,end:13,summary:'The cadets fight to reclaim Trost after the breach.'},
+    {name:'57th Exterior Scouting Mission',start:14,end:21,summary:'The Scouts investigate a dangerous mission beyond the walls.'},
+    {name:'Stohess District',start:22,end:25,summary:'A confrontation in Stohess raises new questions about the Titans.'}
+  ]
+};
+const normalizeArcTitle = (value: string) => value.toLocaleLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 const episodeNumber = (item: MediaItem) => {
   const externalId = String(item.externalId || '');
   const match = externalId.match(/:episode:(\d+)$/)
@@ -32,6 +71,14 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const shown = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const arcRanges = ARC_RANGES[normalizeArcTitle(title)];
+  const grouped = useMemo(() => {
+    if (!arcRanges) return [{name:'Episodes',summary:'Episode details and artwork',start:1,end:Number.MAX_SAFE_INTEGER,items:shown}];
+    const groups = arcRanges.map(arc => ({...arc,items:shown.filter(item => { const n=episodeNumber(item); return n>=arc.start && n<=arc.end; })})).filter(group=>group.items.length>0);
+    const unassigned = shown.filter(item=>!arcRanges.some(arc=>episodeNumber(item)>=arc.start&&episodeNumber(item)<=arc.end));
+    if(unassigned.length)groups.push({name:'Other episodes',summary:'Episodes outside the defined arc ranges.',start:0,end:0,items:unassigned});
+    return groups;
+  }, [arcRanges,shown]);
   if (!episodes.length) return null;
   return <section className="frame-anime-episode-catalogue detail-section" aria-label={title + ' episode catalogue'}>
     <div className="detail-section-head">
@@ -42,15 +89,24 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
       <label><Search size={15}/><input type="search" value={query} onChange={e => { setQuery(e.target.value); setPage(1); }} placeholder="Search episode number or title…" aria-label="Search episode number or title"/></label>
       <span>Showing {shown.length ? ((safePage - 1) * PAGE_SIZE + 1).toLocaleString() : '0'}–{Math.min(safePage * PAGE_SIZE, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}</span>
     </div>
-    {shown.length ? <div className="frame-anime-episode-rows" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))',gap:12}}>
-      {shown.map(item => <button type="button" className="frame-anime-episode-row" key={item.id} onClick={() => onOpen(item)} style={{display:'flex',flexDirection:'column',alignItems:'stretch',gap:8,textAlign:'left',padding:10,minWidth:0,height:'100%'}}>
-        <span style={{position:'relative',display:'block',width:'100%',aspectRatio:'16 / 9',overflow:'hidden',borderRadius:10,background:'var(--surface, #171717)'}}>
-          <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
-          <span className="frame-anime-episode-number" style={{position:'absolute',left:8,top:8}}>{String(episodeNumber(item)).padStart(3, '0')}</span>
-        </span>
-        <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episode\s+\d+\s*[—–-]\s*/i, '')}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
-        <span className="frame-anime-episode-status">{item.status === 'completed' ? 'Watched' : 'Released'} <ChevronRight size={13}/></span>
-      </button>)}
+    {shown.length ? <div className="frame-anime-arc-groups">
+      {grouped.map(group=><details className="frame-anime-arc-group" key={group.name} open>
+        <summary className="frame-anime-arc-heading">
+          <span className="frame-anime-arc-cover">{group.items[0]&&<FrameArtwork title={group.items[0].title} medium={group.items[0].medium} poster={group.items[0].poster} sourceProvider={group.items[0].sourceProvider} externalId={group.items[0].externalId} className="frame-episode-artwork" alt="" loading="lazy"/>}</span>
+          <span className="frame-anime-arc-copy"><b>{group.name}</b><small>{group.summary}</small><small>{group.items.length} episode{group.items.length===1?'':'s'} · {group.items.length?String(episodeNumber(group.items[0])).padStart(3,'0')+'–'+String(episodeNumber(group.items[group.items.length-1])).padStart(3,'0'):''}</small></span>
+          <ChevronRight size={17}/>
+        </summary>
+        <div className="frame-anime-episode-rows" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))',gap:12}}>
+          {group.items.map(item => <button type="button" className="frame-anime-episode-row" key={item.id} onClick={() => onOpen(item)} style={{display:'flex',flexDirection:'column',alignItems:'stretch',gap:8,textAlign:'left',padding:10,minWidth:0,height:'100%'}}>
+            <span style={{position:'relative',display:'block',width:'100%',aspectRatio:'16 / 9',overflow:'hidden',borderRadius:10,background:'var(--surface, #171717)'}}>
+              <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
+              <span className="frame-anime-episode-number" style={{position:'absolute',left:8,top:8}}>{String(episodeNumber(item)).padStart(3, '0')}</span>
+            </span>
+            <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episode\s+\d+\s*[—–-]\s*/i, '')}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
+            <span className="frame-anime-episode-status">{item.status === 'completed' ? 'Watched' : 'Released'} <ChevronRight size={13}/></span>
+          </button>)}
+        </div>
+      </details>)}
     </div> : <p className="muted frame-anime-episode-empty">No episodes match that search.</p>}
     {pageCount > 1 && <div className="frame-anime-episode-pagination">
       <button type="button" className="secondary" disabled={safePage <= 1} onClick={() => setPage(1)}>First</button>
