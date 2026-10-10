@@ -329,13 +329,6 @@ function charactersFrom(media: CatalogueMedia): AnimeCharacterProfile[] {
   return result.slice(0, 15);
 }
 
-function mediaReleaseStatus(media: CatalogueMedia, count: number) {
-  const state = String(media.status || '');
-  if (state === 'FINISHED') return 'completed' as const;
-  if (count > 0 || state === 'RELEASING' || state === 'HIATUS') return 'watching' as const;
-  return 'planned' as const;
-}
-
 function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: MediaItem[], isRoot: boolean, rootId: string) {
   const wantedMedium = MOVIE_FORMATS.has(String(media.format || '')) ? 'movie' : 'anime';
   const existing = library.find(x => x.anilistId === Number(media.id) && x.medium === wantedMedium);
@@ -461,7 +454,6 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
 
   const incoming: MediaItem[] = [];
   let franchiseEpisodes = 0;
-  let allFinished = true;
   for (let index = 0; index < chosen.length; index++) {
     const media = chosen[index];
     const movie = MOVIE_FORMATS.has(String(media.format || ''));
@@ -478,7 +470,6 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const total = movie ? 1 : episodes.length;
     if (!movie) {
       franchiseEpisodes += episodes.length;
-      if (String(media.status || '') !== 'FINISHED') allFinished = false;
     }
     incoming.push(mapMediaItem(media, {
       id,
