@@ -104,12 +104,16 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     const overlay=document.querySelector<HTMLElement>('.detail-overlay');
     const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
     const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
+    const heading=document.querySelector<HTMLElement>('.detail-overlay #frame-detail-title');
+    // Do not apply the saved position to the child drawer while React is still
+    // transitioning to the target item. Wait until the restored item is mounted.
+    if(!heading||heading.textContent?.trim()!==previous.item.title.trim())return;
     if(overlay)overlay.scrollTop=Math.min(previous.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
     if(drawer)drawer.scrollTop=Math.min(previous.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
     if(body)body.scrollTop=Math.min(previous.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
     window.scrollTo(0,previous.pageScrollTop);
     restoreAttempts++;
-    if(restoreAttempts>=20)window.clearInterval(restoreTimer);
+    if(restoreAttempts>=30)window.clearInterval(restoreTimer);
    },80);
    return;
   }
