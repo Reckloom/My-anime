@@ -42,7 +42,7 @@ async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Pr
   const media = result.Media;
   const normalizeTitle = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const expected = normalizeTitle(expectedTitle);
-  const actual = [media?.title?.english, media?.title?.romaji, media?.title?.native, media?.title?.userPreferred].filter(Boolean).map((value: string) => normalizeTitle(String(value)));
+  const actual = [media?.title?.english, media?.title?.romaji, media?.title?.native, media?.title?.userPreferred].filter(Boolean).map(value => normalizeTitle(String(value)));
   if (!actual.some((value: string) => value === expected || (expected.length >= 5 && value.startsWith(expected)))) return [];
   const edges = media?.characters?.edges || [];
   return edges.filter(edge => edge.node?.name?.full).map(edge => ({
