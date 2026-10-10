@@ -40,7 +40,7 @@ async function character(name: string) {
   const row = data?.data?.Character;
   const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (!row?.name?.full || normalize(row.name.full) !== normalize(name)) return { name, image: '', description: '' };
-  return { name, image: String(row.image?.large || ''), description: String(row.description || '').replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim() };
+  return { name, image: String(row.image?.large || ''), description: String(row.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() };
 }
 async function characters(names: unknown) {
   const list = Array.isArray(names) ? names.map(String).filter(Boolean).slice(0, 40) : [];
@@ -73,7 +73,7 @@ async function animeCharacters(anilistIdValue: unknown) {
     nativeName: edge.node.name.native ? String(edge.node.name.native) : undefined,
     role: edge.role ? String(edge.role) : undefined,
     image: edge.node.image?.large ? String(edge.node.image.large) : undefined,
-    description: edge.node.description ? String(edge.node.description).replace(/<br\\s*\\/?>(\\s*)/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim() : undefined,
+    description: edge.node.description ? String(edge.node.description).replace(/<br\s*\/?>(\s*)/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : undefined,
     sourceUrl: edge.node.siteUrl ? String(edge.node.siteUrl) : undefined,
   }));
   return { characters: mapped, matched: mapped.filter((item: any) => item.image).length, requested: mapped.length, source: 'AniList' };
