@@ -70,8 +70,9 @@ async function animeCharacters(anilistIdValue: unknown, expectedTitleValue: unkn
   if (expectedTitle) {
     const normalizeTitle = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
     const expected = normalizeTitle(expectedTitle);
+    const allowSubtitlePrefix = /[:—–-]/.test(expectedTitle);
     const actual = [media.title?.english, media.title?.romaji, media.title?.native, media.title?.userPreferred].filter(Boolean).map((value: string) => normalizeTitle(String(value)));
-    if (!actual.some((value: string) => value === expected || (expected.length >= 5 && value.startsWith(expected)))) {
+    if (!actual.some((value: string) => value === expected || (allowSubtitlePrefix && expected.length >= 5 && value.startsWith(expected)))) {
       throw new Error('AniList ID does not match this anime title.');
     }
   }
