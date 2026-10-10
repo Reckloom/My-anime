@@ -124,6 +124,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
      if(drawer)setInstantScroll(drawer,previous.drawerScrollTop);
      if(body)setInstantScroll(body,previous.bodyScrollTop);
      window.scrollTo({top:previous.pageScrollTop,left:0,behavior:'auto'});
+     if(restoreAttempts<3||restoreAttempts%25===0)console.debug('[FRAME scroll restore]',{attempt:restoreAttempts,desired:previous.drawerScrollTop,actual:drawer?.scrollTop,scrollHeight:drawer?.scrollHeight,clientHeight:drawer?.clientHeight});
     }
     restoreAttempts++;
     if(restoreAttempts>=250){
