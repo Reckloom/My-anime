@@ -116,7 +116,7 @@ export function FrameCharacterArchive(){
   };
   const wikiTitle=(name:string)=>{
    if(name==='Sanji')return 'Black_Leg_Style/Ifrit_Jambe';
-   if(name==='Monkey D. Luffy')return 'Gear_5';
+   if(name==='Monkey D. Luffy')return 'Episode_1071';
    return (aliases[name]?.[0]||name).replace(/ /g,'_');
   };
   const load=async()=>{
