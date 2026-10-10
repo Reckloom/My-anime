@@ -801,7 +801,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    if(root.medium==='anime' && root.title.trim().toLowerCase()!=='one piece'){
     const children=childrenByParent.get(root.id)||[];
     const season1=children.find(x=>/\\bseason\\s*1\\b/i.test(x.title));
-    if(children.length>1 && season1 && textMatches(season1) && facetMatches(season1)) result.push({...season1,poster:root.poster,backdrop:''});
+    if(children.length>1 && season1 && textMatches(season1) && facetMatches(season1)) result.push(season1);
    }
   }
   return result;
