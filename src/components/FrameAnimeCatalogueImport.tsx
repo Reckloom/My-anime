@@ -619,7 +619,27 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
               existing.id === imported.id
             );
             if (match < 0) localRows.push(imported);
-            else localRows[match] = { ...localRows[match], ...imported, id: localRows[match].id, parentId: imported.parentId === undefined && imported.sourceProvider === 'frame-anime-catalogue' ? undefined : (imported.parentId ?? localRows[match].parentId) };
+            else {
+              const existing = localRows[match];
+              // Catalogue refreshes may replace source metadata, but must never
+              // silently rewrite the user's own tracking state or reading notes.
+              const customTotal = existing.customTotal ?? imported.customTotal;
+              localRows[match] = {
+                ...existing,
+                ...imported,
+                id: existing.id,
+                parentId: imported.parentId === undefined && imported.sourceProvider === 'frame-anime-catalogue' ? undefined : (imported.parentId ?? existing.parentId),
+                progress: existing.progress,
+                status: existing.status,
+                favorite: existing.favorite,
+                personalRating: existing.personalRating,
+                notes: existing.notes,
+                startedAt: existing.startedAt,
+                completedAt: existing.completedAt,
+                customTotal,
+                total: existing.customTotal != null ? existing.customTotal : imported.total
+              };
+            }
           }
           libraryRef.current = localRows;
           warningMap[task.key] = built.warnings;
