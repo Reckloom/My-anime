@@ -3551,3 +3551,10 @@ hr,.divider{border-color:var(--frame-line)!important}
  .frame-anime-character-card{grid-template-columns:68px minmax(0,1fr)}
  .frame-anime-character-portrait{width:68px;height:86px}
 }
+
+
+/* Episode cards use source-provided episode thumbnails in a wide still frame. */
+.frame-anime-episode-row .frame-episode-artwork{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;background:var(--frame-surface,#171717)}
+.frame-anime-episode-row>span:first-child{isolation:isolate}
+.frame-anime-episode-row .frame-anime-episode-number{z-index:1}
+.frame-anime-episode-row .frame-anime-episode-copy small{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
