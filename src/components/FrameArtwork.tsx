@@ -16,7 +16,7 @@ async function withArtworkLimit<T>(job:()=>Promise<T>):Promise<T>{
 }
 const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
-const isPlaceholderArtwork=(value?:string)=>!value||/(?:^|\\/)frame-logo\\.svg(?:[?#]|$)/i.test(value);
+const isPlaceholderArtwork=(value?:string)=>!value||value.toLowerCase().includes('frame-logo.svg');
 const isHierarchyNode=(p:Props)=>isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'');
 const svgFallback=(title:string,medium:Medium)=>{
  const hash=[...title].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,7);
