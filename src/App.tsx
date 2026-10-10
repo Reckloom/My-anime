@@ -175,8 +175,6 @@ export default function App(){
  const [density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('cinematic-archive'),[appearanceMode,setAppearanceMode]=useState<'light'|'dark'|'system'>('dark');
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
  const saveQueue=useRef(Promise.resolve(true));
- const onePieceAutoRef=useRef('');
- const onePieceArcArtworkRef=useRef('');
  const onePiecePosterCatalogueRef=useRef<Record<string,string>>({});
 
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
@@ -656,85 +654,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  // Naruto catalogue/artwork generation is intentionally paused. We'll build and verify
  // Naruto and Shippuden as a separate task; loading FRAME must not launch bulk jobs.
- useEffect(()=>{
-  if(!user?.id||!cloudLibraryReady||!items.length||!supabase)return;
-  const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
-  if(!root)return;
-  const arcs=items.filter(x=>x.parentId===root.id&&String(x.externalId||'').startsWith('one-piece-arc-'));
-  const arcsNeedingArtwork=arcs.filter(x=>!String(x.notes||'').includes('FRAME_POSTER_VERSION=one-piece-arc-wiki-v1'));
-  if(!arcsNeedingArtwork.length)return;
-  const runKey=user.id+':'+root.id+':'+arcsNeedingArtwork.length;
-  if(onePieceArcArtworkRef.current===runKey)return;
-  const episodeItems=items.filter(x=>String(x.externalId||'').startsWith('one-piece-episode-'));
-  const ranges=arcsNeedingArtwork.map(arc=>{
-   const children=episodeItems.filter(x=>x.parentId===arc.id);
-   const numbers=children.map(x=>Number(String(x.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1]||0)).filter(n=>n>0);
-   if(!numbers.length)return null;
-   const midpoint=Math.floor((Math.min(...numbers)+Math.max(...numbers))/2);
-   const candidates=children.map(child=>{
-    const number=Number(String(child.externalId||'').match(/^one-piece-episode-(\d+)$/)?.[1]||0);
-    return {absoluteEpisode:number,seasonNumber:Number(child.episode?.seasonNumber)||0,episodeNumber:Number(child.episode?.episodeNumber)||0,title:child.title,poster:child.poster||'',backdrop:child.backdrop||'',tmdbEpisode:String(child.sourceProvider||'').startsWith('tmdb')};
-   }).filter(candidate=>candidate.absoluteEpisode>0).sort((a,b)=>Number(Boolean(b.poster||b.backdrop))-Number(Boolean(a.poster||a.backdrop))||Math.abs(a.absoluteEpisode-midpoint)-Math.abs(b.absoluteEpisode-midpoint)).slice(0,6);
-   return {id:arc.id,title:arc.title,currentPoster:arc.poster||'',candidates};
-  }).filter((x):x is NonNullable<typeof x>=>Boolean(x));
-  if(!ranges.length)return;
-  onePieceArcArtworkRef.current=runKey;
-  void (async()=>{
-   try{
-    const posters:Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string;kind?:string;title?:string}>={};
-    let failedBatches=0;
-    // Keep each request small: sending every arc and all its episode metadata at
-    // once can exceed edge-function/proxy request limits and abort the whole refresh.
-    for(let offset=0;offset<ranges.length;offset+=4){
-     const batch=ranges.slice(offset,offset+4).map(arc=>({...arc,candidates:arc.candidates.slice(0,4)}));
-     try{
-      const {data,error}=await supabase.functions.invoke('media-discovery',{body:{action:'arc-posters',provider:'series',source:'tmdb-tv',externalId:'37854',arcs:batch}});
-      if(error)throw error;
-      const found=(data?.posters&&typeof data.posters==='object'?data.posters:{}) as Record<string,{poster?:string;backdrop?:string;episodeNumber?:number;episodeTitle?:string;sourceUrl?:string;artworkSource?:string;kind?:string;title?:string}>;
-      Object.assign(posters,found);
-     }catch(error){
-      failedBatches++;
-      console.warn('[FRAME One Piece arc artwork batch]',offset/4+1,error);
-     }
-    }
-    const reserved=new Set<string>([String(root.poster||''),...arcs.map(x=>String(x.poster||''))].filter(Boolean));
-    const updates=new Map<string,MediaItem>();
-    for(const arc of arcs){
-     const art=posters[arc.id];
-     const arcRange=ranges.find(x=>x.id===arc.id);
-     const fallback=(arcRange?.candidates||[]).flatMap(candidate=>[
-      {url:String(candidate.poster||'').trim(),episodeNumber:candidate.absoluteEpisode,title:candidate.title,sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+candidate.absoluteEpisode+' '+candidate.title),kind:'related-episode-poster'},
-      {url:String(candidate.backdrop||'').trim(),episodeNumber:candidate.absoluteEpisode,title:candidate.title,sourceUrl:'https://www.imdb.com/find/?q='+encodeURIComponent('One Piece anime episode '+candidate.absoluteEpisode+' '+candidate.title),kind:'related-episode-still'}
-     ]).find(candidate=>candidate.url&&candidate.url!==String(arc.poster||'').trim()&&candidate.url!==String(root.poster||'').trim()&&!reserved.has(candidate.url));
-     let poster=String(art?.poster||'').trim();
-     let chosen=art;
-     if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster)){poster=String(fallback?.url||'').trim();chosen=fallback as any;}
-     if(!poster||poster===String(arc.poster||'').trim()||reserved.has(poster))continue;
-     reserved.add(poster);
-     const isDedicatedArcArtwork=chosen?.kind==='arc-artwork'||String(chosen?.artworkSource||'').toLowerCase().includes('arc-specific');
-     const sourceNote='FRAME_ARC_ARTWORK='+(chosen?.artworkSource||chosen?.kind||'related-episode-still')+(isDedicatedArcArtwork?'; dedicated artwork for '+arc.title:'; representative episode '+String(chosen?.episodeNumber||'')+': '+String(chosen?.episodeTitle||chosen?.title||arc.title))+(chosen?.sourceUrl?'; '+chosen.sourceUrl:'');
-     const baseNotes=String(arc.notes||'').split('\n\nFRAME_ARC_ARTWORK=')[0].replace('FRAME_POSTER_VERSION=one-piece-stills-v3','FRAME_POSTER_VERSION=one-piece-arc-wiki-v1');
-     updates.set(arc.id,{...arc,poster,backdrop:String(chosen?.backdrop||poster),notes:[baseNotes,sourceNote].filter(Boolean).join('\n\n')});
-    }
-    if(!updates.size){
-     setAppMessage('No different usable image was found for these sub-parts. Episode entries and progress remain unchanged.');
-     window.setTimeout(()=>setAppMessage(''),7000);
-     return;
-    }
-    const next=items.map(x=>updates.get(x.id)||x);
-    const ok=await save(next);
-    if(ok){
-     setAppMessage('Updated '+updates.size+' One Piece sub-part posters'+(failedBatches?' ('+failedBatches+' batch(es) could not refresh; retry to catch the rest)':'')+'. Episode posters and completion progress were left unchanged.');
-     window.setTimeout(()=>setAppMessage(''),7000);
-    }else onePieceArcArtworkRef.current='';
-   }catch(error){
-    onePieceArcArtworkRef.current='';
-    console.warn('[FRAME One Piece arc artwork]',error);
-    setAppMessage('Sub-part artwork refresh failed: '+(error instanceof Error?error.message:'please try again')+'. Episode progress was not changed.');
-    window.setTimeout(()=>setAppMessage(''),8000);
-   }
-  })();
- },[user?.id,cloudLibraryReady,items]);
+ // Bulk One Piece artwork refresh is not run automatically on page load. This keeps
+ // navigation responsive; poster changes should happen only in a deliberate catalogue task.
+
  const addSteamGame=(game:{appId?:string;name:string;header?:string;storeUrl?:string})=>{
   if(!game.name.trim())return;
   importItem({id:crypto.randomUUID(),sourceProvider:'steam',externalId:game.appId,title:game.name,description:'Imported from your Steam library.',poster:game.header||'',backdrop:game.header||'',medium:'game',status:'planned',progress:0,total:100,progressUnit:'%',year:undefined,score:undefined,genres:[],themes:[],favorite:false,game:{storeUrl:game.storeUrl||undefined}});
