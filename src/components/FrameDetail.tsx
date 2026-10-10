@@ -224,7 +224,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     <button className="detail-back-bubble" aria-label="Go back" title="Go back" onClick={goBack}><ArrowLeft size={16}/></button>
     <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
    <div className="detail-body">
-    <FrameArtwork className="detail-poster" title={d.title} medium={d.medium} poster={d.poster} anilistId={d.anilistId} parentPoster={artworkParent?.poster} parentTitle={artworkParent?.title} parentMedium={artworkParent?.medium} parentAnilistId={artworkParent?.anilistId} sourceProvider={d.sourceProvider} externalId={d.externalId} alt={d.title} loading="eager"/>
+    <FrameArtwork className="detail-poster" title={d.title} medium={d.medium} poster={d.poster} anilistId={d.anilistId} parentPoster={artworkParent?.poster} parentTitle={artworkParent?.title} parentMedium={artworkParent?.medium} parentAnilistId={artworkParent?.anilistId} sourceProvider={d.sourceProvider} externalId={d.externalId} posterSource={d.episode?.posterSource} alt={d.title} loading="eager"/>
     <div className="detail-main">
      <small>{types[d.medium]} · {labels[d.status]}</small>
      <h2 id="frame-detail-title">{d.title}</h2>
