@@ -4,8 +4,9 @@ import { createClient } from 'npm:@supabase/supabase-js@^2';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const WINDOW_DAYS = 45;
 
-const QUERY = `query ($ids:[Int!]!, $from:Int!, $to:Int!) {
-  Page(page:1, perPage:50) {
+const QUERY = `query ($ids:[Int!]!, $from:Int!, $to:Int!, $page:Int!) {
+  Page(page:$page, perPage:50) {
+    pageInfo { hasNextPage }
     airingSchedules(mediaId_in:$ids, airingAt_greater:$from, airingAt_lesser:$to, sort:TIME) {
       id airingAt episode timeUntilAiring mediaId
       media { id title { userPreferred english romaji native } format type status }
@@ -28,20 +29,20 @@ function titleOf(m:NonNullable<Schedule['media']>){
   return m.title.userPreferred||m.title.english||m.title.romaji||m.title.native||'Untitled';
 }
 
-async function aniList(ids:number[],from:number,to:number){
+async function aniList(ids:number[],from:number,to:number,page:number){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),20000);
   try{
     const r=await fetch(ANILIST_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json','Accept':'application/json','User-Agent':'FRAME/1.0'},
-      body:JSON.stringify({query:QUERY,variables:{ids,from,to}}),
+      body:JSON.stringify({query:QUERY,variables:{ids,from,to,page}}),
       signal:controller.signal
     });
     let j:any;
     try{j=await r.json()}catch{throw new Error('AniList returned an invalid response.')}
     if(!r.ok||j.errors?.length) throw new Error(j.errors?.[0]?.message||'AniList release lookup failed.');
-    return (j.data?.Page?.airingSchedules||[]) as Schedule[];
+    return {rows:(j.data?.Page?.airingSchedules||[]) as Schedule[],hasNextPage:Boolean(j.data?.Page?.pageInfo?.hasNextPage)};
   }catch(e){
     if(e instanceof DOMException&&e.name==='AbortError') throw new Error('AniList release lookup timed out.');
     throw e;
@@ -77,7 +78,7 @@ Deno.serve(async req=>{
   const {data:tracked,error:trackedError}=await admin
     .from('media_items')
     .select('id,user_id,metadata_id,anilist_id,title,progress,total,data')
-    .not('anilist_id','is',null);
+    .eq('medium','anime').is('parent_id',null).not('anilist_id','is',null);
   if(trackedError)return json({error:trackedError.message},500);
 
   const items=(tracked||[]) as Array<{id:string;user_id:string;metadata_id:string|null;anilist_id:number;title:string;progress:number;total:number|null;data?:{frameReleaseRadar?:{enabled?:boolean}}|null}>;
@@ -88,7 +89,14 @@ Deno.serve(async req=>{
   const to=now+WINDOW_DAYS*86400;
   let schedules:Schedule[]=[];
   try{
-    for(let i=0;i<ids.length;i+=50)schedules.push(...await aniList(ids.slice(i,i+50),now-7*86400,to));
+    for(let i=0;i<ids.length;i+=50){
+      const batch=ids.slice(i,i+50);
+      for(let page=1;page<=100;page++){
+        const result=await aniList(batch,now-7*86400,to,page);
+        schedules.push(...result.rows);
+        if(!result.hasNextPage)break;
+      }
+    }
   }catch(error){
     return json({error:error instanceof Error?error.message:'Release lookup failed.'},502);
   }
