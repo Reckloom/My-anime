@@ -114,11 +114,9 @@ export function FrameCharacterArchive(){
    'Charlotte Katakuri':['Charlotte Katakuri','Katakuri'],
    'Ochoku':['Ochoku','Wang Zhi'],
   };
-  const wikiTitle=(name:string)=>{
-   if(name==='Sanji')return 'Black_Leg_Style/Ifrit_Jambe';
-   if(name==='Monkey D. Luffy')return 'Episode_1071';
-   return (aliases[name]?.[0]||name).replace(/ /g,'_');
-  };
+  // Only query the character's own wiki page. Episode and technique pages
+  // can return scene art, which is not a valid character portrait.
+  const wikiTitle=(name:string)=>(aliases[name]?.[0]||name).replace(/ /g,'_');
   const load=async()=>{
    const result:Record<string,string>={};
    const titleOwners=new Map<string,string>();
@@ -178,8 +176,8 @@ export function FrameCharacterArchive(){
       const foundName=normalize(found?.name?.full||'');
       const allowed=[character.name,...(aliases[character.name]||[]),character.alias].map(normalize);
       const exact=allowed.includes(foundName);
-      const compatible=allowed.some(name=>name.length>5&&(name.includes(foundName)||foundName.includes(name)));
-      return found?.image?.large&&foundName&&(exact||compatible)?[{character,image:found.image.large,foundName,allowed}]:[];
+      // Reject approximate matches: similar names can resolve to a different character.
+      return found?.image?.large&&foundName&&exact?[{character,image:found.image.large,foundName,allowed}]:[];
      });
     }catch{return []}
    }));
