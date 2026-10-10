@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
+import { posterImageSrc } from '../posterImage';
 import {ExternalLink,Search,Users,X,CalendarDays,Mic2} from 'lucide-react';
 
 type Character={id:number;name:string;alias:string;role:string;crew:string;bio:string;goal:string};
@@ -152,7 +153,7 @@ const characterInitials=(name:string)=>name.split(/\s+/).map(x=>x[0]).slice(0,2)
 function CharacterPortrait({name,image,large=false}:{name:string;image?:string;large?:boolean}){
  const [failed,setFailed]=useState(false);
  useEffect(()=>setFailed(false),[image,name]);
- if(image&&!failed)return <img src={image} alt={name} loading="lazy" decoding="async" referrerPolicy="no-referrer" style={{display:'block',width:large?150:'100%',height:large?190:'100%',minHeight:large?190:170,objectFit:'cover',objectPosition:'top center',borderRadius:large?14:0,flexShrink:0}} onError={()=>setFailed(true)}/>;
+ if(image&&!failed)return <img src={posterImageSrc(image)} alt={name} loading="lazy" decoding="async" referrerPolicy="no-referrer" style={{display:'block',width:large?150:'100%',height:large?190:'100%',minHeight:large?190:170,objectFit:'cover',objectPosition:'top center',borderRadius:large?14:0,flexShrink:0}} onError={()=>setFailed(true)}/>;
  return <div className="character-art-fallback" aria-label={name+' portrait unavailable'} style={{display:'grid',placeItems:'center',width:large?150:'100%',height:large?190:'100%',minHeight:large?190:170,flexShrink:0,borderRadius:large?14:0,background:'linear-gradient(145deg,#172a46,#30204b 58%,#0b111f)',color:'#f5f3ff',fontSize:large?'2.3rem':'2rem',fontWeight:850,letterSpacing:'.08em',textShadow:'0 2px 14px #0008'}}>{characterInitials(name)}</div>;
 }
 
