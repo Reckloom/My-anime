@@ -326,9 +326,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   // Release Radar reads anilist_id from Supabase, so this also connects legacy/manual
   // entries to episode schedules. New AniList-search additions already carry their ID.
   type AnimeMetadata={anilistId?:number;popularity?:number;score?:number;titles?:string[]};
-  const missing=items.filter(item=>item.medium==='anime'&&!item.parentId&&
-   (!Number.isInteger(item.anilistId)||!Number.isFinite(item.popularity)));
-  const syncKey=uid+':'+missing.map(item=>item.id+':'+(item.anilistId??item.title)+':'+(item.popularity??'')).sort().join('|');
+  const missing=items.filter(item=>item.medium==='anime'&&!item.parentId);
+  const syncKey=uid+':'+missing.map(item=>item.id+':'+item.title+':'+(item.anilistId??'')+':'+(item.popularity??'')).sort().join('|');
   if(popularitySyncRef.current===syncKey)return;
   if(!missing.length){popularitySyncRef.current=syncKey;return}
   popularitySyncRef.current=syncKey;
