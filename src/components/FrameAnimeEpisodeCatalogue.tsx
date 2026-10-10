@@ -71,6 +71,24 @@ const ARC_RANGES: Record<string, ArcRange[]> = {
     {name:'Moebius',start:6,end:12,summary:'A clash with Moebius puts Toman’s future at risk.'},
     {name:'Valhalla',start:13,end:21,summary:'The Bloody Halloween conflict reshapes Toman.'},
     {name:'Black Dragon',start:22,end:24,summary:'A new gang conflict begins to emerge.'}
+  ],
+  're zero': [
+    {name:'The Capital',start:1,end:3,summary:'Subaru discovers that his arrival in another world comes with a strange ability.'},
+    {name:'The Mansion',start:4,end:11,summary:'Subaru settles into the mansion and tries to understand its inhabitants.'},
+    {name:'Return to the Capital',start:12,end:25,summary:'The royal selection and a growing threat force Subaru into repeated crises.'}
+  ],
+  'one punch man': [
+    {name:'Hero for Fun',start:1,end:2,summary:'Saitama and Genos establish their unusual partnership.'},
+    {name:'House of Evolution',start:3,end:4,summary:'Saitama and Genos confront a laboratory creating powerful beings.'},
+    {name:'Sea King',start:5,end:8,summary:'A growing threat puts the heroes of City Z to the test.'},
+    {name:'Alien Conquerors',start:9,end:12,summary:'A powerful alien force attacks Earth.'}
+  ],
+  'solo leveling': [
+    {name:'Double Dungeon',start:1,end:2,summary:'A dangerous dungeon raid changes Jinwoo’s life.'},
+    {name:'Reawakening and New Quests',start:3,end:4,summary:'Jinwoo discovers a system that lets him grow stronger.'},
+    {name:'Instant Dungeon',start:5,end:7,summary:'Jinwoo tests his new abilities in a private dungeon.'},
+    {name:'Job Change Quest',start:8,end:10,summary:'Jinwoo faces a difficult quest that could redefine his role.'},
+    {name:'Demon Castle',start:11,end:12,summary:'Jinwoo begins a dangerous challenge inside a towering dungeon.'}
   ]
 };
 const normalizeArcTitle = (value: string) => value.toLocaleLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
