@@ -65,6 +65,7 @@ async function resolve(p:Props):Promise<string>{
    const image=media?.coverImage?.extraLarge;
    const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
   if(image&&media?.type===type&&titleMatches)return image;
+  if(media&&!titleMatches)return svgFallback(p.title,p.medium);
   }catch{/* external metadata can be unavailable */}
   if(isSeriesMedia){if(hasSavedPoster&&p.poster)return p.poster as string;return p.parentPoster||svgFallback(p.title,p.medium);}
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
