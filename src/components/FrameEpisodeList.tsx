@@ -60,7 +60,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
         if(!response.ok)throw new Error(response.status===429?'Episode source is rate-limiting requests. Wait a moment and retry.':'Could not identify this anime (HTTP '+response.status+').');
         const results=Array.isArray(data.data)?data.data:[];
         const norm=(v:string)=>v.toLocaleLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-        const picked=results.find(x=>[x.title,x.title_english,x.title_japanese].some(v=>v&&norm(v)===norm(query)))||results[0];
+        const picked=results.find(x=>[x.title,x.title_english,x.title_japanese].some(v=>v&&norm(v)===norm(query)));
         if(!picked?.mal_id)throw new Error('No matching anime was found. Add a MyAnimeList ID in Edit all details and retry.');
         if(alive)setResolvedMalId(String(picked.mal_id));
       })
