@@ -393,6 +393,21 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     }
    }catch(error){console.warn('[FRAME One Piece TMDB episode catalogue]',error)}
   }
+  // Reliable server-side Jikan fallback avoids browser CORS/network failures when
+  // TMDB is unavailable. It uses the same normalized episode shape as the other providers.
+  if(!episodes.length&&supabase){
+   try{
+    const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'episodes',anime:'one-piece'}});
+    if(error)throw error;
+    const rows=Array.isArray(data?.episodes)?data.episodes:[];
+    episodes=rows.map((e:any)=>({
+     mal_id:Number(e.number||e.mal_id),title:String(e.title||''),aired:e.aired||e.airDate||'',
+     score:e.score,synopsis:String(e.synopsis||''),
+     images:e.images||{jpg:{image_url:String(e.image||''),large_image_url:''}},
+     ratingSource:e.ratingSource||'MyAnimeList / Jikan',sourceUrl:String(e.url||'https://myanimelist.net/anime/21/One_Piece')
+    })).filter((e:any)=>Number.isInteger(e.mal_id)&&e.mal_id>0&&e.title.trim());
+   }catch(error){console.warn('[FRAME One Piece server-side Jikan fallback]',error)}
+  }
   // First fallback: Kitsu's public episode catalogue provides titles, synopses,
   // dates and thumbnails without a private API key.
   if(!episodes.length){
