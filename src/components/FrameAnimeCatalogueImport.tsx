@@ -634,8 +634,6 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
                 favorite: existing.favorite,
                 personalRating: existing.personalRating,
                 notes: existing.notes,
-                startedAt: existing.startedAt,
-                completedAt: existing.completedAt,
                 customTotal,
                 total: existing.customTotal != null ? existing.customTotal : imported.total
               };
