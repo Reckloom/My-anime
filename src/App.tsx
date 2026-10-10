@@ -815,7 +815,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   narutoArtworkRef.current=runKey;
   void (async()=>{
    const found=new Map<string,string>();
-   const normalized=(value:string)=>value.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+   const normalized=(value:string)=>value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
    const meaningful=(value:string)=>normalized(value).split(' ').filter(word=>word.length>2&&!['naruto','shippuden','arc','the','and','for','episode','filler'].includes(word));
    for(let offset=0;offset<stale.length;offset+=4){
     const batch=stale.slice(offset,offset+4);
@@ -845,7 +845,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const updated=items.map(item=>{
     const arcImage=found.get(item.id);
     if(arcImage){
-     return {...item,poster:arcImage,backdrop:arcImage,notes:[item.notes,'FRAME_NARUTO_ARTWORK=v1'].filter(Boolean).join('\\n')};
+     return {...item,poster:arcImage,backdrop:arcImage,notes:[item.notes,'FRAME_NARUTO_ARTWORK=v1'].filter(Boolean).join('\n)};
     }
     if(item.sourceProvider!=='frame-naruto-episode')return item;
     const arc=arcs.find(x=>x.id===item.parentId);
