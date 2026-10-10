@@ -145,6 +145,7 @@ export default function App(){
  const saveQueue=useRef(Promise.resolve(true));
  const onePieceAutoRef=useRef('');
  const narutoAutoRef=useRef('');
+ const narutoArtworkRef=useRef('');
  const onePieceArcArtworkRef=useRef('');
  const onePiecePosterCatalogueRef=useRef<Record<string,string>>({});
 
@@ -800,6 +801,67 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(duplicate){setAppMessage('This title is already in your library.');window.setTimeout(()=>setAppMessage(''),3000);return false}
   return await save([item,...items]);
  };
+ useEffect(()=>{
+  if(!cloudLibraryReady||!items.length)return;
+  const root=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
+  if(!root)return;
+  const parts=items.filter(x=>x.parentId===root.id&&x.sourceProvider==='frame-naruto-part');
+  const partById=new Map(parts.map(x=>[x.id,x]));
+  const arcs=items.filter(x=>partById.has(String(x.parentId||''))&&x.sourceProvider==='frame-naruto-arc');
+  const stale=arcs.filter(x=>!String(x.notes||'').includes('FRAME_NARUTO_ARTWORK=v1'));
+  if(!stale.length)return;
+  const runKey=root.id+':'+stale.map(x=>x.id).sort().join('|');
+  if(narutoArtworkRef.current===runKey)return;
+  narutoArtworkRef.current=runKey;
+  void (async()=>{
+   const found=new Map<string,string>();
+   const normalized=(value:string)=>value.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+   const meaningful=(value:string)=>normalized(value).split(' ').filter(word=>word.length>2&&!['naruto','shippuden','arc','the','and','for','episode','filler'].includes(word));
+   for(let offset=0;offset<stale.length;offset+=4){
+    const batch=stale.slice(offset,offset+4);
+    const results=await Promise.all(batch.map(async arc=>{
+     try{
+      const query=encodeURIComponent('File:'+arc.title+' Naruto');
+      const url='https://naruto.fandom.com/api.php?action=query&generator=search&gsrsearch='+query+'&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=900&format=json&origin=*';
+      const response=await fetch(url,{headers:{Accept:'application/json'}});
+      if(!response.ok)return [arc.id,''] as const;
+      const data=await response.json() as any;
+      const pages=Object.values(data?.query?.pages||{}) as any[];
+      const words=meaningful(arc.title);
+      const candidates=pages.map(page=>{
+       const title=String(page?.title||'');
+       const image=String(page?.imageinfo?.[0]?.thumburl||page?.imageinfo?.[0]?.url||'');
+       const key=normalized(title);
+       const score=words.reduce((sum,word)=>sum+(key.includes(word)?1:0),0);
+       return {image,score,title};
+      }).filter(x=>/^https:\/\//i.test(x.image)&&x.score>0&&!/logo|icon|flag|symbol/i.test(x.title))
+       .sort((a,b)=>b.score-a.score);
+      return [arc.id,candidates[0]?.image||''] as const;
+     }catch(error){console.warn('[FRAME Naruto arc artwork]',arc.title,error);return [arc.id,''] as const}
+    }));
+    for(const [id,image] of results)if(image)found.set(id,image);
+   }
+   if(!found.size)return;
+   const updated=items.map(item=>{
+    const arcImage=found.get(item.id);
+    if(arcImage){
+     return {...item,poster:arcImage,backdrop:arcImage,notes:[item.notes,'FRAME_NARUTO_ARTWORK=v1'].filter(Boolean).join('\\n')};
+    }
+    if(item.sourceProvider!=='frame-naruto-episode')return item;
+    const arc=arcs.find(x=>x.id===item.parentId);
+    const arcPoster=arc?found.get(arc.id):'';
+    if(!arcPoster)return item;
+    const part=arc?partById.get(String(arc.parentId||'')):undefined;
+    const current=String(item.poster||'');
+    const sameAsPart=!current||current===part?.poster||current.toLowerCase().includes('frame-logo.svg');
+    return sameAsPart?{...item,poster:arcPoster,backdrop:arcPoster,episode:{...item.episode,posterSource:'naruto-arc-artwork-fallback',posterVersion:'naruto-episodes-v2'}}:item;
+   });
+   const ok=await save(updated);
+   if(!ok)narutoArtworkRef.current='';
+   else setAppMessage('Naruto artwork refreshed: distinct story-arc posters applied without changing episode progress.');
+   window.setTimeout(()=>setAppMessage(''),6000);
+  })().catch(error=>{narutoArtworkRef.current='';console.warn('[FRAME Naruto artwork refresh]',error)});
+ },[cloudLibraryReady,items]);
  useEffect(()=>{
   if(!cloudLibraryReady||!items.length)return;
   const root=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
