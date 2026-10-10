@@ -65,7 +65,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     return () => { active = false; };
   }, [anilistId, characters.length]);
 
-  const profiles = characters.length ? characters : remoteCharacters;
+  const profiles = remoteCharacters.length ? remoteCharacters : characters;
   if (!profiles.length && !loading && !failed) return null;
   return <section className="frame-anime-characters detail-section" aria-label={title + ' character profiles'}>
     <div className="detail-section-head">
