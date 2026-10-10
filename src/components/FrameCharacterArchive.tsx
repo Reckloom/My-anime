@@ -200,14 +200,15 @@ export function FrameCharacterArchive(){
      const response=await fetch(url,{headers:{Accept:'application/json'}});
      if(!response.ok)return {character,image:''};
      const json=await response.json() as {query?:{pages?:Record<string,{title?:string;imageinfo?:{url?:string;thumburl?:string}[]}>}};
-     const words=[character.name,...(aliases[character.name]||[])].flatMap(value=>value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(word=>word.length>2&&!['one','piece','the','anime','portrait','character'].includes(word)));
+     const words=[...new Set([character.name,...(aliases[character.name]||[])].flatMap(value=>value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(word=>word.length>2&&!['one','piece','the','anime','portrait','character'].includes(word))))];
      const candidates=Object.values(json.query?.pages||{}).map(page=>{
       const title=page.title||'';
       const key=normalize(title);
       const image=(page.imageinfo?.[0]?.thumburl||page.imageinfo?.[0]?.url||'').replace(/\\_/g,'_');
-      const score=words.reduce((sum,word)=>sum+(key.includes(normalize(word))?1:0),0)+( /anime|infobox|portrait/i.test(title)?2:0);
-      return {title,image,score};
-     }).filter(candidate=>candidate.image.startsWith('https://')&&candidate.score>0&&!/fan.?art|figure|statue|toy|plush|card|logo|icon|symbol|wanted|merch|cosplay|wallpaper|collectible/i.test(candidate.title))
+      const matches=words.filter(word=>key.includes(normalize(word))).length;
+      const score=matches+( /anime/i.test(title)?3:0)+( /infobox|portrait/i.test(title)?5:0);
+      return {title,image,score,matches,required:words.length};
+     }).filter(candidate=>candidate.image.startsWith('https://')&&candidate.matches===candidate.required&&candidate.score>0&&!/fan.?art|figure|statue|toy|plush|card|logo|icon|symbol|wanted|merch|cosplay|wallpaper|collectible|compared|versus|\\bvs\\b|\\bgroup\\b|\\bcrew\\b|\\bfamily\\b|\\bconfronts\\b|\\battacks\\b|\\bsize\\b|\\bdiagram\\b|\\bconcept\\b/i.test(candidate.title))
        .sort((a,b)=>b.score-a.score);
      return {character,image:candidates[0]?.image||''};
     }catch{return {character,image:''}}
