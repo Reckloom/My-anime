@@ -27,11 +27,12 @@ const svgFallback=(title:string,medium:Medium)=>{
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 async function resolve(p:Props):Promise<string>{
- // Prefer saved artwork. Re-querying AniList for every card creates a burst of
- // unnecessary requests when a large library is rendered.
- if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
+ const sharedOnePiecePoster='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
+ const isOnePiece=/^one piece$/i.test(p.title.trim());
+ const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
+ if(hasSavedPoster&&(!['anime','manga','manhwa','light-novel'].includes(p.medium)||isHierarchyNode(p)))return p.poster;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return svgFallback(p.title,p.medium);
+ if(isEpisode)return hasSavedPoster?p.poster!:svgFallback(p.title,p.medium);
   const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  if(isNarutoHierarchy(p)){
   if(p.poster&&!isPlaceholderArtwork(p.poster))return p.poster;
@@ -59,7 +60,7 @@ async function resolve(p:Props):Promise<string>{
    const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
   if(image&&media?.type===type&&titleMatches)return image;
   }catch{/* external metadata can be unavailable */}
-  if(isSeriesMedia)return p.parentPoster||svgFallback(p.title,p.medium);
+  if(isSeriesMedia)return hasSavedPoster?p.poster!:p.parentPoster||svgFallback(p.title,p.medium);
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  });
  cache.set(key,request);
