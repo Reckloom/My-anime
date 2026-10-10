@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import {ExternalLink,Search,Users,X} from 'lucide-react';
+import {supabase} from '../lib/supabase';
 
 type NarutoCharacter={name:string;role:string;affiliation:string;bio:string;ability:string;image?:string;description?:string};
 const seed:Omit<NarutoCharacter,'image'|'description'>[]=[
@@ -48,31 +49,20 @@ export function FrameNarutoCharacterArchive(){
  const [selected,setSelected]=useState<NarutoCharacter|null>(null);
  useEffect(()=>{
   let active=true;
-  const normalize=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
   const request=async()=>{
-   // Small independent batches prevent one rejected character query from
-   // discarding every portrait in the archive.
-   const resolved:Record<number,{image?:string;description?:string}>={};
-   for(let start=0;start<seed.length;start+=5){
+   try{
+    if(!supabase)throw new Error('The FRAME data connection is not configured.');
+    const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'characters',names:seed.map(c=>c.name)}});
+    if(error)throw error;
+    const rows=Array.isArray(data?.characters)?data.characters:[];
     if(!active)return;
-    const batch=seed.slice(start,start+5);
-    const aliases=batch.map((c,offset)=>'c'+(start+offset)+': Character(search: '+JSON.stringify(c.name)+', sort: SEARCH_MATCH) { name { full } image { large } description(asHtml: false) }').join('\n');
-    try{
-     const response=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+aliases+' }'})});
-     if(!response.ok)continue;
-     const json=await response.json() as {data?:Record<string,{name?:{full?:string};image?:{large?:string};description?:string}|null>};
-     for(let offset=0;offset<batch.length;offset++){
-      const result=json.data?.['c'+(start+offset)];
-      if(normalize(result?.name?.full||'')!==normalize(batch[offset].name))continue;
-      resolved[start+offset]={
-       image:result?.image?.large||undefined,
-       description:String(result?.description||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()||undefined
-      };
-     }
-    }catch{/* Preserve successful batches when AniList is temporarily unavailable. */}
+    const byName=new Map<string,{image?:string;description?:string}>(rows.map((row:any)=>[String(row.name||'').toLowerCase(),{image:String(row.image||'')||undefined,description:String(row.description||'')||undefined}]));
+    setCharacters(seed.map(c=>({...c,...byName.get(c.name.toLowerCase())})));
+   }catch(error){
+    if(!active)return;
+    // Keep the archive usable even if artwork service is temporarily down.
+    console.warn('[FRAME Naruto character artwork]',error);
    }
-   if(!active)return;
-   setCharacters(seed.map((c,i)=>({...c,...resolved[i]})));
   };
   void request();return()=>{active=false};
  },[]);
