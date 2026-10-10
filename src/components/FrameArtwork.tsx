@@ -45,7 +45,7 @@ async function resolve(p:Props):Promise<string>{
  }
  if(!isSeriesMedia)return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  const type=p.medium==='anime'?'ANIME':'MANGA';
- const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':source:'+(p.posterSource||'');
+ const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':parent:'+(p.parentPoster||'')+':source:'+(p.posterSource||'');
  const existing=cache.get(key);if(existing)return existing;
  const request=withArtworkLimit(async()=>{
   try{
@@ -71,6 +71,7 @@ async function resolve(p:Props):Promise<string>{
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  });
  cache.set(key,request);
+ void request.then(value=>{if(value.startsWith('data:image/svg+xml')&&cache.get(key)===request)cache.delete(key)}).catch(()=>{if(cache.get(key)===request)cache.delete(key)});
  return request;
 }
 export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):MediaItem{
