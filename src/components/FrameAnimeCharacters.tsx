@@ -56,8 +56,23 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
           sourceUrl: edge.node!.siteUrl || undefined
         }));
         if (active) {
-          setRemoteCharacters(mapped);
-          setFailed(mapped.length === 0);
+          const normalizeName = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
+          const merged = characters.map(existing => {
+            const match = mapped.find(remote => normalizeName(remote.name) === normalizeName(existing.name));
+            return match ? {
+              ...match,
+              ...existing,
+              image: existing.image || match.image,
+              nativeName: existing.nativeName || match.nativeName,
+              description: existing.description || match.description,
+              sourceUrl: existing.sourceUrl || match.sourceUrl,
+              role: existing.role || match.role,
+            } : existing;
+          });
+          const names = new Set(merged.map(character => normalizeName(character.name)));
+          const combined = [...merged, ...mapped.filter(character => !names.has(normalizeName(character.name)))];
+          setRemoteCharacters(combined);
+          setFailed(!combined.some(character => Boolean(character.image)));
         }
       })
       .catch(() => { if (active) setFailed(true); })
