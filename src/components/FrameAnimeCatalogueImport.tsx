@@ -523,7 +523,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
           episode: episodeMeta,
           externalLinks: {
             malId: malId ? String(malId) : undefined,
-            officialUrl: episode.source === 'Kitsu' ? undefined : 'https://myanimelist.net/anime/' + (malId || '') + '/episode/' + episode.number,
+            officialUrl: malId && episode.source !== 'Kitsu' ? 'https://myanimelist.net/anime/' + malId + '/episode/' + episode.number : undefined,
             newsUrl: episode.sourceUrl
           }
         });
