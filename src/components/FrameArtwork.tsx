@@ -30,6 +30,8 @@ async function resolve(p:Props):Promise<string>{
  // Prefer saved artwork. Re-querying AniList for every card creates a burst of
  // unnecessary requests when a large library is rendered.
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
+ const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
+ if(isEpisode)return svgFallback(p.title,p.medium);
   const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  if(isNarutoHierarchy(p)){
   if(p.poster&&!isPlaceholderArtwork(p.poster))return p.poster;
