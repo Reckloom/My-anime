@@ -18,7 +18,7 @@ type EpisodeRow = {
   airDate?: string;
   synopsis?: string;
   poster?: string;
-  source: 'Jikan' | 'Kitsu';
+  source: 'Jikan' | 'Kitsu' | 'AniList count fallback';
   sourceUrl: string;
 };
 type CatalogueResult = { items: MediaItem[]; warnings: string[]; summary: string };
@@ -297,11 +297,31 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
   }
 
   current = dedupeEpisodes(current).filter(row => row.title.trim());
+  const sourcedCount = current.length;
+  // Preserve every numbered episode when a trusted catalogue confirms the count,
+  // even if Jikan/Kitsu omit a title or an episode page. Real source titles always win.
+  const targetCount = finished && expected > 0 ? Math.min(2000, expected) : nextEpisode > 0 ? Math.min(2000, nextEpisode - 1) : 0;
+  if (targetCount > 0) {
+    const byNumber = new Map(current.map(row => [row.number, row]));
+    for (let number = 1; number <= targetCount; number++) {
+      if (byNumber.has(number)) continue;
+      byNumber.set(number, {
+        number,
+        title: 'Episode ' + pad(number),
+        source: 'AniList count fallback',
+        sourceUrl: 'https://anilist.co/anime/' + Number(media.id) + '/',
+        synopsis: ''
+      });
+    }
+    current = [...byNumber.values()].sort((a, b) => a.number - b.number);
+  }
   const maxSourceNumber = current.reduce((n, row) => Math.max(n, row.number), 0);
-  const countMismatch = expected > 0 && finished && current.length !== expected;
+  const countMismatch = expected > 0 && finished && current.length !== Math.min(2000, expected);
   const airingMismatch = !finished && nextEpisode > 0 && maxSourceNumber < nextEpisode - 1;
+  const fallbackCount = current.filter(row => row.source === 'AniList count fallback').length;
   const warnings: string[] = [];
-  if (countMismatch) warnings.push(preferredTitle(media) + ': AniList reports ' + expected + ' episodes, but sources supplied titles for ' + current.length + '. Only real titled episodes were stored.');
+  if (fallbackCount) warnings.push(preferredTitle(media) + ': added ' + fallbackCount + ' numbered episode entries where source episode titles/pages were missing; verify titles later.');
+  if (countMismatch) warnings.push(preferredTitle(media) + ': AniList reports ' + expected + ' episodes, but the sources did not establish the full numbered range.');
   if (airingMismatch) warnings.push(preferredTitle(media) + ': the upcoming AniList episode implies ' + (nextEpisode - 1) + ' released episodes, but source titles reach only episode ' + maxSourceNumber + '.');
   if (!primary?.rows.length && sourceErrors.length) warnings.push(preferredTitle(media) + ': episode source problem — ' + sourceErrors.join(' / '));
   return { rows: current, verified: !countMismatch && !airingMismatch && (!expected || current.length > 0), warnings };
