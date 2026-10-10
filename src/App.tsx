@@ -845,7 +845,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const updated=items.map(item=>{
     const arcImage=found.get(item.id);
     if(arcImage){
-     return {...item,poster:arcImage,backdrop:arcImage,notes:[item.notes,'FRAME_NARUTO_ARTWORK=v1'].filter(Boolean).join('\n)};
+     return {...item,poster:arcImage,backdrop:arcImage,notes:[item.notes,'FRAME_NARUTO_ARTWORK=v1'].filter(Boolean).join(String.fromCharCode(10))};
     }
     if(item.sourceProvider!=='frame-naruto-episode')return item;
     const arc=arcs.find(x=>x.id===item.parentId);
