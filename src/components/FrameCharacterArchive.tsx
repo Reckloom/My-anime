@@ -200,7 +200,7 @@ export function FrameCharacterArchive(){
      const response=await fetch(url,{headers:{Accept:'application/json'}});
      if(!response.ok)return {character,image:''};
      const json=await response.json() as {query?:{pages?:Record<string,{title?:string;imageinfo?:{url?:string;thumburl?:string}[]}>}};
-     const words=[character.name,...(aliases[character.name]||[])].flatMap(value=>value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g,' ').split(/\\s+/).filter(word=>word.length>2&&!['one','piece','the','anime','portrait','character'].includes(word)));
+     const words=[character.name,...(aliases[character.name]||[])].flatMap(value=>value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(word=>word.length>2&&!['one','piece','the','anime','portrait','character'].includes(word)));
      const candidates=Object.values(json.query?.pages||{}).map(page=>{
       const title=page.title||'';
       const key=normalize(title);
