@@ -111,7 +111,8 @@ export function FrameCharacterArchive(){
    'Sakazuki':['Akainu','Sakazuki'],
    'Kuzan':['Aokiji','Kuzan'],
    'Issho':['Fujitora','Issho'],
-   'Charlotte Katakuri':['Katakuri','Charlotte Katakuri']
+   'Charlotte Katakuri':['Katakuri','Charlotte Katakuri'],
+   'Ochoku':['Wang Zhi','Ochoku']
   };
   const load=async()=>{
    const result:Record<string,string>={};
@@ -140,7 +141,7 @@ export function FrameCharacterArchive(){
   void load();
   return()=>{active=false};
  },[]);
- const popularityOrder=["Sanji","Monkey D. Luffy","Roronoa Zoro","Nami","Trafalgar D. Water Law","Nico Robin","Portgas D. Ace","Shanks","Dracule Mihawk","Crocodile","Donquixote Rosinante","Boa Hancock","Tony Tony Chopper","Sabo","Uta","Carrot","Rocks D. Xebec","Yamato","Usopp","Loki","Donquixote Doflamingo","Eustass Kid","Perona","Buggy","Marco","Brook","Nefertari Vivi","Franky","Jinbe","Charlotte Katakuri","Rob Lucci","Edward Newgate","Koby","Monkey D. Garp","Kuzan","Benn Beckman","Silvers Rayleigh","King","Borsalino","Enel","Imu","Sakazuki","Gol D. Roger","Joy Boy","Marshall D. Teach","Charlotte Linlin (Big Mom / Olin)","Kaido","Gecko Moria","Issho","Scopper Gaban","Shimotsuki Ryuma","Fisher Tiger","Captain John","Gloriosa","Zunesha","Kozuki Oden","Shiki","Nika","Neptune","Streusen","Kong","Buckingham Stussy","Figarland Garling","King Harald"] as const;
+ const popularityOrder=["Sanji","Monkey D. Luffy","Roronoa Zoro","Nami","Trafalgar D. Water Law","Nico Robin","Portgas D. Ace","Shanks","Dracule Mihawk","Crocodile","Donquixote Rosinante","Boa Hancock","Tony Tony Chopper","Sabo","Uta","Carrot","Rocks D. Xebec","Yamato","Usopp","Loki","Donquixote Doflamingo","Eustass Kid","Perona","Buggy","Marco","Brook","Nefertari Vivi","Franky","Jinbe","Charlotte Katakuri","Rob Lucci","Edward Newgate","Koby","Monkey D. Garp","Kuzan","Benn Beckman","Silvers Rayleigh","King","Borsalino","Enel","Imu","Sakazuki","Gol D. Roger","Joy Boy","Marshall D. Teach","Charlotte Linlin (Big Mom / Olin)","Kaido","Gecko Moria","Kozuki Oden","Issho","Scopper Gaban","Shiki","Figarland Garling","King Harald","Shimotsuki Ryuma","Fisher Tiger","Captain John","Gloriosa","Zunesha","Kozuki Toki","Nika","Ochoku","Nefertari D. Lily","Neptune","Streusen","Kong","Buckingham Stussy"] as const;
  const visible=useMemo(()=>{const q=query.trim().toLowerCase();return characters.filter(c=>!q||[c.name,c.alias,c.role,c.crew,c.bio].join(' ').toLowerCase().includes(q)).sort((a,b)=>{const ai=popularityOrder.indexOf(a.name as typeof popularityOrder[number]),bi=popularityOrder.indexOf(b.name as typeof popularityOrder[number]);if(ai!==-1||bi!==-1)return (ai===-1?999:ai)-(bi===-1?999:bi);return a.id-b.id})},[query]);
  const displayRank=(name:string)=>{const rank=popularityOrder.indexOf(name as typeof popularityOrder[number]);return rank===-1?null:rank+1};
  const profiles:Record<string,{birthday:string;jp:string;en:string;age:string;height:string;fruit:string;first:string;facts:string[]}>={
