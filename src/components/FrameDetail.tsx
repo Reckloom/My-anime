@@ -305,7 +305,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
      const isOnePieceEpisode=/^one-piece-episode-\d+$/.test(externalId);
      const isImportedEpisode=x.sourceProvider==='frame-anime-episode';
      const isOnePieceRoot=/^one piece(?: \(tv\))?$/i.test(d.title.trim())&&!d.parentId;
-     return (x.parentId===d.id&&(isImportedEpisode||isOnePieceEpisode))||(isOnePieceRoot&&isOnePieceEpisode);
+     return x.parentId===d.id&&(isImportedEpisode||isOnePieceEpisode);
     })} onOpen={openRelated}/>
     
    <section className="detail-section"><div className="detail-section-head"><h3>Progress</h3><span>{Math.round(pct)}%</span></div><input className="progress-slider" type="range" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value))}/><div className="progress-edit"><input type="number" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value)||0)}/><span>{d.progressUnit||units[d.medium]}</span><span>/</span><input type="number" min="1" max="2000" value={d.total|| (movie?1:500)} onChange={e=>setTotal(Number(e.target.value))}/><span>{movie?'watched state':'total'}</span></div><small className="hint">Change the total when an edition or source count is different.</small></section>
