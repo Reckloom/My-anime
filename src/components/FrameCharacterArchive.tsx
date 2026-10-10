@@ -208,7 +208,7 @@ export function FrameCharacterArchive(){
       const matches=words.filter(word=>key.includes(normalize(word))).length;
       const score=matches+( /anime/i.test(title)?3:0)+( /infobox|portrait/i.test(title)?5:0);
       return {title,image,score,matches,required:words.length};
-     }).filter(candidate=>candidate.image.startsWith('https://')&&candidate.matches===candidate.required&&candidate.score>0&&!/fan.?art|figure|statue|toy|plush|card|logo|icon|symbol|wanted|merch|cosplay|wallpaper|collectible|compared|versus|\\bvs\\b|\\bgroup\\b|\\bcrew\\b|\\bfamily\\b|\\bconfronts\\b|\\battacks\\b|\\bsize\\b|\\bdiagram\\b|\\bconcept\\b/i.test(candidate.title))
+     }).filter(candidate=>candidate.image.startsWith('https://')&&candidate.matches===candidate.required&&candidate.score>0&&!/fan.?art|figure|statue|toy|plush|card|logo|icon|symbol|wanted|merch|cosplay|wallpaper|collectible|compared|versus|vs|group|crew|family|confronts|attacks|size|diagram|concept/i.test(candidate.title))
        .sort((a,b)=>b.score-a.score);
      return {character,image:candidates[0]?.image||''};
     }catch{return {character,image:''}}
