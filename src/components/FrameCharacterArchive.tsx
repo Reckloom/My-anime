@@ -113,7 +113,6 @@ export function FrameCharacterArchive(){
    'Issho':['Issho','Fujitora'],
    'Charlotte Katakuri':['Charlotte Katakuri','Katakuri'],
    'Ochoku':['Ochoku','Wang Zhi'],
-   'Donquixote Rosinante':['Donquixote Rosinante','Corazon']
   };
   const wikiTitle=(name:string)=>{
    if(name==='Sanji')return 'Sanji/Abilities_and_Powers';
