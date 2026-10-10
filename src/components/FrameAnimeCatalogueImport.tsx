@@ -26,6 +26,7 @@ type Task = { key: string; title: string; search: string; aliases: string[]; rel
 type StoredProgress = { completedKeys: string[]; warnings: Record<string, string[]>; updatedAt?: string };
 
 const TASKS: Task[] = [
+  { key: 'naruto', title: 'Naruto', search: 'Naruto', aliases: ['Naruto'], relatedLimit: 1, relationDepth: 1 },
   { key: 'bleach', title: 'Bleach', search: 'Bleach', aliases: ['Bleach'], relatedLimit: 16, relationDepth: 2 },
   { key: 'summertime-rendering', title: 'Summertime Rendering', search: 'Summertime Rendering', aliases: ['Summertime Rendering', 'Summer Time Rendering'], relatedLimit: 5, relationDepth: 1 },
   { key: 'attack-on-titan', title: 'Attack on Titan', search: 'Attack on Titan', aliases: ['Attack on Titan', 'Shingeki no Kyojin'], relatedLimit: 14, relationDepth: 2 },
@@ -417,7 +418,11 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   const queue: Array<{ id: number; depth: number; parentId: number }> = [];
   const parentByMediaId = new Map<number, number>();
   if (task.relatedLimit > 0) {
-    for (const edge of rootDetails.relations?.edges || []) {
+    const relationEdges = rootDetails.relations?.edges || [];
+    const eligibleEdges = task.key === 'naruto'
+      ? relationEdges.filter(edge => edge.node && titleVariants(edge.node).some(value => value === normalizeText('Naruto Shippuden')))
+      : relationEdges;
+    for (const edge of eligibleEdges) {
       if (isEligibleRelation(task, edge) && Number(edge.node?.id) !== Number(rootDetails.id)) {
         queue.push({ id: Number(edge.node!.id), depth: 1, parentId: Number(rootDetails.id) });
       }
@@ -464,11 +469,15 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   const rootExisting = library.find(x => !x.parentId && x.medium === 'anime' && (x.anilistId === Number(rootDetails.id) || titleVariants(rootDetails).includes(normalizeText(x.title))));
   const scope = userId.replace(/-/g, '').slice(0, 12);
   const rootId = rootExisting?.id || ('frame-anime-media-' + Number(rootDetails.id) + '-' + scope);
+  const narutoPartFor = (media: CatalogueMedia) => task.key === 'naruto'
+    ? library.find(x => x.parentId === rootId && x.sourceProvider === 'frame-naruto-part' && normalizeText(x.title) === normalizeText(preferredTitle(media)))
+    : undefined;
   const itemIds = new Map<number, string>();
   for (let index = 0; index < chosen.length; index++) {
     const media = chosen[index];
     const existingEpisodes = catalogues.get(Number(media.id))?.rows || [];
-    const id = index === 0 ? rootId : mediaIdFor(media, task, userId, library, false, rootId);
+    const existingNarutoPart = narutoPartFor(media);
+    const id = existingNarutoPart?.id || (index === 0 ? rootId : mediaIdFor(media, task, userId, library, false, rootId));
     itemIds.set(Number(media.id), id);
   }
 
@@ -493,9 +502,11 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     }
     incoming.push(mapMediaItem(media, {
       id,
-      parentId: index === 0
-        ? undefined
-        : (itemIds.get(parentByMediaId.get(Number(media.id)) ?? Number(rootDetails.id)) || rootId),
+      parentId: task.key === 'naruto'
+        ? (index === 0 ? (narutoPartFor(media)?.parentId || rootExisting?.id) : rootExisting?.id)
+        : index === 0
+          ? undefined
+          : (itemIds.get(parentByMediaId.get(Number(media.id)) ?? Number(rootDetails.id)) || rootId),
       progress,
       total,
       characters: index === 0 ? charactersFrom(rootDetails) : undefined
