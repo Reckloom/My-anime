@@ -51,6 +51,24 @@ const TASKS: Task[] = [
   { key: 'tokyo-revengers', title: 'Tokyo Revengers', search: 'Tokyo Revengers', aliases: ['Tokyo Revengers'], relatedLimit: 12, relationDepth: 2 }
 ];
 
+const BLEACH_ARCS = [
+  [1,'Agent of the Shinigami',1,20,'Ichigo becomes a Substitute Soul Reaper and protects Karakura Town.'],
+  [2,'Soul Society: Sneak Entry',21,41,'Ichigo and his friends enter Soul Society to rescue Rukia.'],
+  [3,'Soul Society: Rescue',42,63,'The rescue mission reaches its turning point in Soul Society.'],
+  [4,'The Bount',64,91,'A mysterious group called the Bount emerges.'],
+  [5,'Bount Assault on Soul Society',92,109,'The Bount conflict reaches Soul Society.'],
+  [6,'Arrancar: The Arrival',110,131,'The Arrancar threat reaches the human world.'],
+  [7,'Hueco Mundo: Sneak Entry',132,151,'The rescue mission moves into Hueco Mundo.'],
+  [8,'Hueco Mundo: Fierce Fight',152,167,'Battles against the Arrancar intensify.'],
+  [9,'The New Captain Shusuke Amagai',168,189,'A new captain takes command of the Third Division.'],
+  [10,'Arrancar vs. Shinigami',190,205,'The conflict between Soul Reapers and Arrancar escalates.'],
+  [11,'The Past',206,212,'The origins of the Visored are revealed.'],
+  [12,'Decisive Battle of Karakura',213,229,'The battle for Karakura Town reaches a critical stage.'],
+  [13,'Zanpakuto: The Alternate Tale',230,265,'Zanpakuto spirits become central to a new conflict.'],
+  [14,'Arrancar: Downfall',266,316,'The Arrancar conflict approaches its conclusion.'],
+  [15,'Gotei 13 Invading Army',317,342,'A new threat targets the Gotei 13.'],
+  [16,'The Lost Substitute Shinigami',343,366,'Ichigo faces life after losing his Soul Reaper powers.']
+] as const;
 const SEARCH_QUERY = 'query ($search:String!,$page:Int!,$perPage:Int!,$type:MediaType!){Page(page:$page,perPage:$perPage){media(search:$search,type:$type,sort:[SEARCH_MATCH]){id idMal type format title{romaji english native userPreferred} synonyms coverImage{extraLarge} bannerImage genres season seasonYear averageScore}}}';
 const DETAIL_FIELDS = 'id idMal type format status title{romaji english native userPreferred} synonyms description coverImage{extraLarge} bannerImage genres tags{name} season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id idMal type format status title{romaji english native userPreferred} synonyms coverImage{extraLarge} bannerImage genres season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day}}}}';
 const ROOT_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + ' characters(sort:ROLE,perPage:15){edges{role node{id name{full native} image{large} description siteUrl}}}}}';
