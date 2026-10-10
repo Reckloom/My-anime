@@ -96,9 +96,11 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
   if(previous&&navigate){
    pendingScrollRestore.current=previous;
    navigate(previous.item);
-   // A final post-commit restore covers browsers that reflow the drawer after
-   // the item-change effect has already run.
-   window.setTimeout(()=>{
+   // Keep restoring after navigation commits. The target drawer can still be
+   // re-laid out by image loads after the first paint, so one timeout is not
+   // sufficient on slower devices.
+   let restoreAttempts=0;
+   const restoreTimer=window.setInterval(()=>{
     const overlay=document.querySelector<HTMLElement>('.detail-overlay');
     const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
     const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
@@ -106,7 +108,9 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     if(drawer)drawer.scrollTop=Math.min(previous.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
     if(body)body.scrollTop=Math.min(previous.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
     window.scrollTo(0,previous.pageScrollTop);
-   },120);
+    restoreAttempts++;
+    if(restoreAttempts>=20)window.clearInterval(restoreTimer);
+   },80);
    return;
   }
   if(item.parentId){const parent=library.find(x=>x.id===item.parentId);if(parent&&navigate){navigate(parent);return}}
