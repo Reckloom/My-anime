@@ -76,6 +76,7 @@ const rows=[
 [72,'Neptune','King of the Ryugu Kingdom','King','Ryugu Kingdom; Fish-Man Island','The king of Fish-Man Island and father of Shirahoshi, involved in the long-standing promise tied to Joy Boy.','Protect his people and family']
 ] as const;
 const characters:Character[]=rows.map(r=>({id:r[0],name:r[1],alias:r[2],role:r[3],crew:r[4],bio:r[5],goal:r[6]}));
+const popularityOrder=['Monkey D. Luffy','Roronoa Zoro','Nami','Sanji','Tony Tony Chopper','Nico Robin','Usopp','Franky','Brook','Jinbe','Shanks','Portgas D. Ace','Trafalgar D. Water Law','Boa Hancock','Gol D. Roger'] as const;
 const characterInitials=(name:string)=>name.split(/\s+/).map(x=>x[0]).slice(0,2).join('');
 function CharacterPortrait({name,image,large=false}:{name:string;image?:string;large?:boolean}){
  const [failed,setFailed]=useState(false);
