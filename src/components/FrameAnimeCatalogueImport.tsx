@@ -789,7 +789,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
       }
       const pending = TASKS.filter(task => !done.includes(task.key));
       setCurrent(pending.length ? 'Import paused with ' + pending.length + ' task(s) needing retry.' : 'All catalogue tasks passed source checks.');
-      addLog(pending.length ? pending.length + ' task(s) remain incomplete or need source verification.' : 'All 22 requested entries passed the importer checks.');
+      addLog(pending.length ? pending.length + ' task(s) remain incomplete or need source verification.' : 'All ' + TASKS.length + ' configured entries passed the importer checks.');
     } catch (authOrRunError) {
       const message = authOrRunError instanceof Error ? authOrRunError.message : 'The catalogue import could not start.';
       setError(message);
