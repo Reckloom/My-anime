@@ -1,6 +1,14 @@
+import { useEffect, useState } from 'react';
 import { ExternalLink, Users } from 'lucide-react';
 import type { AnimeCharacterProfile } from '../types';
 import { posterImageSrc } from '../posterImage';
+
+function CharacterPortrait({character}:{character:AnimeCharacterProfile}) {
+  const [failed,setFailed]=useState(false);
+  useEffect(()=>setFailed(false),[character.image,character.name]);
+  if(character.image&&!failed)return <img src={posterImageSrc(character.image)} alt={character.name + ' portrait'} loading="lazy" onError={()=>setFailed(true)} />;
+  return <span aria-label={character.name + ' portrait unavailable'}><Users size={21}/></span>;
+}
 
 function shortDescription(value?: string) {
   if (!value) return 'Character information was not supplied by the metadata source.';
@@ -17,7 +25,7 @@ export function FrameAnimeCharacters({ title, characters }: { title: string; cha
     <div className="frame-anime-character-grid">
       {characters.map((character, index) => <article className="frame-anime-character-card" key={(character.id || character.name) + '-' + index}>
         <div className="frame-anime-character-portrait">
-          {character.image ? <img src={posterImageSrc(character.image)} alt={character.name + ' portrait'} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} /> : <span><Users size={21}/></span>}
+          <CharacterPortrait character={character} />
         </div>
         <div className="frame-anime-character-copy">
           <b>{character.name}</b>
