@@ -574,7 +574,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     uniqueRows.set(key, item);
   }
   const finalItems = [...uniqueRows.values()];
-  const verified = !warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing/i.test(w));
+  const verified = !warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing|added \d+ numbered episode entries/i.test(w));
   return {
     items: finalItems,
     warnings: [...new Set(warnings)],
@@ -674,7 +674,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
           libraryRef.current = localRows;
           warningMap[task.key] = built.warnings;
           setWarningsByTask({ ...warningMap });
-          const hasVerificationWarning = built.warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing/i.test(w));
+          const hasVerificationWarning = built.warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing|added \d+ numbered episode entries/i.test(w));
           if (!hasVerificationWarning) done = [...new Set([...done, task.key])];
           persistCompleted(done, warningMap);
           addLog(task.title + ': saved ' + built.summary + (built.warnings.length ? '; ' + built.warnings.length + ' warning(s).' : '.'));
@@ -702,7 +702,10 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
     }
   };
 
-  const verifiedCount = completedKeys.filter(key => TASKS.some(task => task.key === key)).length;
+  const verifiedCount = completedKeys.filter(key =>
+    TASKS.some(task => task.key === key) &&
+    !(warningsByTask[key] || []).some(w => /added \d+ numbered episode entries|reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing/i.test(w))
+  ).length;
   const warningsCount = Object.values(warningsByTask).reduce((sum, list) => sum + list.length, 0);
   return <section className="anime-catalogue-import settings-panel settings-panel-wide" aria-label="Anime catalogue import">
     <div className="section-title">
@@ -728,7 +731,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
         const issue = warningsByTask[task.key] || [];
         return <article key={task.key}>
           {done ? <CheckCircle2 size={15} /> : issue.length ? <CircleAlert size={15} /> : <span className="anime-catalogue-import-pending" />}
-          <div><b>{task.title}</b><small>{done ? 'Source-count checks passed' : issue.length ? issue[0] : 'Not verified yet'}</small></div>
+          <div><b>{task.title}</b><small>{done && (issue.length > 0) ? issue[0] : done ? 'Source-count checks passed' : issue.length ? issue[0] : 'Not verified yet'}</small></div>
         </article>;
       })}</div>
       <p className="muted">One Piece is intentionally not re-imported because its existing catalogue is the reference entry. Dragon Ball GT and Dragon Ball Daima are excluded by the importer.</p>
