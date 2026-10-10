@@ -78,6 +78,13 @@ function sortMedia(items:MediaItem[],mode:string){
 }
 
 function FrameLogoMark({logo='frame-mark',small=false}:{logo?:string|null;small?:boolean}){ const mode=logo&&logo!=='ultra-instinct'?logo:'frame-mark'; if(mode.startsWith('http'))return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src={mode} alt="Custom FRAME logo"/></span>; if(mode==='classic-f')return <span className={'frame-logo-mark classic-f '+(small?'small':'')}>F</span>; if(mode==='minimal-ring')return <span className={'frame-logo-mark minimal-ring '+(small?'small':'')}><i/></span>; return <span className={'frame-logo-mark frame-mark '+(small?'small':'')}><img src="/frame-logo.svg" alt="FRAME logo"/></span>;}
+const libraryIndexCache=new WeakMap<MediaItem[],{byId:Map<string,MediaItem>;childCounts:Map<string,number>;childrenByParent:Map<string,MediaItem[]>}>();
+function getLibraryIndexes(library:MediaItem[]){
+ const cached=libraryIndexCache.get(library);if(cached)return cached;
+ const byId=new Map<string,MediaItem>(),childCounts=new Map<string,number>(),childrenByParent=new Map<string,MediaItem[]>();
+ for(const item of library){byId.set(item.id,item);if(item.parentId){childCounts.set(item.parentId,(childCounts.get(item.parentId)||0)+1);const children=childrenByParent.get(item.parentId);if(children)children.push(item);else childrenByParent.set(item.parentId,[item]);}}
+ const result={byId,childCounts,childrenByParent};libraryIndexCache.set(library,result);return result;
+}
 function sameMedia(a:MediaItem,b:MediaItem){
  const aTitle=a.title.trim().toLowerCase().replace(/\\s+/g,' '),bTitle=b.title.trim().toLowerCase().replace(/\\s+/g,' ');
  if(a.anilistId&&b.anilistId)return a.anilistId===b.anilistId;
@@ -1026,6 +1033,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const hasStatusFilter=activeStatus.length>0;
  const sorted=sortMedia(items,sortMode);
+ const childrenByParent=getLibraryIndexes(items).childrenByParent;
  if(!hasStatusFilter){
   const roots=sorted.filter(x=>{
    if(x.parentId)return false;
@@ -1038,7 +1046,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    // Multi-part anime get a paired Season 1 card immediately beside the main
    // aggregate entry. Keep single-season anime and One Piece unchanged.
    if(root.medium==='anime' && root.title.trim().toLowerCase()!=='one piece'){
-    const children=items.filter(x=>x.parentId===root.id);
+    const children=childrenByParent.get(root.id)||[];
     const season1=children.find(x=>/\\bseason\\s*1\\b/i.test(x.title));
     if(children.length>1 && season1 && textMatches(season1) && facetMatches(season1)) result.push({...season1,poster:root.poster,backdrop:''});
    }
@@ -1143,9 +1151,10 @@ function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;
 function Stat({value,label}:{value:number;label:string}){return <div className="stat-card"><b>{value}</b><span>{label}</span></div>}
 function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;library?:MediaItem[]}){
  const pct=progressPercent(item);
- const parent=library.find(x=>x.id===item.parentId);
+ const indexes=getLibraryIndexes(library);
+  const parent=item.parentId?indexes.byId.get(item.parentId):undefined;
  const artworkParent=artworkFallbackAncestor(item,library);
- const childCount=library.filter(x=>x.parentId===item.id).length;
+ const childCount=indexes.childCounts.get(item.id)||0;
  return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={artworkParent.id!==item.id?artworkParent.poster:undefined} parentTitle={artworkParent.id!==item.id?artworkParent.title:undefined} parentMedium={artworkParent.id!==item.id?artworkParent.medium:undefined} parentAnilistId={artworkParent.id!==item.id?artworkParent.anilistId:undefined} sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total||500)} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
 }
 
