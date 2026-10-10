@@ -361,16 +361,20 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
       // Keep the verified title/count data even when Kitsu artwork is unavailable.
     }
   }
+  const missingPosterCount = current.filter(row => !String(row.poster || '').trim()).length;
+  // Do not create episode cards that would render without their own still poster.
+  current = current.filter(row => Boolean(String(row.poster || '').trim()));
   const maxSourceNumber = current.reduce((n, row) => Math.max(n, row.number), 0);
   const countMismatch = expected > 0 && finished && current.length !== Math.min(2000, expected);
   const airingMismatch = !finished && nextEpisode > 0 && maxSourceNumber < nextEpisode - 1;
   const fallbackCount = current.filter(row => row.source === 'AniList count fallback').length;
   const warnings: string[] = [];
   if (fallbackCount) warnings.push(preferredTitle(media) + ': added ' + fallbackCount + ' numbered episode entries where source episode titles/pages were missing; verify titles later.');
+  if (missingPosterCount) warnings.push(preferredTitle(media) + ': ' + missingPosterCount + ' episode(s) have no source still poster and were not imported.');
   if (countMismatch) warnings.push(preferredTitle(media) + ': AniList reports ' + expected + ' episodes, but the sources did not establish the full numbered range.');
   if (airingMismatch) warnings.push(preferredTitle(media) + ': the upcoming AniList episode implies ' + (nextEpisode - 1) + ' released episodes, but source titles reach only episode ' + maxSourceNumber + '.');
   if (!primary?.rows.length && sourceErrors.length) warnings.push(preferredTitle(media) + ': episode source problem — ' + sourceErrors.join(' / '));
-  return { rows: current, verified: !countMismatch && !airingMismatch && (!expected || current.length > 0), warnings };
+  return { rows: current, verified: !countMismatch && !airingMismatch && missingPosterCount === 0 && (!expected || current.length > 0), warnings };
 }
 
 function charactersFrom(media: CatalogueMedia): AnimeCharacterProfile[] {
@@ -678,14 +682,14 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   }
   const missingPosterTitles = chosen.filter(media => !String(media.coverImage?.extraLarge || '').trim()).map(preferredTitle);
   if (missingPosterTitles.length) warnings.push('Cover artwork unavailable from AniList for: ' + missingPosterTitles.join(', ') + '.');
-  if (!String(rootDetails.coverImage?.extraLarge || '').trim()) warnings.push('Main poster URL is missing from AniList for ' + task.title + '.');
+  if (!String(rootDetails.coverImage?.extraLarge || '').trim()) warnings.push('could not be read|could not be verified|missing episode posters|Main poster URL is missing from AniList for ' + task.title + '.');
   const uniqueRows = new Map<string, MediaItem>();
   for (const item of incoming) {
     const key = item.sourceProvider === 'frame-anime-episode' ? String(item.externalId) : 'media:' + String(item.anilistId || item.id);
     uniqueRows.set(key, item);
   }
   const finalItems = [...uniqueRows.values()];
-  const verified = !warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing|added \d+ numbered episode entries/i.test(w));
+  const verified = !warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|could not be read|could not be verified|missing episode posters|Main poster URL is missing|added \d+ numbered episode entries/i.test(w));
   return {
     items: finalItems,
     warnings: [...new Set(warnings)],
@@ -785,7 +789,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
           libraryRef.current = localRows;
           warningMap[task.key] = built.warnings;
           setWarningsByTask({ ...warningMap });
-          const hasVerificationWarning = built.warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing|added \d+ numbered episode entries/i.test(w));
+          const hasVerificationWarning = built.warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|could not be read|could not be verified|missing episode posters|Main poster URL is missing|added \d+ numbered episode entries/i.test(w));
           if (!hasVerificationWarning) done = [...new Set([...done, task.key])];
           persistCompleted(done, warningMap);
           addLog(task.title + ': saved ' + built.summary + (built.warnings.length ? '; ' + built.warnings.length + ' warning(s).' : '.'));
@@ -815,7 +819,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
 
   const verifiedCount = completedKeys.filter(key =>
     TASKS.some(task => task.key === key) &&
-    !(warningsByTask[key] || []).some(w => /added \d+ numbered episode entries|reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|Main poster URL is missing/i.test(w))
+    !(warningsByTask[key] || []).some(w => /added \d+ numbered episode entries|reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|could not be read|could not be verified|missing episode posters|Main poster URL is missing/i.test(w))
   ).length;
   const warningsCount = Object.values(warningsByTask).reduce((sum, list) => sum + list.length, 0);
   return <section className="anime-catalogue-import settings-panel settings-panel-wide" aria-label="Anime catalogue import">
