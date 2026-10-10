@@ -17,7 +17,7 @@ type AniListCharacterEdge = {
 };
 type AniListCharacterResponse = { Media?: { characters?: { edges?: AniListCharacterEdge[] } } };
 
-async function fetchAnimeCharacters(anilistId: number): Promise<AnimeCharacterProfile[]> {
+async function loadAnimeCharacters(anilistId: number): Promise<AnimeCharacterProfile[]> {
   if (supabase) {
     try {
       const { data, error } = await supabase.functions.invoke('anime-catalogue', {
@@ -49,6 +49,25 @@ async function fetchAnimeCharacters(anilistId: number): Promise<AnimeCharacterPr
     description: edge.node!.description || undefined,
     sourceUrl: edge.node!.siteUrl || undefined,
   }));
+}
+
+const characterCache = new Map<number, { expiresAt: number; profiles: AnimeCharacterProfile[] }>();
+const characterRequests = new Map<number, Promise<AnimeCharacterProfile[]>>();
+
+async function fetchAnimeCharacters(anilistId: number): Promise<AnimeCharacterProfile[]> {
+  const cached = characterCache.get(anilistId);
+  if (cached && cached.expiresAt > Date.now()) return cached.profiles;
+  const pending = characterRequests.get(anilistId);
+  if (pending) return pending;
+  const request = loadAnimeCharacters(anilistId);
+  characterRequests.set(anilistId, request);
+  try {
+    const profiles = await request;
+    if (profiles.length) characterCache.set(anilistId, { expiresAt: Date.now() + 15 * 60 * 1000, profiles });
+    return profiles;
+  } finally {
+    if (characterRequests.get(anilistId) === request) characterRequests.delete(anilistId);
+  }
 }
 
 function CharacterPortrait({character}:{character:AnimeCharacterProfile}) {
