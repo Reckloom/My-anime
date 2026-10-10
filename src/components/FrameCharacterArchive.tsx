@@ -189,6 +189,35 @@ export function FrameCharacterArchive(){
      usedImages.add(image);
     }
    });
+   // Last-resort source lookup for uncommon characters whose main wiki page
+   // and AniList profile have no portrait. Search only the One Piece Wiki file
+   // namespace, prefer anime/infobox images, and exclude fan art and merchandise.
+   const stillMissing=characters.filter(character=>!result[character.name]);
+   const searched=await Promise.all(stillMissing.map(async character=>{
+    try{
+     const query=(aliases[character.name]?.[0]||character.name)+' anime';
+     const url='https://onepiece.fandom.com/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent(query)+'&gsrnamespace=6&gsrlimit=12&prop=imageinfo&iiprop=url&iiurlwidth=900&format=json&origin=*';
+     const response=await fetch(url,{headers:{Accept:'application/json'}});
+     if(!response.ok)return {character,image:''};
+     const json=await response.json() as {query?:{pages?:Record<string,{title?:string;imageinfo?:{url?:string;thumburl?:string}[]}>}};
+     const words=[character.name,...(aliases[character.name]||[])].flatMap(value=>value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9 ]/g,' ').split(/\\s+/).filter(word=>word.length>2&&!['one','piece','the','anime','portrait','character'].includes(word)));
+     const candidates=Object.values(json.query?.pages||{}).map(page=>{
+      const title=page.title||'';
+      const key=normalize(title);
+      const image=(page.imageinfo?.[0]?.thumburl||page.imageinfo?.[0]?.url||'').replace(/\\_/g,'_');
+      const score=words.reduce((sum,word)=>sum+(key.includes(normalize(word))?1:0),0)+( /anime|infobox|portrait/i.test(title)?2:0);
+      return {title,image,score};
+     }).filter(candidate=>candidate.image.startsWith('https://')&&candidate.score>0&&!/fan.?art|figure|statue|toy|plush|card|logo|icon|symbol|wanted|merch|cosplay|wallpaper|collectible/i.test(candidate.title))
+       .sort((a,b)=>b.score-a.score);
+     return {character,image:candidates[0]?.image||''};
+    }catch{return {character,image:''}}
+   }));
+   searched.forEach(({character,image})=>{
+    if(image&&!result[character.name]&&!usedImages.has(image)){
+     result[character.name]=image;
+     usedImages.add(image);
+    }
+   });
    if(active)setPortraits(result);
   };
   void load();
