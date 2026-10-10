@@ -114,6 +114,26 @@ test.describe('FRAME core smoke flow', () => {
 
 test.describe('FRAME movie discovery UI', () => {
   test('movie results resolve artwork in the actual modal', async ({ page }) => {
+    await page.route(/functions\/v1\/media-discovery/, async route => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get('action') !== 'search' || url.searchParams.get('provider') !== 'movie') {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({
+          results: [{
+            provider: 'tmdb-movie', externalId: '27205', title: 'Inception', medium: 'movie',
+            poster: 'https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg',
+            backdrop: '', description: 'A science-fiction thriller.', genres: ['Science Fiction'],
+            source: 'TMDB', sourceUrl: 'https://www.themoviedb.org/movie/27205'
+          }]
+        })
+      });
+    });
     await page.goto('/');
     await page.getByRole('button', { name: 'Search', exact: true }).first().click();
     await page.getByRole('tab', { name: /Movies/ }).click();
