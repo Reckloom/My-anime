@@ -532,6 +532,39 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   }
 
   const incoming: MediaItem[] = [];
+  const bleachArcIds = new Map<number, string>();
+  if (task.key === 'bleach') {
+    const bleachMedia = chosen[0];
+    const bleachEpisodes = catalogues.get(Number(bleachMedia?.id))?.rows || [];
+    for (const [order, name, start, end, summary] of BLEACH_ARCS) {
+      const arcEpisodes = bleachEpisodes.filter(episode => episode.number >= start && episode.number <= end);
+      if (!arcEpisodes.length) continue;
+      const arcId = 'frame-bleach-arc-' + order + '-' + scope;
+      bleachArcIds.set(order, arcId);
+      const existingArc = library.find(item => item.id === arcId);
+      const poster = arcEpisodes.find(episode => episode.poster)?.poster || '';
+      incoming.push({
+        id: arcId,
+        parentId: rootId,
+        sourceProvider: 'frame-bleach-arc',
+        externalId: 'bleach-arc-' + String(order).padStart(2, '0'),
+        title: name,
+        description: summary,
+        poster,
+        backdrop: poster,
+        medium: 'anime',
+        status: existingArc?.status || 'planned',
+        progress: Math.max(0, Number(existingArc?.progress) || 0),
+        total: arcEpisodes.length,
+        progressUnit: 'episodes',
+        genres: existingArc?.genres || [],
+        themes: existingArc?.themes || [],
+        favorite: existingArc?.favorite || false,
+        source: 'FRAME curated Bleach story arc',
+        externalLinks: existingArc?.externalLinks || {}
+      });
+    }
+  }
   let franchiseEpisodes = 0;
   for (let index = 0; index < chosen.length; index++) {
     const media = chosen[index];
@@ -588,7 +621,9 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
           id: episodeId,
           // Preserve an existing curated arc assignment when a catalogue refresh
           // revisits the same episode; never flatten a nested episode onto its part.
-          parentId: existingEpisode?.parentId || id,
+          parentId: task.key === 'bleach' && index === 0
+            ? (bleachArcIds.get(BLEACH_ARCS.find(arc => episode.number >= arc[2] && episode.number <= arc[3])?.[0] || -1) || existingEpisode?.parentId || id)
+            : (existingEpisode?.parentId || id),
           sourceProvider: 'frame-anime-episode',
           externalId: episodeExternalId,
           title: 'Episode ' + pad(episode.number) + ' — ' + episode.title,
