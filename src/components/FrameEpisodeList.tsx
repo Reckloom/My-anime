@@ -14,6 +14,26 @@ type EpisodeResponse={
   pagination?:{last_visible_page?:number;has_next_page?:boolean};
 };
 
+async function fetchJikan(url:string,signal:AbortSignal):Promise<Response>{
+  let lastError:unknown;
+  for(let attempt=0;attempt<4;attempt++){
+    try{
+      const response=await fetch(url,{signal,headers:{Accept:'application/json'}});
+      if((response.status===429||response.status>=500)&&attempt<3){
+        await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+        if(signal.aborted)throw new DOMException('Aborted','AbortError');
+        continue;
+      }
+      return response;
+    }catch(error){
+      if(signal.aborted)throw error;
+      lastError=error;
+      if(attempt<3)await new Promise(resolve=>setTimeout(resolve,700*(attempt+1)));
+    }
+  }
+  throw lastError instanceof Error?lastError:new Error('Anime episode service is temporarily unavailable.');
+}
+
 export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{malId?:string;title:string;currentProgress:number;onMarkThrough:(episode:number)=>Promise<void>}){
   const [resolvedMalId,setResolvedMalId]=useState(malId||'');
   const [resolving,setResolving]=useState(!malId);
@@ -31,7 +51,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
     if(malId){setResolving(false);return()=>{alive=false;controller.abort()};}
     const query=title.trim();
     if(!query){setResolving(false);setError('Add a title or MyAnimeList ID to load episodes.');return()=>{alive=false;controller.abort()};}
-    fetch('https://api.jikan.moe/v4/anime?q='+encodeURIComponent(query)+'&limit=8',{signal:controller.signal,headers:{Accept:'application/json'}})
+    fetchJikan('https://api.jikan.moe/v4/anime?q='+encodeURIComponent(query)+'&limit=8',controller.signal)
       .then(async response=>{
         const raw=await response.text();let data:{data?:Array<{mal_id:number;title?:string|null;title_english?:string|null;title_japanese?:string|null}>};
         try{data=JSON.parse(raw)}catch{throw new Error('Anime lookup returned an invalid response.')}
@@ -51,7 +71,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
     if(!resolvedMalId)return;
     const controller=new AbortController();let alive=true;
     setLoading(true);setError('');
-    fetch('https://api.jikan.moe/v4/anime/'+encodeURIComponent(resolvedMalId)+'/episodes?page='+page,{signal:controller.signal,headers:{Accept:'application/json'}})
+    fetchJikan('https://api.jikan.moe/v4/anime/'+encodeURIComponent(resolvedMalId)+'/episodes?page='+page,controller.signal)
       .then(async response=>{
         const raw=await response.text();let data:EpisodeResponse;
         try{data=JSON.parse(raw) as EpisodeResponse}catch{throw new Error('Episode source returned an invalid response.')}
