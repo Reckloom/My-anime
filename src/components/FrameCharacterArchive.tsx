@@ -2,7 +2,89 @@ import {useEffect,useMemo,useState} from 'react';
 import {ExternalLink,Search,Users,X,CalendarDays,Mic2} from 'lucide-react';
 
 type Character={id:number;name:string;alias:string;role:string;crew:string;bio:string;goal:string};
-const characters:Character[]=[];
+const rows=[
+[1,'Monkey D. Luffy','Straw Hat','Captain','Straw Hat Pirates','The upbeat captain who can stretch his body after eating a Devil Fruit. He values freedom and his friends above fame.','Become King of the Pirates'],
+[2,'Roronoa Zoro','Pirate Hunter','Swordsman','Straw Hat Pirates','A focused swordsman known for his Three-Sword Style and unwavering loyalty.','Become the world’s greatest swordsman'],
+[3,'Nami','Cat Burglar','Navigator','Straw Hat Pirates','A clever navigator, weather expert and cartographer who guides the crew across the seas.','Draw a map of the entire world'],
+[4,'Usopp','God Usopp','Sniper and inventor','Straw Hat Pirates','A creative marksman who relies on clever tools, stories and improvisation.','Become a brave warrior of the sea'],
+[5,'Sanji','Stealth Black / Soba Mask','Cook','Straw Hat Pirates','The crew’s cook, known for his culinary skill and kick-focused style.','Find the All Blue'],
+[6,'Tony Tony Chopper','Cotton Candy Lover','Doctor','Straw Hat Pirates','A reindeer with human-like traits who combines medical knowledge with special transformations.','Become a doctor who can cure any disease'],
+[7,'Nico Robin','Devil Child','Archaeologist','Straw Hat Pirates','A calm scholar who can read Poneglyphs and uncover fragments of lost history.','Discover the true history of the world'],
+[8,'Franky','Cyborg','Shipwright','Straw Hat Pirates','A cyborg shipwright and inventor who built the Thousand Sunny.','Build a ship that reaches the end of the world'],
+[9,'Brook','Soul King','Musician','Straw Hat Pirates','A living skeleton and musician whose Devil Fruit brought him back to life.','Reunite with Laboon'],
+[10,'Jinbe','Knight of the Sea','Helmsman','Straw Hat Pirates','A fish-man and experienced helmsman known for calm judgement and honour.','Help humans and fish-men coexist'],
+[11,'Nefertari Vivi','Princess Vivi','Princess','Alabasta; former Straw Hat companion','The compassionate princess who travelled with the Straw Hats to protect Alabasta.','Protect Alabasta and its people'],
+[12,'Portgas D. Ace','Fire Fist','Pirate commander','Whitebeard Pirates; formerly Spade Pirates','Luffy’s sworn older brother, remembered for his warmth and devotion to family.','Live freely and honour his family'],
+[13,'Sabo','Chief of Staff','Revolutionary leader','Revolutionary Army','Luffy and Ace’s sworn brother who works to challenge oppression.','Fight for freedom and protect his brothers’ legacy'],
+[14,'Yamato','Oni Princess','Wano warrior','Wano','A powerful Wano native inspired by Kozuki Oden’s journals and ideals.','Follow Oden’s path and explore the world'],
+[15,'Trafalgar D. Water Law','Surgeon of Death','Captain and doctor','Heart Pirates','A strategic pirate and surgeon whose Devil Fruit creates a space for precise operations.','Uncover the meaning of the Will of D.'],
+[16,'Eustass Kid','Captain Kid','Pirate captain','Kid Pirates','An ambitious captain who uses magnetic abilities to manipulate metal.','Reach the top of the pirate world'],
+[17,'Boa Hancock','Pirate Empress','Captain','Kuja Pirates; Amazon Lily','The ruler of Amazon Lily, known for confidence, Haki and a petrification ability.','Protect Amazon Lily and her loved ones'],
+[18,'Carrot','Mink warrior','Scout','Mokomo Dukedom','An energetic rabbit mink with exceptional agility and sharp senses.','Carry Pedro’s hopes forward'],
+[19,'Gol D. Roger','Pirate King','Pirate captain','Roger Pirates','The legendary pirate who reached the final island and began a new era of piracy.','Reach the end of the Grand Line'],
+[20,'Edward Newgate','Whitebeard','Pirate captain','Whitebeard Pirates','A legendary pirate who treated his crew as family.','Have a family'],
+[21,'Monkey D. Garp','Hero of the Marines','Vice admiral','Marines','A famously powerful Marine and Luffy’s grandfather with an unconventional attitude.','Serve his own idea of justice'],
+[22,'Shanks','Red-Haired','Pirate captain','Red-Haired Pirates','The captain who inspired Luffy’s dream and entrusted him with the straw hat.','See the next generation shape the era'],
+[23,'Kaido','Strongest Creature','Pirate emperor','Beasts Pirates','A fearsome emperor known for extraordinary durability and a dragon form.','Create a world where the strong can live freely'],
+[24,'Charlotte Linlin (Big Mom / Olin)','Big Mom','Pirate emperor','Big Mom Pirates','The ruler of Totto Land who can manipulate souls and leads a vast family.','Build a kingdom for every race'],
+[25,'Marshall D. Teach','Blackbeard','Pirate emperor','Blackbeard Pirates','A calculating pirate whose ambitions make him a major force in the New World.','Claim the freedom and power he seeks'],
+[26,'Silvers Rayleigh','Dark King','Former first mate','Roger Pirates','Roger’s former right-hand man, now retired, renowned for his Haki and wisdom.','Live freely after the crew’s journey'],
+[27,'Kozuki Oden','Lord of Kuri','Samurai and daimyo','Kozuki Family; Whitebeard and Roger Pirates','A bold samurai whose voyages shaped his vision for Wano’s future.','Open Wano’s borders'],
+[28,'Marco','Phoenix','Doctor and commander','Whitebeard Pirates','A calm veteran who can transform into a phoenix and regenerate with blue flames.','Protect the Whitebeard family'],
+[29,'Benn Beckman','Red-Haired first mate','First mate','Red-Haired Pirates','Shanks’s trusted first mate, known for intelligence and composure.','Support the Red-Haired crew'],
+[30,'King','King the Wildfire','All-Star','Beasts Pirates; Lunarian','A powerful Lunarian known for flame, flight and remarkable durability.','Support Kaido’s ambition'],
+[31,'Charlotte Katakuri','Sweet Commander','Commander','Big Mom Pirates','A disciplined fighter with advanced Observation Haki who cares deeply for his siblings.','Protect his family'],
+[32,'Sakazuki','Akainu','Fleet Admiral','Marines','A hard-line Marine leader who follows an uncompromising idea of Absolute Justice.','Enforce his view of justice'],
+[33,'Borsalino','Kizaru','Admiral','Marines','An enigmatic admiral whose Devil Fruit grants light-based abilities.','Carry out Marine orders'],
+[34,'Issho','Fujitora','Admiral','Marines','A blind swordsman and admiral who controls gravity and prioritises civilian safety.','Reform the world’s justice systems'],
+[35,'Sengoku','Buddha','Former Fleet Admiral','Marines','A veteran strategist who can transform into a giant golden Buddha-like form.','Maintain order'],
+[36,'Koby','Hero of the Marines','Marine officer','Marines; SWORD','A former cabin boy who trained hard and grew into a courageous Marine.','Become an admiral and help people'],
+[37,'Kuzan','Aokiji','Former admiral','Former Marines; Blackbeard Pirates','A laid-back former admiral who can create and control ice.','Follow his own sense of justice'],
+[38,'Buggy','Star Clown','Pirate captain','Cross Guild','A theatrical pirate whose public reputation often grows beyond his own plans.','Become a great pirate'],
+[39,'Crocodile','Desert King','Pirate strategist','Cross Guild; formerly Baroque Works','A calculating former Warlord who controls sand and favours long-term schemes.','Gain influence and power'],
+[40,'Enel','God','Former ruler','Formerly Skypiea','A self-proclaimed god with lightning powers and exceptional awareness.','Reach Fairy Vearth'],
+[41,'Rob Lucci','CP0 agent','Cipher Pol agent','World Government; CP0','A highly trained government agent known for his strict loyalty to orders.','Carry out government orders'],
+[42,'Gecko Moria','Shadow Master','Pirate captain','Thriller Bark Pirates','A shadow-manipulating pirate who commands a crew aboard Thriller Bark.','Build a powerful crew'],
+[43,'Donquixote Doflamingo','Heavenly Demon','Pirate captain and former king','Donquixote Pirates','A manipulative former ruler who controls strings and built an underworld network.','Control the world around him'],
+[44,'Dracule Mihawk','Hawk-Eyes','Master swordsman','Cross Guild; formerly Warlord','Widely recognised as the world’s greatest swordsman, he values skill and worthy rivals.','Remain at the pinnacle of swordsmanship'],
+[45,'Donquixote Rosinante','Corazon','Marine undercover agent','Marines; Donquixote Family undercover','Doflamingo’s younger brother, remembered for his compassion toward Law.','Save Law from a tragic future'],
+[46,'Perona','Ghost Princess','Pirate','Formerly Thriller Bark Pirates','A gothic-styled pirate who creates ghostly projections and has a dramatic personality.','Live comfortably with trusted companions'],
+[47,'Shiki','Golden Lion','Pirate captain','Golden Lion Pirates','A legendary pirate from Roger’s era who can make objects and islands float.','Reshape the world through his plan'],
+[48,'Zephyr','Z','Former Marine instructor','Neo Marines; Film Z','A film-original former Marine instructor whose story examines his strict ideals.','Pursue his vision of justice'],
+[49,'Gild Tesoro','Gold King','Casino magnate','Gran Tesoro; Film Gold','A film-original character who controls gold and rules a vast entertainment ship.','Gain wealth and control'],
+[50,'Uta','World’s Most Beloved Singer','Singer','Film Red; connected to Red-Haired Pirates','A singer whose extraordinary voice and music are central to Film Red.','Create a happier world through music'],
+[52,'Loki','Accursed Prince / Sun God','Prince of Elbaph','Warland Kingdom; Elbaph royal family','A giant prince tied to Elbaph’s royal history and the legendary Devil Fruit. He idolizes Rocks D. Xebec.','Pursue his own idea of the Sun God'],
+[53,'Rocks D. Xebec','Captain of the Rocks Pirates','Legendary pirate captain','Rocks Pirates','The infamous captain who gathered future emperors and other legendary pirates under one flag. His ambition made him a major threat to the world order.','Become King of the World'],
+[54,'King Harald','King of Elbaph','Former king','Elbaph royal family','A giant king whose choices shaped Elbaph’s modern history and the lives of Loki and Hajrudin.','Secure a future for Elbaph'],
+[55,'Joy Boy','The First Pirate','Ancient legendary figure','Ancient Great Kingdom; Void Century','A figure from the Void Century associated with the ancient kingdom, a promise to Fish-Man Island, and a treasure left at the end of the Grand Line.','Fulfil the promise he left behind'],
+[56,'Imu','Sovereign of the World','Hidden world ruler','World Government','The secretive authority at the top of the World Government, surrounded by mysteries about the Void Century.','Unknown'],
+[57,'Davy D. Jones','Legendary Davy figure','Legendary figure','Davy Family lore','A legendary name connected to the Davy family’s history and the mysteries surrounding Rocks D. Xebec. Many details remain unconfirmed.','Unknown'],
+[58,'Figarland Garling','Supreme Commander','World Noble leader','Figarland family; God’s Knights','A powerful figure associated with the God’s Knights and the God Valley incident.','Unknown'],
+[59,'Scopper Gaban','Roger Pirates veteran','Veteran pirate','Roger Pirates','A veteran member of Roger’s crew who helped the Pirate King reach the final island.','Live freely after the great voyage'],
+[60,'Captain John','Captain John','Pirate captain','Rocks Pirates','A notorious member of the Rocks Pirates whose hidden treasure became famous long after his era.','Amass treasure'],
+[61,'Ochoku','Wang Zhi','Pirate leader','Rocks Pirates; Hachinosu','A powerful pirate associated with the Rocks Pirates and the later struggle for control of Hachinosu.','Unknown'],
+[62,'Buckingham Stussy','Miss Buckingham Stussy','Former Rocks Pirate','Rocks Pirates; MADS connections','A former member of the Rocks Pirates with a complicated history tied to scientific experiments and the underworld.','Secure her own interests'],
+[63,'Gloriosa','Elder Nyon','Former Kuja empress','Kuja Pirates; Amazon Lily; formerly Rocks Pirates','A former empress of Amazon Lily who lived through the era of the Rocks Pirates.','Protect Amazon Lily'],
+[64,'Streusen','Gourmet Knight','Chef and pirate','Big Mom Pirates; formerly Rocks Pirates','A chef and longtime associate of Big Mom who helped establish the crew’s early foundations.','Keep cooking and survive'],
+[65,'Kong','Former Fleet Admiral','World Government commander','Marines; World Government','A senior military figure who served as Fleet Admiral before becoming Commander-in-Chief of the World Government’s armed forces.','Maintain military order'],
+[66,'Shimotsuki Ryuma','Sword God','Legendary samurai','Wano; Shimotsuki family','A legendary samurai of Wano remembered as a national hero and an extraordinary swordsman.','Protect Wano’s honour'],
+[67,'Fisher Tiger','Sun Pirates founder','Fish-man revolutionary','Sun Pirates','A fish-man who challenged slavery and founded the Sun Pirates. His actions inspired generations.','Free the oppressed'],
+[68,'Kozuki Toki','Lady Toki','Kozuki family member','Kozuki family; Wano','A woman from the distant past whose ability to send people forward in time became crucial to Wano’s future.','Reach the future she believed in'],
+[69,'Nefertari D. Lily','Queen Lily','Former queen','Nefertari family; Ancient World Government','The ancient queen of Alabasta whose choices are linked to the Poneglyphs and mysteries of the Void Century.','Unknown'],
+[70,'Nika','Sun God','Mythic figure','Ancient legend','A liberating figure from legend associated with freedom, laughter, and the power later connected to the Hito Hito no Mi, Model: Nika.','Bring liberation to the oppressed'],
+[71,'Zunesha','The Walking Elephant','Ancient giant elephant','Mokomo Dukedom; Zou','An enormous ancient elephant condemned to walk the seas, carrying the Mink homeland of Zou.','Continue its long journey'],
+[72,'Neptune','King of the Ryugu Kingdom','King','Ryugu Kingdom; Fish-Man Island','The king of Fish-Man Island and father of Shirahoshi, involved in the long-standing promise tied to Joy Boy.','Protect his people and family']
+] as const;
+const characters:Character[]=rows.map(r=>({id:r[0],name:r[1],alias:r[2],role:r[3],crew:r[4],bio:r[5],goal:r[6]}));
+const popularityOrder=['Monkey D. Luffy','Sanji','Roronoa Zoro','Nami','Tony Tony Chopper','Nico Robin','Usopp','Franky','Brook','Jinbe','Shanks','Portgas D. Ace','Trafalgar D. Water Law','Boa Hancock','Gol D. Roger'] as const;
+const characterInitials=(name:string)=>name.split(/\s+/).map(x=>x[0]).slice(0,2).join('');
+function CharacterPortrait({name,image,large=false}:{name:string;image?:string;large?:boolean}){
+ const [failed,setFailed]=useState(false);
+ useEffect(()=>setFailed(false),[image,name]);
+ if(image&&!failed)return <img src={image} alt={name} loading="lazy" onError={()=>setFailed(true)}/>;
+ return <div className="character-art-fallback" aria-label={name+' portrait unavailable'} style={{display:'grid',placeItems:'center',width:large?150:'100%',height:large?190:'100%',minHeight:large?190:170,flexShrink:0,borderRadius:large?14:0,background:'linear-gradient(145deg,#172a46,#30204b 58%,#0b111f)',color:'#f5f3ff',fontSize:large?'2.3rem':'2rem',fontWeight:850,letterSpacing:'.08em',textShadow:'0 2px 14px #0008'}}>{characterInitials(name)}</div>;
+}
+
 const google=(name:string)=>'https://www.google.com/search?q='+encodeURIComponent(name);
 
 export function FrameCharacterArchive(){
