@@ -114,6 +114,11 @@ test.describe('FRAME core smoke flow', () => {
 
 test.describe('FRAME artwork identity', () => {
   test('keeps each anime poster tied to its title and preserves saved art for a mismatched ID', async ({ page }) => {
+    await page.route(/https:\/\/(cdn\.example\.test|saved\.example)\/.+/, route => route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="blue"/></svg>'
+    }));
     const catalog: Record<number, { title: string; image: string }> = {
       16498: { title: 'Attack on Titan', image: 'https://cdn.example.test/aot.jpg' },
       269: { title: 'Bleach', image: 'https://cdn.example.test/bleach.jpg' },
