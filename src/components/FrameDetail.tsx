@@ -125,11 +125,11 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
   setD(item);setNote(item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
  },[item.id]);
  useEffect(()=>{
-  // Wait until d.id matches the newly selected item, then clamp restoration to
-  // the drawer's current scroll range. Reapply after layout settles so image
-  // loading or responsive reflow cannot pull the drawer away from its target.
+  // Wait until d.id matches the newly selected item, then restore scroll.
+  // The detail drawer can gain height asynchronously as artwork and child
+  // content finish loading, so a single delayed restore can clamp too early.
   if(d.id!==item.id)return;
-  let timer:number|undefined;
+  let retryTimer:number|undefined;
   const restore=pendingScrollRestore.current;
   const applyScroll=()=>{
    const overlay=document.querySelector<HTMLElement>('.detail-overlay');
@@ -146,13 +146,24 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     if(body)body.scrollTop=0;
    }
   };
+  let attempts=0;
   const frame=window.requestAnimationFrame(()=>{
    applyScroll();
    if(restore&&restore.item.id===item.id){
-    timer=window.setTimeout(()=>{applyScroll();if(pendingScrollRestore.current===restore)pendingScrollRestore.current=null},80);
+    // Retry for up to 1.2 seconds while async images/content settle. This
+    // restores the original position when the drawer's final scroll range is
+    // larger than it was during the first paint.
+    retryTimer=window.setInterval(()=>{
+     applyScroll();
+     attempts++;
+     if(attempts>=12){
+      if(retryTimer!==undefined)window.clearInterval(retryTimer);
+      if(pendingScrollRestore.current===restore)pendingScrollRestore.current=null;
+     }
+    },100);
    }
   });
-  return()=>{window.cancelAnimationFrame(frame);if(timer!==undefined)window.clearTimeout(timer)};
+  return()=>{window.cancelAnimationFrame(frame);if(retryTimer!==undefined)window.clearInterval(retryTimer)};
  },[item.id,d.id]);
  useEffect(()=>{const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[]);
  const progress=(n:number)=>setD(game?{...d,progress:n,game:d.game?{...d.game,storyProgress:n}:undefined}:{...d,progress:Math.max(0,Math.min(max,n))});
