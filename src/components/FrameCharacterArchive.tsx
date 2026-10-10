@@ -93,14 +93,56 @@ export function FrameCharacterArchive(){
  const [portraits,setPortraits]=useState<Record<string,string>>({});
  useEffect(()=>{
   let active=true;
-  const fields=characters.map((character,index)=>'c'+index+': Character(search: '+JSON.stringify(character.name)+', sort: SEARCH_MATCH) { name { full } image { large } }').join('\\n');
-  void fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+fields+' }'})})
-   .then(async response=>{if(!response.ok)throw new Error('AniList character art unavailable');return await response.json() as {data?:Record<string,{name?:{full?:string};image?:{large?:string}}|null>};})
-   .then(json=>{if(!active||!json.data)return;const exact:Record<string,string>={};const normalize=(v:string)=>v.toLowerCase().replace(/[^a-z0-9]/g,'');characters.forEach((character,index)=>{const result=json.data?.['c'+index];if(result?.image?.large&&result.name?.full&&normalize(result.name.full)===normalize(character.name))exact[character.name]=result.image.large;});setPortraits(exact);})
-   .catch(()=>{});
+  const normalize=(value:string)=>value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g,'');
+  const aliases:Record<string,string[]>={
+   'Charlotte Linlin (Big Mom / Olin)':['Big Mom','Charlotte Linlin'],
+   'Edward Newgate':['Whitebeard','Edward Newgate'],
+   'Marshall D. Teach':['Blackbeard','Marshall D. Teach'],
+   'Trafalgar D. Water Law':['Trafalgar Law','Trafalgar D. Water Law'],
+   'Donquixote Rosinante':['Corazon','Donquixote Rosinante'],
+   'Monkey D. Garp':['Garp','Monkey D. Garp'],
+   'Silvers Rayleigh':['Rayleigh','Silvers Rayleigh'],
+   'Shimotsuki Ryuma':['Ryuma','Shimotsuki Ryuma'],
+   'Figarland Garling':['Saint Figarland Garling','Figarland Garling'],
+   'King Harald':['Harald','King Harald'],
+   'Tony Tony Chopper':['Chopper','Tony Tony Chopper'],
+   'Nefertari D. Lily':['Nefertari Lily','Lily','Nefertari D. Lily'],
+   'Borsalino':['Kizaru','Borsalino'],
+   'Sakazuki':['Akainu','Sakazuki'],
+   'Kuzan':['Aokiji','Kuzan'],
+   'Issho':['Fujitora','Issho'],
+   'Charlotte Katakuri':['Katakuri','Charlotte Katakuri']
+  };
+  const load=async()=>{
+   const result:Record<string,string>={};
+   for(let start=0;start<characters.length;start+=10){
+    const batch=characters.slice(start,start+10);
+    const fields=batch.map((character,index)=>{
+     const search=(aliases[character.name]?.[0]||character.name).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+     return 'c'+index+': Character(search: "'+search+'", sort: SEARCH_MATCH) { name { full } image { large } }';
+    }).join('\\n');
+    try{
+     const response=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+fields+' }'})});
+     if(!response.ok)continue;
+     const json=await response.json() as {data?:Record<string,{name?:{full?:string};image?:{large?:string}}|null>};
+     batch.forEach((character,index)=>{
+      const found=json.data?.['c'+index];
+      const foundName=normalize(found?.name?.full||'');
+      const allowed=[character.name,...(aliases[character.name]||[]),character.alias].map(normalize);
+      const exact=allowed.includes(foundName);
+      const compatible=allowed.some(name=>name.length>5&&(name.includes(foundName)||foundName.includes(name)));
+      if(found?.image?.large&&foundName&&(exact||compatible))result[character.name]=found.image.large;
+     });
+    }catch{/* keep trying the next small batch if AniList is temporarily unavailable */}
+   }
+   if(active)setPortraits(result);
+  };
+  void load();
   return()=>{active=false};
  },[]);
- const visible=useMemo(()=>{const q=query.trim().toLowerCase();return characters.filter(c=>!q||[c.name,c.alias,c.role,c.crew,c.bio].join(' ').toLowerCase().includes(q)).sort((a,b)=>{const priority=['Sanji','Loki','Rocks D. Xebec','Joy Boy','King Harald','Imu','Davy D. Jones','Figarland Garling','Shiki','Scopper Gaban','Captain John','Ochoku','Buckingham Stussy','Gloriosa','Streusen','Kong','Shimotsuki Ryuma','Nefertari D. Lily','Nika','Zunesha'];const ai=priority.indexOf(a.name),bi=priority.indexOf(b.name);if(ai!==-1||bi!==-1)return (ai===-1?999:ai)-(bi===-1?999:bi);return a.id-b.id})},[query]);
+ const popularityOrder=["Sanji","Monkey D. Luffy","Roronoa Zoro","Nami","Trafalgar D. Water Law","Nico Robin","Portgas D. Ace","Shanks","Dracule Mihawk","Crocodile","Donquixote Rosinante","Boa Hancock","Tony Tony Chopper","Sabo","Uta","Carrot","Rocks D. Xebec","Yamato","Usopp","Loki","Donquixote Doflamingo","Eustass Kid","Perona","Buggy","Marco","Brook","Nefertari Vivi","Franky","Jinbe","Charlotte Katakuri","Rob Lucci","Edward Newgate","Koby","Monkey D. Garp","Kuzan","Benn Beckman","Silvers Rayleigh","King","Borsalino","Enel","Imu","Sakazuki","Gol D. Roger","Joy Boy","Marshall D. Teach","Charlotte Linlin (Big Mom / Olin)","Kaido","Gecko Moria","Issho","Scopper Gaban","Shimotsuki Ryuma","Fisher Tiger","Captain John","Gloriosa","Zunesha","Kozuki Oden","Shiki","Nika","Neptune","Streusen","Kong","Buckingham Stussy","Figarland Garling","King Harald"] as const;
+ const visible=useMemo(()=>{const q=query.trim().toLowerCase();return characters.filter(c=>!q||[c.name,c.alias,c.role,c.crew,c.bio].join(' ').toLowerCase().includes(q)).sort((a,b)=>{const ai=popularityOrder.indexOf(a.name as typeof popularityOrder[number]),bi=popularityOrder.indexOf(b.name as typeof popularityOrder[number]);if(ai!==-1||bi!==-1)return (ai===-1?999:ai)-(bi===-1?999:bi);return a.id-b.id})},[query]);
+ const displayRank=(name:string)=>{const rank=popularityOrder.indexOf(name as typeof popularityOrder[number]);return rank===-1?null:rank+1};
  const profiles:Record<string,{birthday:string;jp:string;en:string;age:string;height:string;fruit:string;first:string;facts:string[]}>={
  'Sanji':{birthday:'March 2',jp:'Hiroaki Hirata (adult); Ikue Ōtani (young)',en:'Eric Vale (Funimation); regional dubs vary',age:'21 after timeskip',height:'180 cm',fruit:'No confirmed Devil Fruit; kick-based Black Leg Style',first:'Episode 20 / manga chapter 43',facts:['Born Vinsmoke Sanji, third son of the Vinsmoke family.','Cook of the Straw Hat Pirates; trained by Zeff at the Baratie.','Dreams of finding the All Blue.','Keeps his hands for cooking and primarily fights with kicks.']},
  'Monkey D. Luffy':{birthday:'May 5',jp:'Mayumi Tanaka',en:'Colleen Clinkenbeard',age:'19 after timeskip',height:'174 cm',fruit:'Hito Hito no Mi, Model: Nika',first:'Episode 1 / manga chapter 1',facts:['Captain of the Straw Hat Pirates.','Shanks inspired his dream of becoming a pirate.','Wants to become King of the Pirates.']},
@@ -153,13 +195,13 @@ export function FrameCharacterArchive(){
   <div className="frame-character-head"><div><small>CHARACTER ARCHIVE</small><h3><Users size={18}/> One Piece characters</h3><p>Swipe sideways to browse · tap any card for the full profile</p></div><span className="frame-character-count">{visible.length} / {characters.length}</span></div>
   <label className="frame-character-search"><Search size={16}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search names, crews, roles…" aria-label="Search One Piece characters"/>{query&&<button type="button" onClick={()=>setQuery('')} aria-label="Clear character search"><X size={15}/></button>}</label>
   <div className="frame-character-rail" aria-label="Horizontally scrolling One Piece character profiles">{visible.map(c=><article className={'frame-character-card'+(c.name==='Sanji'?' sanji-featured':'')} key={c.id} role="button" tabIndex={0} onClick={()=>openProfile(c)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openProfile(c)}}} aria-label={'Open details for '+c.name}>
-   <div className="frame-character-portrait"><CharacterPortrait name={c.name} image={portraits[c.name]||(c.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)}/><span className="frame-character-open"><Users size={13}/> View profile</span></div>
+   <div className="frame-character-portrait"><CharacterPortrait name={c.name} image={portraits[c.name]||(c.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)}/><span style={{position:'absolute',top:8,left:8,zIndex:2,padding:'4px 8px',borderRadius:999,background:'rgba(10,15,28,.86)',color:'#fff',fontSize:12,fontWeight:800,border:'1px solid rgba(255,255,255,.25)'}}>{displayRank(c.name)===null?'Unranked':'#'+displayRank(c.name)}</span><span className="frame-character-open"><Users size={13}/> View profile</span></div>
    <div className="frame-character-copy"><a className="frame-character-name" href={google(c.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>{c.name}<ExternalLink size={13}/></a><span className="frame-character-alias">{c.alias}</span><div className="frame-character-role">{c.role}</div><p>{c.bio}</p><span className="frame-character-tap">Tap card for facts <span>↗</span></span></div>
   </article>)}</div><div className="frame-character-rail-hint"><span>← Swipe to explore →</span><span>{visible.length} profiles</span></div>
   <p className="frame-character-source">Portraits are linked from ONE PIECE Bounty Rush. Japanese and English cast fields identify common anime dub credits where available; other regional dubs may differ. Unknown values are labelled rather than guessed.</p>
   {selected&&<div className="frame-character-modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><section className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selected.name+' character details'}>
    <button className="frame-character-modal-close" type="button" onClick={()=>setSelected(null)} aria-label="Close character details"><X size={19}/></button>
-   <div className="frame-character-modal-hero"><CharacterPortrait name={selected.name} image={portraits[selected.name]||(selected.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)} large/><div><small>ONE PIECE · CHARACTER FILE</small><h2>{selected.name}</h2><p>{selected.alias} · {selected.role}</p><span className="frame-character-modal-affiliation">{selected.crew}</span><a className="frame-character-google" href={google(selected.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>Search exact character name on Google <ExternalLink size={13}/></a></div></div>
+   <div className="frame-character-modal-hero"><CharacterPortrait name={selected.name} image={portraits[selected.name]||(selected.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)} large/><div><small>ONE PIECE · CHARACTER FILE · {'+displayRank(selected.name)===null?'UNRANKED':'CUSTOM RANK #'+displayRank(selected.name)+'}</small><h2>{selected.name}</h2><p>{selected.alias} · {selected.role}</p><span className="frame-character-modal-affiliation">{selected.crew}</span><a className="frame-character-google" href={google(selected.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>Search exact character name on Google <ExternalLink size={13}/></a></div></div>
    <div className="frame-character-fact-grid"><div><span><CalendarDays size={14}/> Birthday</span><b>{profiles[selected.name]?.birthday||'Not verified in this profile'}</b></div><div><span>Age</span><b>{profiles[selected.name]?.age||'Not verified / depends on story period'}</b></div><div><span>Height</span><b>{profiles[selected.name]?.height||'Not verified in this profile'}</b></div><div><span><Mic2 size={14}/> Japanese voice actor</span><b>{profiles[selected.name]?.jp||'Not yet verified for this profile'}</b></div><div><span><Mic2 size={14}/> English voice actor</span><b>{profiles[selected.name]?.en||'Dub-dependent / not yet verified'}</b></div><div><span>Devil Fruit / ability</span><b>{profiles[selected.name]?.fruit||'See character description; details not verified here'}</b></div><div><span>First appearance</span><b>{profiles[selected.name]?.first||'Not yet verified in this profile'}</b></div><div><span>Affiliation</span><b>{selected.crew}</b></div></div>
    <section className="frame-character-modal-section"><h3>About</h3><p>{selected.bio}</p><p><strong>Goal / dream:</strong> {selected.goal}</p><p><strong>Role:</strong> {selected.role}. <strong>Alias:</strong> {selected.alias}.</p></section>
    <section className="frame-character-modal-section"><h3>Facts</h3><ul>{(profiles[selected.name]?.facts||[selected.bio,'Affiliation: '+selected.crew,'Goal / dream: '+selected.goal]).map((fact,i)=><li key={i}>{fact}</li>)}</ul></section>
