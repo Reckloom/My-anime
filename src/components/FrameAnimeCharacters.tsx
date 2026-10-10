@@ -37,7 +37,8 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     let active = true;
     setRemoteCharacters([]);
     setFailed(false);
-    if (characters.length || !anilistId) {
+    const needsRemote = characters.length === 0 || characters.some(character => !character.image);
+    if (!needsRemote || !anilistId) {
       setLoading(false);
       return () => { active = false; };
     }
