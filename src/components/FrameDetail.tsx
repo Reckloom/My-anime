@@ -52,8 +52,10 @@ function hierarchyPartOrder(item:MediaItem){
  return (season?Number(season[1])*100:10000)+(part?Number(part[1])*10:0)+(cour?Number(cour[1]):0);
 }
 function compareHierarchyParts(a:MediaItem,b:MediaItem){
- const arcStart=(item:MediaItem)=>{const external=String(item.externalId||'');const match=external.match(/^one-piece-arc-(\d+|other)$/);if(match)return match[1]==='other'?Number.POSITIVE_INFINITY:Number(match[1]);const naruto=external.match(/^naruto-arc-(?:original|shippuden)-(\d+)-\d+$/);return naruto?Number(naruto[1]):null};
+ const arcStart=(item:MediaItem)=>{const external=String(item.externalId||'');const match=external.match(/^one-piece-arc-(\d+|other)$/);if(match)return match[1]==='other'?Number.POSITIVE_INFINITY:Number(match[1]);const naruto=external.match(/^naruto-arc-(?:original|shippuden)-(\d+)-\d+$/);if(naruto)return Number(naruto[1]);const storyArc=external.match(/^frame-story-arc-[a-z0-9-]+-(\d+)$/i);return storyArc?Number(storyArc[1]):null};
  const aArc=arcStart(a),bArc=arcStart(b);
+ if(aArc!==null&&bArc===null)return -1;
+ if(bArc!==null&&aArc===null)return 1;
  if(aArc!==null&&bArc!==null&&aArc!==bArc)return aArc-bArc;
  const aEpisode=String(a.externalId||'').match(/^one-piece-episode-(\d+)$/),bEpisode=String(b.externalId||'').match(/^one-piece-episode-(\d+)$/);
  if(aEpisode&&bEpisode)return Number(aEpisode[1])-Number(bEpisode[1]);
