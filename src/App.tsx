@@ -823,7 +823,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const item=normalise(raw);
   if(item.medium==='anime'&&/^naruto$/i.test(item.title.trim())){
    const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
-   try{return await buildNarutoHierarchy(existing||item,true)}catch(error){setAppMessage('Could not load Naruto hierarchy: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
+   if(existing){setAppMessage('Naruto is already in your library. Its catalogue is paused for now.');window.setTimeout(()=>setAppMessage(''),4000);return false}
+   // Add only the main title for now. Do not start the unfinished arc/episode build.
+   return await save([item,...items]);
   }
   if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
    const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
@@ -835,86 +837,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(duplicate){setAppMessage('This title is already in your library.');window.setTimeout(()=>setAppMessage(''),3000);return false}
   return await save([item,...items]);
  };
- useEffect(()=>{
-  if(!cloudLibraryReady||!items.length)return;
-  const root=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
-  if(!root)return;
-  const parts=items.filter(x=>x.parentId===root.id&&x.sourceProvider==='frame-naruto-part');
-  const partById=new Map(parts.map(x=>[x.id,x]));
-  const arcs=items.filter(x=>partById.has(String(x.parentId||''))&&x.sourceProvider==='frame-naruto-arc');
-  const stale=arcs.filter(x=>!String(x.notes||'').includes('FRAME_NARUTO_ARTWORK=v1'));
-  if(!stale.length)return;
-  const runKey=root.id+':'+stale.map(x=>x.id).sort().join('|');
-  if(narutoArtworkRef.current===runKey)return;
-  narutoArtworkRef.current=runKey;
-  void (async()=>{
-   const found=new Map<string,string>();
-   const normalized=(value:string)=>value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-   const meaningful=(value:string)=>normalized(value).split(' ').filter(word=>word.length>2&&!['naruto','shippuden','arc','the','and','for','episode','filler'].includes(word));
-   for(let offset=0;offset<stale.length;offset+=4){
-    const batch=stale.slice(offset,offset+4);
-    const results=await Promise.all(batch.map(async arc=>{
-     try{
-      const query=encodeURIComponent('File:'+arc.title+' Naruto');
-      const url='https://naruto.fandom.com/api.php?action=query&generator=search&gsrsearch='+query+'&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url&iiurlwidth=900&format=json&origin=*';
-      const response=await fetch(url,{headers:{Accept:'application/json'}});
-      if(!response.ok)return [arc.id,''] as const;
-      const data=await response.json() as any;
-      const pages=Object.values(data?.query?.pages||{}) as any[];
-      const words=meaningful(arc.title);
-      const candidates=pages.map(page=>{
-       const title=String(page?.title||'');
-       const image=String(page?.imageinfo?.[0]?.thumburl||page?.imageinfo?.[0]?.url||'');
-       const key=normalized(title);
-       const score=words.reduce((sum,word)=>sum+(key.includes(word)?1:0),0);
-       return {image,score,title};
-      }).filter(x=>/^https:\/\//i.test(x.image)&&x.score>0&&!/logo|icon|flag|symbol/i.test(x.title))
-       .sort((a,b)=>b.score-a.score);
-      return [arc.id,candidates[0]?.image||''] as const;
-     }catch(error){console.warn('[FRAME Naruto arc artwork]',arc.title,error);return [arc.id,''] as const}
-    }));
-    for(const [id,image] of results)if(image)found.set(id,image);
-   }
-   if(!found.size)return;
-   const updated=items.map(item=>{
-    const arcImage=found.get(item.id);
-    if(arcImage){
-     return {...item,poster:arcImage,backdrop:arcImage,notes:[item.notes,'FRAME_NARUTO_ARTWORK=v1'].filter(Boolean).join(String.fromCharCode(10))};
-    }
-    if(item.sourceProvider!=='frame-naruto-episode')return item;
-    const arc=arcs.find(x=>x.id===item.parentId);
-    const arcPoster=arc?found.get(arc.id):'';
-    if(!arcPoster)return item;
-    const part=arc?partById.get(String(arc.parentId||'')):undefined;
-    const current=String(item.poster||'');
-    const sameAsPart=!current||current===part?.poster||current.toLowerCase().includes('frame-logo.svg');
-    return sameAsPart?{...item,poster:arcPoster,backdrop:arcPoster,episode:item.episode?{...item.episode,posterSource:'naruto-arc-artwork-fallback',posterVersion:'naruto-episodes-v2'}:undefined}:item;
-   });
-   const ok=await save(updated);
-   if(!ok)narutoArtworkRef.current='';
-   else setAppMessage('Naruto artwork refreshed: distinct story-arc posters applied without changing episode progress.');
-   window.setTimeout(()=>setAppMessage(''),6000);
-  })().catch(error=>{narutoArtworkRef.current='';console.warn('[FRAME Naruto artwork refresh]',error)});
- },[cloudLibraryReady,items]);
- useEffect(()=>{
-  if(!cloudLibraryReady||!items.length)return;
-  const root=items.find(x=>!x.parentId&&x.medium==='anime'&&/^naruto$/i.test(x.title.trim()));
-  if(!root)return;
-  const parts=items.filter(x=>x.parentId===root.id&&x.sourceProvider==='frame-naruto-part');
-  const originalPart=parts.find(x=>x.externalId==='naruto-part-original');
-  const shippudenPart=parts.find(x=>x.externalId==='naruto-part-shippuden');
-  const originalArcs=items.filter(arc=>arc.parentId===originalPart?.id&&arc.sourceProvider==='frame-naruto-arc');
-  const shippudenArcs=items.filter(arc=>arc.parentId===shippudenPart?.id&&arc.sourceProvider==='frame-naruto-arc');
-  const originalEpisodeCount=originalArcs.reduce((sum,arc)=>sum+items.filter(ep=>ep.parentId===arc.id&&ep.sourceProvider==='frame-naruto-episode').length,0);
-  const shippudenEpisodeCount=shippudenArcs.reduce((sum,arc)=>sum+items.filter(ep=>ep.parentId===arc.id&&ep.sourceProvider==='frame-naruto-episode').length,0);
-  const originalComplete=Boolean(originalPart&&originalArcs.length===7&&originalEpisodeCount===220);
-  const shippudenComplete=Boolean(shippudenPart&&shippudenArcs.length===32&&shippudenEpisodeCount===500);
-  if(originalComplete&&shippudenComplete)return;
-  const key=root.id+':'+parts.length;
-  if(narutoAutoRef.current===key||narutoAutoRef.current===root.id+':ready')return;
-  narutoAutoRef.current=key;
-  void buildNarutoHierarchy(root).then(ok=>{if(!ok)narutoAutoRef.current=''}).catch(error=>{narutoAutoRef.current='';console.warn('[FRAME Naruto hierarchy]',error)});
- },[cloudLibraryReady,items]);
+ // Naruto catalogue/artwork generation is intentionally paused. We'll build and verify
+ // Naruto and Shippuden as a separate task; loading FRAME must not launch bulk jobs.
  useEffect(()=>{
   if(!user?.id||!cloudLibraryReady||!items.length||!supabase)return;
   const root=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
@@ -1074,7 +998,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  useEffect(()=>{
   const onPopState=()=>{
    setFinder(false);setManualEntry(false);setSelected(null);setMenu(false);setCommandOpen(false);
-   const next=typeof history.state?.framePage==='string'?history.state.framePage:'home';
+   const next=typeof history.state?.framePage==='string'?history.state.framePage:null;
+   // Ignore foreign/initial history entries rather than unexpectedly dumping the user home.
+   if(!next)return;
    setPage(next);
   };
   window.addEventListener('popstate',onPopState);
