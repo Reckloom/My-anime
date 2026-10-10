@@ -7,6 +7,18 @@ const PAGE_SIZE = 100;
 
 type ArcRange = { name: string; start: number; end: number; summary: string };
 const ARC_RANGES: Record<string, ArcRange[]> = {
+  'black clover': [
+    {name:'Magic Knights Entrance',start:1,end:13,summary:'Asta and Yuno begin their journeys toward becoming Wizard King.'},
+    {name:'Dungeon Exploration',start:14,end:19,summary:'The Black Bulls and Golden Dawn explore a dangerous dungeon.'},
+    {name:'Royal Capital Assault',start:20,end:27,summary:'The Royal Capital comes under attack.'},
+    {name:'Eye of the Midnight Sun Encounter',start:28,end:39,summary:'The Magic Knights confront the Eye of the Midnight Sun.'},
+    {name:'Seabed Temple',start:40,end:51,summary:'The Black Bulls undertake a mission to the Seabed Temple.'},
+    {name:'Witches’ Forest',start:52,end:65,summary:'Asta’s search for a cure leads to the Witches’ Forest.'},
+    {name:'Royal Knights',start:66,end:96,summary:'Magic Knights compete for a place in the Royal Knights squad.'},
+    {name:'Elf Reincarnation',start:97,end:129,summary:'The conflict with the elves reveals a deeper history.'},
+    {name:'Heart Kingdom Joint Struggle',start:130,end:157,summary:'The Clover Kingdom prepares for a growing threat from the Spade Kingdom.'},
+    {name:'Spade Kingdom Raid',start:158,end:170,summary:'The Magic Knights launch a dangerous operation against the Spade Kingdom.'}
+  ],
   'bleach': [
     {name:'Agent of the Shinigami',start:1,end:20,summary:'Ichigo becomes a substitute Soul Reaper and begins protecting Karakura Town.'},
     {name:'Soul Society: The Sneak Entry',start:21,end:41,summary:'Ichigo and his friends enter Soul Society to rescue Rukia.'},
