@@ -5,8 +5,15 @@ import { FrameArtwork } from './FrameArtwork';
 
 const PAGE_SIZE = 100;
 const episodeNumber = (item: MediaItem) => {
-  const match = String(item.externalId || '').match(/:episode:(\d+)$/);
-  return Number(match?.[1] || item.episode?.episodeNumber || 0);
+  const externalId = String(item.externalId || '');
+  const match = externalId.match(/:episode:(\d+)$/)
+    || externalId.match(/^one-piece-episode-(\d+)$/i)
+    || externalId.match(/^naruto-episode-(\d+)$/i)
+    || externalId.match(/^frame-anime-episode-\d+-(\d+)-/i);
+  if (match?.[1]) return Number(match[1]);
+  if (item.episode?.episodeNumber) return Number(item.episode.episodeNumber);
+  const titleNumber = item.title.match(/^Episode\s+(\d+)/i);
+  return Number(titleNumber?.[1] || 0);
 };
 
 export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
