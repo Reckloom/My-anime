@@ -368,10 +368,12 @@ function mapMediaItem(media: CatalogueMedia, opts: {
     poster: String(media.coverImage?.extraLarge || ''),
     backdrop: String(media.bannerImage || ''),
     medium: movie ? 'movie' : 'anime',
-    status: movie ? 'completed' : mediaReleaseStatus(media, opts.progress),
-    progress: movie ? 1 : opts.progress,
+    // A catalogue import records availability, not whether the user watched it.
+    // Existing tracking state is preserved by the merge layer.
+    status: opts.total > 0 && opts.progress >= opts.total ? 'completed' : 'planned',
+    progress: movie ? 0 : Math.max(0, Math.min(opts.progress, opts.total)),
     total: movie ? 1 : Math.min(2000, Math.max(0, opts.total)),
-    customTotal: movie ? 1 : Math.min(2000, Math.max(0, opts.total)),
+    customTotal: undefined,
     progressUnit: movie ? 'watch state' : 'episodes',
     year: media.startDate?.year ? Number(media.startDate.year) : media.seasonYear ? Number(media.seasonYear) : undefined,
     score: media.averageScore == null ? undefined : Number(media.averageScore) / 10,
@@ -466,7 +468,13 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const catalogue = catalogues.get(Number(media.id)) || { rows: [], verified: false, warnings: [] };
     const episodes = movie ? [] : catalogue.rows;
     const id = itemIds.get(Number(media.id))!;
-    const progress = movie ? 1 : episodes.length;
+    const existingMedia = library.find(x =>
+      x.id === id ||
+      (x.anilistId === Number(media.id) && x.medium === (movie ? 'movie' : 'anime'))
+    );
+    // Never assume a new title or season is watched just because episode
+    // metadata exists. Keep an existing entry's progress, otherwise start at 0.
+    const progress = Math.max(0, Number(existingMedia?.progress) || 0);
     const total = movie ? 1 : episodes.length;
     if (!movie) {
       franchiseEpisodes += episodes.length;
@@ -509,10 +517,10 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
           poster: episode.poster || '',
           backdrop: '',
           medium: 'anime',
-          status: 'completed',
-          progress: 1,
+          status: 'planned',
+          progress: 0,
           total: 1,
-          customTotal: 1,
+          customTotal: undefined,
           progressUnit: 'episodes',
           year: episode.airDate ? Number(episode.airDate.slice(0, 4)) : (media.startDate?.year ? Number(media.startDate.year) : undefined),
           score: undefined,
@@ -535,10 +543,10 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   // The root's progress represents the released episodes across its imported animated entries.
   const rootRow = incoming.find(x => x.id === rootId);
   if (rootRow && chosen.length > 1) {
+    // The root's total can summarize the imported franchise, but catalogue
+    // completeness must never be interpreted as watched progress.
     rootRow.total = Math.min(2000, franchiseEpisodes);
-    rootRow.customTotal = rootRow.total;
-    rootRow.progress = rootRow.total;
-    rootRow.status = allFinished ? 'completed' : (rootRow.total > 0 ? 'watching' : 'planned');
+    rootRow.customTotal = undefined;
     rootRow.description = clean(rootDetails.description);
   }
   const missingPosterTitles = chosen.filter(media => !String(media.coverImage?.extraLarge || '').trim()).map(preferredTitle);
