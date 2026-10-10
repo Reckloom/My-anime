@@ -633,7 +633,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    return {...next,progress:Math.min(prior.progress,next.total??prior.total??0),status:prior.status,personalRating:prior.personalRating??next.personalRating,favorite:prior.favorite,notes:prior.notes??next.notes,customTotal:prior.customTotal??next.customTotal};
   });
   const ok=await save([...reconciled,...remaining]);
-  if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(created[0])}
+  if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);openDetail(created[0])}
   return ok;
  };
  const makeOnePieceEpisode=(e:any,arc:{name:string;start:number;end:number},arcNumber:number,parentId:string,root:MediaItem,usedPosters:Set<string>):MediaItem=>{
@@ -713,7 +713,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    while(changed){changed=false;for(const item of items){if(item.parentId&&descendantIds.has(item.parentId)&&!descendantIds.has(item.id)){descendantIds.add(item.id);changed=true}}}
    const remaining=items.filter(x=>!descendantIds.has(x.id));
    const ok=await save([...created,...remaining]);
-   if(ok){setAppMessage(seriesTitle+': '+sourceRows.length+' episodes loaded with arc grouping.');window.setTimeout(()=>setAppMessage(''),7000);setSelected(root)}
+   if(ok){setAppMessage(seriesTitle+': '+sourceRows.length+' episodes loaded with arc grouping.');window.setTimeout(()=>setAppMessage(''),7000);openDetail(root)}
    return ok;
   }catch(error){
    const message=error instanceof Error?error.message:'Please retry the catalogue request.';
@@ -813,6 +813,22 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   return true;
  });
 },[items,sortMode,query,filters]);
+ const openDetail=(item:MediaItem)=>{
+  const state={framePage:page,frameDetailId:item.id};
+  if(selected)history.replaceState(state,'',window.location.href);
+  else history.pushState(state,'',window.location.href);
+  setSelected(item);
+ };
+ const navigateDetail=(item:MediaItem)=>{
+  const state={framePage:page,frameDetailId:item.id};
+  if(history.state?.frameDetailId)history.replaceState(state,'',window.location.href);
+  else history.pushState(state,'',window.location.href);
+  setSelected(item);
+ };
+ const closeDetail=()=>{
+  setSelected(null);
+  if(history.state?.frameDetailId)history.replaceState({framePage:page},'',window.location.href);
+ };
  const pageHistoryReady=useRef(false);
  useEffect(()=>{
   if(!pageHistoryReady.current){
@@ -824,18 +840,22 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  },[page]);
  useEffect(()=>{
   const onPopState=()=>{
-   setFinder(false);setManualEntry(false);setSelected(null);setMenu(false);setCommandOpen(false);
-   const next=typeof history.state?.framePage==='string'?history.state.framePage:null;
-   // Ignore foreign/initial history entries rather than unexpectedly dumping the user home.
-   if(!next)return;
+   setFinder(false);setManualEntry(false);setMenu(false);setCommandOpen(false);
+   const state=history.state;
+   const next=typeof state?.framePage==='string'?state.framePage:null;
+   // A detail drawer has its own history entry. Going back from it should
+   // close the drawer and stay on the same page instead of jumping home.
+   if(!next){setSelected(null);return}
    setPage(next);
+   const detailId=typeof state?.frameDetailId==='string'?state.frameDetailId:null;
+   setSelected(detailId?itemsRef.current.find(x=>x.id===detailId)||null:null);
   };
   window.addEventListener('popstate',onPopState);
   return()=>window.removeEventListener('popstate',onPopState);
  },[]);
  const go=(next:string)=>{
-  if(next===page){setMenu(false);setSelected(null);return}
-  setPage(next);setMenu(false);setSelected(null);if(next!=='friend-library')setFriendLibrary(null);
+  if(next===page){setMenu(false);closeDetail();return}
+  closeDetail();setPage(next);setMenu(false);if(next!=='friend-library')setFriendLibrary(null);
  };
 
  return <div className="frame-app">
@@ -849,7 +869,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
     <button className="primary top-find" onClick={()=>setFinder(true)}><Search size={16}/>Search</button>
     <button className="top-icon" title="Connections" aria-label="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
-    <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>{if(!href)return;if(href.startsWith('media:')){const match=items.find(x=>x.id===href.slice(6));if(match){setSelected(match);return}}go(href)}}/>
+    <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>{if(!href)return;if(href.startsWith('media:')){const match=items.find(x=>x.id===href.slice(6));if(match){openDetail(match);return}}go(href)}}/>
     {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
     <button className="top-account" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
       <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt={(profile.display_name||user?.email||'Account')+' avatar'} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
@@ -874,9 +894,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   <nav className="mobile-bottom">
    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['chat','Chat'],MessageCircle],[['friends','Friends'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
-  {selected&&<FrameDetail item={selected} library={items} navigationItems={shown.length?shown:items.filter(x=>!x.parentId)} navigate={setSelected} close={()=>setSelected(null)} onRefreshMetadata={refreshMetadata} onDelete={async id=>{const target=items.find(i=>i.id===id);const children=items.filter(i=>i.parentId===id);const next=items.filter(i=>i.id!==id).map(i=>i.parentId===id?{...i,parentId:undefined}:i);const client=supabase;if(client&&user?.id){const {error}=await client.from('media_items').delete().eq('id',id).eq('user_id',user.id);if(error){setAppMessage('Delete failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return}}setSelected(null);await save(next);await removeOwnedArtwork(target?.poster);if(target?.backdrop&&target.backdrop!==target.poster)await removeOwnedArtwork(target.backdrop);if(children.length){setAppMessage('Entry deleted. Its child entries were kept and detached.');window.setTimeout(()=>setAppMessage(''),5000)}}} save={async x=>{const previous=items.find(i=>i.id===x.id);const ok=await save(items.map(i=>i.id===x.id?x:i));if(ok&&previous){if(previous.poster&&previous.poster!==x.poster)await removeOwnedArtwork(previous.poster);if(previous.backdrop&&previous.backdrop!==x.backdrop&&previous.backdrop!==previous.poster&&previous.backdrop!==x.poster)await removeOwnedArtwork(previous.backdrop)}return ok}}/>}
+  {selected&&<FrameDetail item={selected} library={items} navigationItems={shown.length?shown:items.filter(x=>!x.parentId)} navigate={navigateDetail} close={closeDetail} onRefreshMetadata={refreshMetadata} onDelete={async id=>{const target=items.find(i=>i.id===id);const children=items.filter(i=>i.parentId===id);const next=items.filter(i=>i.id!==id).map(i=>i.parentId===id?{...i,parentId:undefined}:i);const client=supabase;if(client&&user?.id){const {error}=await client.from('media_items').delete().eq('id',id).eq('user_id',user.id);if(error){setAppMessage('Delete failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return}}closeDetail();await save(next);await removeOwnedArtwork(target?.poster);if(target?.backdrop&&target.backdrop!==target.poster)await removeOwnedArtwork(target.backdrop);if(children.length){setAppMessage('Entry deleted. Its child entries were kept and detached.');window.setTimeout(()=>setAppMessage(''),5000)}}} save={async x=>{const previous=items.find(i=>i.id===x.id);const ok=await save(items.map(i=>i.id===x.id?x:i));if(ok&&previous){if(previous.poster&&previous.poster!==x.poster)await removeOwnedArtwork(previous.poster);if(previous.backdrop&&previous.backdrop!==x.backdrop&&previous.backdrop!==previous.poster&&previous.backdrop!==x.poster)await removeOwnedArtwork(previous.backdrop)}return ok}}/>}
   {finder&&<AniListSearch initialQuery={query} guest={guest} library={items} close={()=>setFinder(false)} onImported={importItem} onManual={()=>{setFinder(false);setManualEntry(true)}} />}
-  {manualEntry&&<ManualEntryForm library={items} close={()=>setManualEntry(false)} onCreate={async raw=>{const item=normalise({...raw,id:crypto.randomUUID()});const ok=await save([item,...items]);if(!ok)return;setSelected(item);setManualEntry(false);}}/>}
+  {manualEntry&&<ManualEntryForm library={items} close={()=>setManualEntry(false)} onCreate={async raw=>{const item=normalise({...raw,id:crypto.randomUUID()});const ok=await save([item,...items]);if(!ok)return;openDetail(item);setManualEntry(false);}}/>}
   {!guest&&<FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/>} 
   <FramePopupHub uid={uid} hidden={finder||manualEntry||selected!==null||commandOpen} onFind={()=>setFinder(true)} onOpenCalls={()=>go('calls')} onCall={setDirectCall}/>
   {commandOpen&&<FrameCommandPalette onGo={go} onFind={()=>setFinder(true)} onClose={()=>setCommandOpen(false)}/>}
