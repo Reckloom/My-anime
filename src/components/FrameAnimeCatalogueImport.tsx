@@ -399,10 +399,13 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   const chosen: CatalogueMedia[] = [rootDetails];
   const warnings: string[] = [];
   const seen = new Set<number>([Number(rootDetails.id)]);
-  const queue: Array<{ id: number; depth: number }> = [];
+  const queue: Array<{ id: number; depth: number; parentId: number }> = [];
+  const parentByMediaId = new Map<number, number>();
   if (task.relatedLimit > 0) {
     for (const edge of rootDetails.relations?.edges || []) {
-      if (isEligibleRelation(task, edge) && Number(edge.node?.id) !== Number(rootDetails.id)) queue.push({ id: Number(edge.node!.id), depth: 1 });
+      if (isEligibleRelation(task, edge) && Number(edge.node?.id) !== Number(rootDetails.id)) {
+        queue.push({ id: Number(edge.node!.id), depth: 1, parentId: Number(rootDetails.id) });
+      }
     }
   }
   while (queue.length && chosen.length < task.relatedLimit + 1) {
@@ -413,10 +416,13 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       const related = await fetchDetails(next.id, false);
       if (!isEligibleRelation(task, { relationType: 'SEQUEL', node: related })) continue;
       chosen.push(related);
+      parentByMediaId.set(Number(related.id), next.parentId);
       if (next.depth < task.relationDepth) {
         for (const edge of related.relations?.edges || []) {
           const childId = Number(edge.node?.id);
-          if (childId && !seen.has(childId) && isEligibleRelation(task, edge)) queue.push({ id: childId, depth: next.depth + 1 });
+          if (childId && !seen.has(childId) && isEligibleRelation(task, edge)) {
+            queue.push({ id: childId, depth: next.depth + 1, parentId: Number(related.id) });
+          }
         }
       }
       onProgress('Found ' + chosen.length + ' linked animated entries for ' + task.title + '.');
@@ -468,7 +474,9 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     }
     incoming.push(mapMediaItem(media, {
       id,
-      parentId: index === 0 ? undefined : rootId,
+      parentId: index === 0
+        ? undefined
+        : (itemIds.get(parentByMediaId.get(Number(media.id)) ?? Number(rootDetails.id)) || rootId),
       progress,
       total,
       characters: index === 0 ? charactersFrom(rootDetails) : undefined
