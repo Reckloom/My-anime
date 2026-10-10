@@ -55,6 +55,36 @@ async function characters(names: unknown) {
   }
   return { characters: results, matched: results.filter(item => item.image).length, requested: list.length };
 }
+async function searchAnime(query: string) {
+  const cleanQuery = query.trim().slice(0, 120);
+  if (!cleanQuery) throw new Error('Anime title is required.');
+  const data = await fetchJson('https://api.jikan.moe/v4/anime?q=' + encodeURIComponent(cleanQuery) + '&limit=8', {}, 3);
+  const results = Array.isArray(data?.data) ? data.data : [];
+  return {
+    results: results.map((item: any) => ({
+      mal_id: Number(item.mal_id),
+      title: String(item.title || ''),
+      title_english: String(item.title_english || ''),
+      title_japanese: String(item.title_japanese || ''),
+    })).filter((item: any) => Number.isInteger(item.mal_id) && item.mal_id > 0),
+    source: 'Jikan / MyAnimeList',
+  };
+}
+async function episodePage(malIdValue: unknown, pageValue: unknown) {
+  const malId = Number(malIdValue);
+  const page = Number(pageValue);
+  if (!Number.isInteger(malId) || malId < 1 || malId > 2147483647) throw new Error('A valid MyAnimeList anime ID is required.');
+  if (!Number.isInteger(page) || page < 1 || page > 100) throw new Error('Episode page must be between 1 and 100.');
+  const data = await fetchJson('https://api.jikan.moe/v4/anime/' + malId + '/episodes?page=' + page, {}, 3);
+  return {
+    data: Array.isArray(data?.data) ? data.data : [],
+    pagination: {
+      last_visible_page: Math.max(1, Number(data?.pagination?.last_visible_page || 1)),
+      has_next_page: Boolean(data?.pagination?.has_next_page),
+    },
+    source: 'Jikan / MyAnimeList',
+  };
+}
 async function episodes(anime: string) {
   const id = anime === 'naruto-shippuden' ? 1735 : anime === 'naruto' ? 20 : anime === 'one-piece' ? 21 : 0;
   if (!id) throw new Error('Unsupported anime series.');
@@ -88,6 +118,8 @@ Deno.serve(async (request: Request) => {
   try {
     const action = String(body?.action || '');
     if (action === 'characters') return json(await characters(body?.names));
+    if (action === 'search') return json(await searchAnime(String(body?.query || '')));
+    if (action === 'episode-page') return json(await episodePage(body?.malId, body?.page));
     if (action === 'episodes') return json(await episodes(String(body?.anime || '')));
     return json({ error: 'Unsupported anime catalogue action.' }, 400);
   } catch (error) {
