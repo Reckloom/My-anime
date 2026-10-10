@@ -84,11 +84,29 @@ function sameMedia(a:MediaItem,b:MediaItem){
  if(a.sourceProvider&&a.externalId&&b.sourceProvider&&b.externalId)return a.sourceProvider===b.sourceProvider&&a.externalId===b.externalId;
  return a.medium===b.medium&&a.parentId===b.parentId&&aTitle===bTitle;
 }
+function mediaMatchKeys(item:MediaItem){
+ const keys:string[]=[];
+ if(item.anilistId)keys.push('anilist:'+item.anilistId);
+ if(item.sourceProvider&&item.externalId)keys.push('source:'+item.sourceProvider+':'+item.externalId);
+ const title=item.title.trim().toLowerCase().replace(/\\s+/g,' ');
+ keys.push('fallback:'+item.medium+':'+(item.parentId||'')+':'+title);
+ return keys;
+}
+function findMediaMatchIndex(indexes:Map<string,number[]>,items:MediaItem[],incoming:MediaItem){
+ const candidates=new Set<number>();
+ for(const key of mediaMatchKeys(incoming))for(const index of indexes.get(key)||[])candidates.add(index);
+ for(const index of candidates)if(sameMedia(items[index],incoming))return index;
+ return -1;
+}
+function indexMediaItem(indexes:Map<string,number[]>,item:MediaItem,index:number){
+ for(const key of mediaMatchKeys(item)){const values=indexes.get(key);if(values)values.push(index);else indexes.set(key,[index]);}
+}
 function dedupeMediaItems(items:MediaItem[]){
  const merged:MediaItem[]=[];
+ const indexes=new Map<string,number[]>();
  for(const raw of items){
-  const incoming=normalise(raw); const index=merged.findIndex(x=>sameMedia(x,incoming));
-  if(index<0){merged.push(incoming);continue}
+  const incoming=normalise(raw); const index=findMediaMatchIndex(indexes,merged,incoming);
+  if(index<0){const nextIndex=merged.length;merged.push(incoming);indexMediaItem(indexes,incoming,nextIndex);continue}
   const current=merged[index];
   merged[index]=normalise({...current,
    id:current.id,parentId:incoming.parentId??current.parentId,metadataId:current.metadataId??incoming.metadataId,
@@ -101,10 +119,12 @@ function dedupeMediaItems(items:MediaItem[]){
 }
 function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
  const merged=dedupeMediaItems(primary);
+ const indexes=new Map<string,number[]>();
+ merged.forEach((item,index)=>indexMediaItem(indexes,item,index));
  for(const incomingRaw of secondary){
   const incoming=normalise(incomingRaw);
-  const index=merged.findIndex(x=>sameMedia(x,incoming));
-  if(index<0){merged.push(incoming);continue}
+  const index=findMediaMatchIndex(indexes,merged,incoming);
+  if(index<0){const nextIndex=merged.length;merged.push(incoming);indexMediaItem(indexes,incoming,nextIndex);continue}
   const current=merged[index];
   // Imported episode and story-arc parent links are database-authoritative.
   // A stale local cache must never flatten episodes back onto a series root.
