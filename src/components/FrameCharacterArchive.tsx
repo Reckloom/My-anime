@@ -115,69 +115,80 @@ export function FrameCharacterArchive(){
    'Ochoku':['Ochoku','Wang Zhi'],
   };
   const wikiTitle=(name:string)=>{
-   if(name==='Sanji')return 'Sanji/Abilities_and_Powers';
-   if(name==='Monkey D. Luffy')return 'Monkey_D._Luffy/Abilities_and_Powers';
+   if(name==='Sanji')return 'Black_Leg_Style/Ifrit_Jambe';
+   if(name==='Monkey D. Luffy')return 'Gear_5';
    return (aliases[name]?.[0]||name).replace(/ /g,'_');
   };
   const load=async()=>{
    const result:Record<string,string>={};
-   // Prefer anime/manga character-page artwork from the One Piece Wiki. For
-   // Sanji and Luffy, request their ability pages to bias toward signature-form
-   // artwork rather than generic profile portraits.
    const titleOwners=new Map<string,string>();
    const requests=characters.map(character=>{
     const title=wikiTitle(character.name);
     titleOwners.set(normalize(title.replace(/_/g,' ')),character.name);
     return {character,title};
    });
-   for(let start=0;start<requests.length;start+=35){
-    const batch=requests.slice(start,start+35);
+   const wikiBatches=Array.from({length:Math.ceil(requests.length/35)},(_,i)=>requests.slice(i*35,(i+1)*35));
+   const wikiResponses=await Promise.all(wikiBatches.map(async batch=>{
     try{
      const titles=batch.map(x=>x.title).join('|');
      const url='https://onepiece.fandom.com/api.php?action=query&format=json&prop=pageimages&piprop=thumbnail%7Coriginal&pithumbsize=900&titles='+encodeURIComponent(titles)+'&origin=*';
      const response=await fetch(url,{headers:{Accept:'application/json'}});
-     if(!response.ok)continue;
-     const json=await response.json() as {query?:{normalized?:{from:string;to:string}[];redirects?:{from:string;to:string}[];pages?:Record<string,{title?:string;thumbnail?:{source?:string};original?:{source?:string}}>}};
-     const canonicalOwners=new Map<string,string>(titleOwners);
-     for(const entry of json.query?.normalized||[]){
-      const owner=titleOwners.get(normalize(entry.from.replace(/_/g,' ')));
-      if(owner)canonicalOwners.set(normalize(entry.to.replace(/_/g,' ')),owner);
+     if(!response.ok)return null;
+     return await response.json() as {query?:{normalized?:{from:string;to:string}[];redirects?:{from:string;to:string}[];pages?:Record<string,{title?:string;thumbnail?:{source?:string};original?:{source?:string}}>}};
+    }catch{return null}
+   }));
+   const usedImages=new Set<string>();
+   wikiResponses.forEach(json=>{
+    if(!json)return;
+    const canonicalOwners=new Map<string,string>(titleOwners);
+    for(const entry of json.query?.normalized||[]){
+     const owner=titleOwners.get(normalize(entry.from.replace(/_/g,' ')));
+     if(owner)canonicalOwners.set(normalize(entry.to.replace(/_/g,' ')),owner);
+    }
+    for(const entry of json.query?.redirects||[]){
+     const owner=canonicalOwners.get(normalize(entry.from.replace(/_/g,' ')))||titleOwners.get(normalize(entry.from.replace(/_/g,' ')));
+     if(owner)canonicalOwners.set(normalize(entry.to.replace(/_/g,' ')),owner);
+    }
+    Object.values(json.query?.pages||{}).forEach(page=>{
+     const owner=canonicalOwners.get(normalize((page.title||'').replace(/_/g,' ')));
+     const image=(page.original?.source||page.thumbnail?.source)?.replace(/\\_/g,'_');
+     if(owner&&image&&!usedImages.has(image)){
+      result[owner]=image;
+      usedImages.add(image);
      }
-     for(const entry of json.query?.redirects||[]){
-      const owner=canonicalOwners.get(normalize(entry.from.replace(/_/g,' ')))||titleOwners.get(normalize(entry.from.replace(/_/g,' ')));
-      if(owner)canonicalOwners.set(normalize(entry.to.replace(/_/g,' ')),owner);
-     }
-     Object.values(json.query?.pages||{}).forEach(page=>{
-      const owner=canonicalOwners.get(normalize((page.title||'').replace(/_/g,' ')));
-      const image=(page.original?.source||page.thumbnail?.source)?.replace(/\\_/g,'_');
-      if(owner&&image)result[owner]=image;
-     });
-    }catch{/* continue to the independent AniList fallback */}
-   }
-   // Keep each character's own portrait as the card artwork. Episode key visuals
-   // can be group shots and accidentally show the wrong character for a profile.
-   // Fill every missing portrait from AniList using alias-aware exact matching.
-   for(let start=0;start<characters.length;start+=10){
-    const batch=characters.slice(start,start+10).filter(character=>!result[character.name]);
-    if(!batch.length)continue;
+    });
+   });
+   // AniList is an independent fallback. Fetch the missing character portraits
+   // concurrently and reject duplicate image URLs so one character never gets
+   // another character's artwork merely because a search result was ambiguous.
+   const missing=characters.filter(character=>!result[character.name]);
+   const anilistBatches=Array.from({length:Math.ceil(missing.length/10)},(_,i)=>missing.slice(i*10,(i+1)*10));
+   const anilistResults=await Promise.all(anilistBatches.map(async batch=>{
+    if(!batch.length)return [] as {character:Character;image:string;foundName:string;allowed:string[]}[];
     const fields=batch.map((character,index)=>{
      const search=(aliases[character.name]?.[0]||character.name).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
      return 'c'+index+': Character(search: "'+search+'", sort: SEARCH_MATCH) { name { full } image { large } }';
-    }).join('\n');
+    }).join('\\n');
     try{
      const response=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+fields+' }'})});
-     if(!response.ok)continue;
+     if(!response.ok)return [];
      const json=await response.json() as {data?:Record<string,{name?:{full?:string};image?:{large?:string}}|null>};
-     batch.forEach((character,index)=>{
+     return batch.flatMap((character,index)=>{
       const found=json.data?.['c'+index];
       const foundName=normalize(found?.name?.full||'');
       const allowed=[character.name,...(aliases[character.name]||[]),character.alias].map(normalize);
       const exact=allowed.includes(foundName);
       const compatible=allowed.some(name=>name.length>5&&(name.includes(foundName)||foundName.includes(name)));
-      if(found?.image?.large&&foundName&&(exact||compatible))result[character.name]=found.image.large;
+      return found?.image?.large&&foundName&&(exact||compatible)?[{character,image:found.image.large,foundName,allowed}]:[];
      });
-    }catch{/* missing sources are shown as a labelled fallback, never as another character */}
-   }
+    }catch{return []}
+   }));
+   anilistResults.flat().forEach(({character,image})=>{
+    if(!result[character.name]&&!usedImages.has(image)){
+     result[character.name]=image;
+     usedImages.add(image);
+    }
+   });
    if(active)setPortraits(result);
   };
   void load();
