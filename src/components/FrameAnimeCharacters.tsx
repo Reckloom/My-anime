@@ -15,13 +15,13 @@ type AniListCharacterEdge = {
     siteUrl?: string | null;
   };
 };
-type AniListCharacterResponse = { Media?: { characters?: { edges?: AniListCharacterEdge[] } } };
+type AniListCharacterResponse = { Media?: { title?: { english?: string | null; romaji?: string | null; native?: string | null; userPreferred?: string | null }; characters?: { edges?: AniListCharacterEdge[] } } };
 
-async function loadAnimeCharacters(anilistId: number): Promise<AnimeCharacterProfile[]> {
+async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Promise<AnimeCharacterProfile[]> {
   if (supabase) {
     try {
       const { data, error } = await supabase.functions.invoke('anime-catalogue', {
-        body: { action: 'anime-characters', anilistId },
+        body: { action: 'anime-characters', anilistId, title: expectedTitle },
       });
       if (!error && Array.isArray(data?.characters)) {
         return data.characters.filter((character: any) => character?.name).map((character: any) => ({
@@ -39,7 +39,12 @@ async function loadAnimeCharacters(anilistId: number): Promise<AnimeCharacterPro
     }
   }
   const result = await aniList<AniListCharacterResponse>(CHARACTERS_QUERY, { id: anilistId });
-  const edges = result.Media?.characters?.edges || [];
+  const media = result.Media;
+  const normalizeTitle = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  const expected = normalizeTitle(expectedTitle);
+  const actual = [media?.title?.english, media?.title?.romaji, media?.title?.native, media?.title?.userPreferred].filter(Boolean).map((value: string) => normalizeTitle(String(value)));
+  if (!actual.some((value: string) => value === expected || (expected.length >= 5 && value.startsWith(expected)))) return [];
+  const edges = media?.characters?.edges || [];
   return edges.filter(edge => edge.node?.name?.full).map(edge => ({
     id: edge.node!.id,
     name: String(edge.node!.name!.full),
@@ -51,22 +56,23 @@ async function loadAnimeCharacters(anilistId: number): Promise<AnimeCharacterPro
   }));
 }
 
-const characterCache = new Map<number, { expiresAt: number; profiles: AnimeCharacterProfile[] }>();
-const characterRequests = new Map<number, Promise<AnimeCharacterProfile[]>>();
+const characterCache = new Map<string, { expiresAt: number; profiles: AnimeCharacterProfile[] }>();
+const characterRequests = new Map<string, Promise<AnimeCharacterProfile[]>>();
 
-async function fetchAnimeCharacters(anilistId: number): Promise<AnimeCharacterProfile[]> {
-  const cached = characterCache.get(anilistId);
+async function fetchAnimeCharacters(anilistId: number, expectedTitle: string): Promise<AnimeCharacterProfile[]> {
+  const key = anilistId + ':' + expectedTitle.toLocaleLowerCase();
+  const cached = characterCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.profiles;
-  const pending = characterRequests.get(anilistId);
+  const pending = characterRequests.get(key);
   if (pending) return pending;
-  const request = loadAnimeCharacters(anilistId);
-  characterRequests.set(anilistId, request);
+  const request = loadAnimeCharacters(anilistId, expectedTitle);
+  characterRequests.set(key, request);
   try {
     const profiles = await request;
-    if (profiles.length) characterCache.set(anilistId, { expiresAt: Date.now() + 15 * 60 * 1000, profiles });
+    if (profiles.length) characterCache.set(key, { expiresAt: Date.now() + 15 * 60 * 1000, profiles });
     return profiles;
   } finally {
-    if (characterRequests.get(anilistId) === request) characterRequests.delete(anilistId);
+    if (characterRequests.get(key) === request) characterRequests.delete(key);
   }
 }
 
@@ -99,7 +105,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
       return () => { active = false; };
     }
     setLoading(true);
-    fetchAnimeCharacters(anilistId)
+    fetchAnimeCharacters(anilistId, title)
       .then(mapped => {
         if (active) {
           const normalizeName = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
@@ -124,7 +130,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
       .catch(() => { if (active) setFailed(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [anilistId, stableCharacters]);
+  }, [anilistId, stableCharacters, title]);
 
   const profiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
   if (!profiles.length && !loading && !failed) return null;
