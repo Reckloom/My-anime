@@ -115,10 +115,13 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     const destinationReady=heading?.textContent?.trim()===previous.item.title;
     if(destinationReady){
      const setInstantScroll=(element:HTMLElement,desired:number)=>{
-      const oldBehavior=element.style.scrollBehavior;
-      element.style.scrollBehavior='auto';
-      element.scrollTop=Math.min(desired,Math.max(0,element.scrollHeight-element.clientHeight));
-      element.style.scrollBehavior=oldBehavior;
+      // Keep programmatic restoration instant; restoring the previous CSS
+      // value can re-enable smooth scrolling and leave the drawer mid-way.
+      element.style.setProperty('scroll-behavior','auto','important');
+      element.style.setProperty('overflow-anchor','none','important');
+      const target=Math.min(desired,Math.max(0,element.scrollHeight-element.clientHeight));
+      element.scrollTop=target;
+      element.scrollTo({top:target,left:0,behavior:'instant'});
      };
      if(overlay)setInstantScroll(overlay,previous.overlayScrollTop);
      if(drawer)setInstantScroll(drawer,previous.drawerScrollTop);
@@ -164,10 +167,17 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
    const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
    if(restore&&restore.item.id===item.id){
-    if(overlay)overlay.scrollTop=Math.min(restore.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
-    if(drawer)drawer.scrollTop=Math.min(restore.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
-    if(body)body.scrollTop=Math.min(restore.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
-    window.scrollTo(0,restore.pageScrollTop);
+    const setInstantScroll=(element:HTMLElement,desired:number)=>{
+     element.style.setProperty('scroll-behavior','auto','important');
+     element.style.setProperty('overflow-anchor','none','important');
+     const target=Math.min(desired,Math.max(0,element.scrollHeight-element.clientHeight));
+     element.scrollTop=target;
+     element.scrollTo({top:target,left:0,behavior:'instant'});
+    };
+    if(overlay)setInstantScroll(overlay,restore.overlayScrollTop);
+    if(drawer)setInstantScroll(drawer,restore.drawerScrollTop);
+    if(body)setInstantScroll(body,restore.bodyScrollTop);
+    window.scrollTo({top:restore.pageScrollTop,left:0,behavior:'instant'});
    }else{
     if(overlay)overlay.scrollTop=0;
     if(drawer)drawer.scrollTop=0;
