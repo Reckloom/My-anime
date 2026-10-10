@@ -88,7 +88,32 @@ const google=(name:string)=>'https://www.google.com/search?q='+encodeURIComponen
 export function FrameCharacterArchive(){
  const [query,setQuery]=useState('');
  const [selected,setSelected]=useState<Character|null>(null);
- const portraits:Record<string,string>={};
+ const [portraits,setPortraits]=useState<Record<string,string>>({});
+ useEffect(()=>{
+  let active=true;
+  const load=async()=>{
+   const titles=characters.map(c=>c.name==='Charlotte Linlin (Big Mom / Olin)'?'Charlotte Linlin':c.name==='Trafalgar D. Water Law'?'Trafalgar D. Water Law':c.name);
+   const found:Record<string,string>={};
+   for(let i=0;i<titles.length;i+=40){
+    const batch=titles.slice(i,i+40);
+    try{
+     const url='https://onepiece.fandom.com/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail& pithumbsize=480&titles='+encodeURIComponent(batch.join('|')).replace(/%20/g,'%20');
+     const response=await fetch(url.replace('& pithumbsize','&pithumbsize'));
+     if(!response.ok)continue;
+     const data=await response.json();
+     for(const page of Object.values(data?.query?.pages||{}) as any[]){
+      const title=String(page.title||'');const source=page.thumbnail?.source;
+      if(source){const character=characters.find(c=>c.name.toLowerCase()===title.toLowerCase()||(c.name==='Charlotte Linlin (Big Mom / Olin)'&&title.toLowerCase()==='charlotte linlin'));
+       if(character)found[character.name]=source;
+      }
+     }
+    }catch{}
+   }
+   if(active)setPortraits(found);
+  };
+  void load();
+  return()=>{active=false};
+ },[]);
 
 
  const visible=useMemo(()=>{const q=query.trim().toLowerCase();return characters.filter(c=>!q||[c.name,c.alias,c.role,c.crew,c.bio].join(' ').toLowerCase().includes(q)).sort((a,b)=>{const ai=popularityOrder.indexOf(a.name as typeof popularityOrder[number]),bi=popularityOrder.indexOf(b.name as typeof popularityOrder[number]);if(ai!==-1||bi!==-1)return (ai===-1?999:ai)-(bi===-1?999:bi);return a.id-b.id})},[query]);
@@ -145,13 +170,13 @@ export function FrameCharacterArchive(){
   <div className="frame-character-head"><div><small>CHARACTER ARCHIVE</small><h3><Users size={18}/> One Piece characters</h3><p>Swipe sideways to browse · tap any card for the full profile</p></div><span className="frame-character-count">{visible.length} / {characters.length}</span></div>
   <label className="frame-character-search"><Search size={16}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search names, crews, roles…" aria-label="Search One Piece characters"/>{query&&<button type="button" onClick={()=>setQuery('')} aria-label="Clear character search"><X size={15}/></button>}</label>
   <div className="frame-character-rail" aria-label="Horizontally scrolling One Piece character profiles">{visible.map(c=><article className={'frame-character-card'+(c.name==='Sanji'?' sanji-featured':'')} key={c.id} role="button" tabIndex={0} onClick={()=>openProfile(c)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openProfile(c)}}} aria-label={'Open details for '+c.name}>
-   <div className="frame-character-portrait"><CharacterPortrait name={c.name} image={undefined}/><span style={{position:'absolute',top:8,left:8,zIndex:2,padding:'4px 8px',borderRadius:999,background:'rgba(10,15,28,.86)',color:'#fff',fontSize:12,fontWeight:800,border:'1px solid rgba(255,255,255,.25)'}}>{displayRank(c.name)===null?'Unranked':'#'+displayRank(c.name)}</span><span className="frame-character-open"><Users size={13}/> View profile</span></div>
+   <div className="frame-character-portrait"><CharacterPortrait name={c.name} image={portraits[c.name]}/><span style={{position:'absolute',top:8,left:8,zIndex:2,padding:'4px 8px',borderRadius:999,background:'rgba(10,15,28,.86)',color:'#fff',fontSize:12,fontWeight:800,border:'1px solid rgba(255,255,255,.25)'}}>{displayRank(c.name)===null?'Unranked':'#'+displayRank(c.name)}</span><span className="frame-character-open"><Users size={13}/> View profile</span></div>
    <div className="frame-character-copy"><a className="frame-character-name" href={google(c.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>{c.name}<ExternalLink size={13}/></a><span className="frame-character-alias">{c.alias}</span><div className="frame-character-role">{c.role}</div><p>{c.bio}</p><span className="frame-character-tap">Tap card for facts <span>↗</span></span></div>
   </article>)}</div><div className="frame-character-rail-hint"><span>← Swipe to explore →</span><span>{visible.length} profiles</span></div>
-  <p className="frame-character-source">Character photos are temporarily disabled while the archive is being rebuilt. Names, profiles and details remain available. Japanese and English cast fields identify common anime dub credits where available; other regional dubs may differ. Unknown values are labelled rather than guessed.</p>
+  <p className="frame-character-source">Character portraits are loaded from matching One Piece Wiki character pages; unavailable images fall back to initials rather than showing another character. Japanese and English cast fields identify common anime dub credits where available; other regional dubs may differ. Unknown values are labelled rather than guessed.</p>
   {selected&&<div className="frame-character-modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><section className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selected.name+' character details'}>
    <button className="frame-character-modal-close" type="button" onClick={()=>setSelected(null)} aria-label="Close character details"><X size={19}/></button>
-   <div className="frame-character-modal-hero"><CharacterPortrait name={selected.name} image={undefined} large/><div><small>ONE PIECE · CHARACTER FILE · {displayRank(selected.name)===null?'UNRANKED':'CUSTOM RANK #'+displayRank(selected.name)}</small><h2>{selected.name}</h2><p>{selected.alias} · {selected.role}</p><span className="frame-character-modal-affiliation">{selected.crew}</span><a className="frame-character-google" href={google(selected.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>Search exact character name on Google <ExternalLink size={13}/></a></div></div>
+   <div className="frame-character-modal-hero"><CharacterPortrait name={selected.name} image={portraits[selected.name]} large/><div><small>ONE PIECE · CHARACTER FILE · {displayRank(selected.name)===null?'UNRANKED':'CUSTOM RANK #'+displayRank(selected.name)}</small><h2>{selected.name}</h2><p>{selected.alias} · {selected.role}</p><span className="frame-character-modal-affiliation">{selected.crew}</span><a className="frame-character-google" href={google(selected.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>Search exact character name on Google <ExternalLink size={13}/></a></div></div>
    <div className="frame-character-fact-grid"><div><span><CalendarDays size={14}/> Birthday</span><b>{profiles[selected.name]?.birthday||'Not verified in this profile'}</b></div><div><span>Age</span><b>{profiles[selected.name]?.age||'Not verified / depends on story period'}</b></div><div><span>Height</span><b>{profiles[selected.name]?.height||'Not verified in this profile'}</b></div><div><span><Mic2 size={14}/> Japanese voice actor</span><b>{profiles[selected.name]?.jp||'Not yet verified for this profile'}</b></div><div><span><Mic2 size={14}/> English voice actor</span><b>{profiles[selected.name]?.en||'Dub-dependent / not yet verified'}</b></div><div><span>Devil Fruit / ability</span><b>{profiles[selected.name]?.fruit||'See character description; details not verified here'}</b></div><div><span>First appearance</span><b>{profiles[selected.name]?.first||'Not yet verified in this profile'}</b></div><div><span>Affiliation</span><b>{selected.crew}</b></div></div>
    <section className="frame-character-modal-section"><h3>About</h3><p>{selected.bio}</p><p><strong>Goal / dream:</strong> {selected.goal}</p><p><strong>Role:</strong> {selected.role}. <strong>Alias:</strong> {selected.alias}.</p></section>
    <section className="frame-character-modal-section"><h3>Facts</h3><ul>{(profiles[selected.name]?.facts||[selected.bio,'Affiliation: '+selected.crew,'Goal / dream: '+selected.goal]).map((fact,i)=><li key={i}>{fact}</li>)}</ul></section>
