@@ -48,15 +48,31 @@ export function FrameNarutoCharacterArchive(){
  const [selected,setSelected]=useState<NarutoCharacter|null>(null);
  useEffect(()=>{
   let active=true;
-  const aliases=seed.map((c,i)=>'c'+i+': Character(search: '+JSON.stringify(c.name)+', sort: SEARCH_MATCH) { name { full } image { large } description(asHtml: false) }').join('\n');
+  const normalize=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
   const request=async()=>{
-   try{
-    const response=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+aliases+' }'})});
-    if(!response.ok)throw new Error('AniList character request failed');
-    const json=await response.json() as {data?:Record<string,{name?:{full?:string};image?:{large?:string};description?:string}|null>};
-    if(!active||!json.data)return;
-    setCharacters(seed.map((c,i)=>{const result=json.data?.['c'+i];const returned=result?.name?.full||'';const normalize=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]/g,'');const exact=normalize(returned)===normalize(c.name);return {...c,image:exact?result?.image?.large:undefined,description:exact?String(result?.description||'').replace(/<[^>]*>/g,' ').replace(/\\s+/g,' ').trim():undefined}}));
-   }catch{/* Keep the useful text archive if AniList is unavailable. */}
+   // Small independent batches prevent one rejected character query from
+   // discarding every portrait in the archive.
+   const resolved:Record<number,{image?:string;description?:string}>={};
+   for(let start=0;start<seed.length;start+=5){
+    if(!active)return;
+    const batch=seed.slice(start,start+5);
+    const aliases=batch.map((c,offset)=>'c'+(start+offset)+': Character(search: '+JSON.stringify(c.name)+', sort: SEARCH_MATCH) { name { full } image { large } description(asHtml: false) }').join('\n');
+    try{
+     const response=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+aliases+' }'})});
+     if(!response.ok)continue;
+     const json=await response.json() as {data?:Record<string,{name?:{full?:string};image?:{large?:string};description?:string}|null>};
+     for(let offset=0;offset<batch.length;offset++){
+      const result=json.data?.['c'+(start+offset)];
+      if(normalize(result?.name?.full||'')!==normalize(batch[offset].name))continue;
+      resolved[start+offset]={
+       image:result?.image?.large||undefined,
+       description:String(result?.description||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim()||undefined
+      };
+     }
+    }catch{/* Preserve successful batches when AniList is temporarily unavailable. */}
+   }
+   if(!active)return;
+   setCharacters(seed.map((c,i)=>({...c,...resolved[i]})));
   };
   void request();return()=>{active=false};
  },[]);
