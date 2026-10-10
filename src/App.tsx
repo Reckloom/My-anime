@@ -333,7 +333,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      if(cancelled)return;
      const ids=missing.slice(offset,offset+40).map(item=>Number(item.anilistId)).filter(Number.isFinite);
      if(!ids.length)continue;
-     const response=await aniList<any>('query ($ids:[Int]){Page{media(id_in:$ids){id popularity averageScore}}}',{ids});
+     const response=await aniList<any>('query ($ids:[Int]){Page(perPage:50){media(id_in:$ids){id popularity averageScore}}}',{ids});
      const rows=Array.isArray(response?.Page?.media)?response.Page.media:[];
      for(const row of rows){
       const id=Number(row?.id);if(!Number.isFinite(id))continue;
