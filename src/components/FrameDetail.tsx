@@ -89,12 +89,16 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
    navigationHistory.current.push({item,overlayScrollTop:overlay?.scrollTop||0,drawerScrollTop:drawer?.scrollTop||0,bodyScrollTop:body?.scrollTop||0,pageScrollTop:window.scrollY||0});
   }
+  // Keep the local detail model in sync with the selected item in the same
+  // React batch; otherwise effects can run one render behind navigation.
+  setD(next);setNote(next.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
   navigate?.(next);
  };
  const goBack=()=>{
   const previous=navigationHistory.current.pop();
   if(previous&&navigate){
    pendingScrollRestore.current=previous;
+   setD(previous.item);setNote(previous.item.notes||'');setEditing(false);setSaveMessage('');setHierarchyQuery('');
    navigate(previous.item);
    // Keep restoring after navigation commits. The target drawer can still be
    // re-laid out by image loads after the first paint, so one timeout is not
