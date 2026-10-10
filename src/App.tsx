@@ -167,7 +167,7 @@ export default function App(){
  });
  const itemsRef=useRef<MediaItem[]>(items);
  useEffect(()=>{itemsRef.current=items},[items]);
- const [page,setPage]=useState('home'),[query,setQuery]=useState(''),[filters,setFilters]=useState<string[]>(['all']),[sortMode,setSortMode]=useState('rating');
+ const [page,setPage]=useState(()=>typeof window!=='undefined'&&typeof window.history.state?.framePage==='string'?window.history.state.framePage:'home'),[query,setQuery]=useState(''),[filters,setFilters]=useState<string[]>(['all']),[sortMode,setSortMode]=useState('rating');
  const [finder,setFinder]=useState(false),[manualEntry,setManualEntry]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null),[appMessage,setAppMessage]=useState('');
  const [directCall,setDirectCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null),[commandOpen,setCommandOpen]=useState(false);
  const [releaseNotificationsEnabled,setReleaseNotificationsEnabled]=useState(true);
@@ -244,7 +244,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     if(Object.keys(effectivePrefs).length){
      setSortMode(String(effectivePrefs.default_sort||'rating'));setDensity(String(effectivePrefs.density||'comfortable'));
      const savedTheme=String(effectivePrefs.theme||'cinematic-archive');setTheme((['cinematic-archive','midnight-glass','clean-editorial','full-screen-epic','collectors-archive','modern-media-hub'].includes(savedTheme)?savedTheme:'cinematic-archive'));
-     setAppearanceMode((['light','dark','system'].includes(String(effectivePrefs.appearance_mode))?String(effectivePrefs.appearance_mode):'light') as 'light'|'dark'|'system');
+     setAppearanceMode((['light','dark','system'].includes(String(effectivePrefs.appearance_mode))?String(effectivePrefs.appearance_mode):'dark') as 'light'|'dark'|'system');
      if(Object.keys(guestPrefs).length){const {error}=await client.from('user_preferences').upsert({...guestPrefs,user_id:user.id,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(!error)localStorage.removeItem('frame-guest-preferences')}
     }
    }
