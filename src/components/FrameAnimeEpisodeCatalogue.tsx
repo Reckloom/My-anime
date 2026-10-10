@@ -7,6 +7,21 @@ const PAGE_SIZE = 100;
 
 type ArcRange = { name: string; start: number; end: number; summary: string };
 const ARC_RANGES: Record<string, ArcRange[]> = {
+  'summer time rendering': [
+    {name:'First Loop & the Shadow Mystery',start:1,end:6,summary:'Shinpei returns to Hitogashima and begins uncovering the mystery behind Ushio’s death.'},
+    {name:'Allies & Hidden Truths',start:7,end:13,summary:'Shinpei gains allies and learns more about the island’s shadow threat.'},
+    {name:'The Counterattack',start:14,end:20,summary:'The group develops a plan to challenge the shadows.'},
+    {name:'The Final Loop',start:21,end:25,summary:'The last confrontation brings the time-loop mystery to its conclusion.'}
+  ],
+  'steins gate': [
+    {name:'Experiments & Divergence',start:1,end:11,summary:'The Future Gadget Lab experiments with messages and discovers unexpected consequences.'},
+    {name:'Worldline Reversal',start:12,end:22,summary:'Okabe struggles to undo the consequences of the lab’s experiments.'},
+    {name:'Steins Gate',start:23,end:24,summary:'Okabe makes one final attempt to reach the desired worldline.'}
+  ],
+  'mushoku tensei jobless reincarnation': [
+    {name:'Childhood Period',start:1,end:8,summary:'Rudeus grows up in a new world and develops his magical abilities.'},
+    {name:'Early Adventures',start:9,end:11,summary:'Rudeus begins to face the wider world beyond his childhood home.'}
+  ],
   'erased': [
     {name:'Revival & the 1988 Kidnappings',start:1,end:6,summary:'Satoru is sent back to childhood and tries to prevent a classmate’s disappearance.'},
     {name:'Unmasking the Killer',start:7,end:12,summary:'The investigation moves toward identifying the killer and resolving the mystery.'}
