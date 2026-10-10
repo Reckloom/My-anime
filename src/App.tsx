@@ -179,6 +179,7 @@ export default function App(){
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
  const saveQueue=useRef(Promise.resolve(true));
  const onePiecePosterCatalogueRef=useRef<Record<string,string>>({});
+ const popularitySyncRef=useRef('');
 
  useEffect(()=>{document.documentElement.dataset.density=density;document.documentElement.dataset.frameTheme=theme;document.documentElement.dataset.frameMode=appearanceMode},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);closeDetail();setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
 
@@ -318,6 +319,38 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   return operation;
  };
 
+
+ useEffect(()=>{
+  if(!items.length||(supabase&&user?.id&&!cloudLibraryReady)||popularitySyncRef.current===uid)return;
+  const missing=items.filter(item=>item.anilistId&&!Number.isFinite(item.popularity)&&!/^one piece(?: \\(tv\\))?$/i.test(item.title.trim()));
+  if(!missing.length){popularitySyncRef.current=uid;return}
+  popularitySyncRef.current=uid;
+  let cancelled=false;
+  void(async()=>{
+   const updates=new Map<number,{popularity?:number;score?:number}>();
+   try{
+    for(let offset=0;offset<missing.length;offset+=40){
+     if(cancelled)return;
+     const ids=missing.slice(offset,offset+40).map(item=>Number(item.anilistId)).filter(Number.isFinite);
+     if(!ids.length)continue;
+     const response=await aniList<any>('query ($ids:[Int]){Page{media(id_in:$ids){id popularity averageScore}}}',{ids});
+     const rows=Array.isArray(response?.Page?.media)?response.Page.media:[];
+     for(const row of rows){
+      const id=Number(row?.id);if(!Number.isFinite(id))continue;
+      updates.set(id,{popularity:row.popularity==null?undefined:Number(row.popularity),score:row.averageScore==null?undefined:Number(row.averageScore)/10});
+     }
+    }
+    if(cancelled||!updates.size)return;
+    const current=itemsRef.current;
+    const enriched=current.map(item=>{
+     const data=item.anilistId?updates.get(Number(item.anilistId)):undefined;
+     return data?{...item,popularity:data.popularity??item.popularity,score:data.score??item.score}:item;
+    });
+    await save(enriched);
+   }catch(error){console.warn('[FRAME popularity ranking]',error)}
+  })();
+  return()=>{cancelled=true};
+ },[items.length,uid,cloudLibraryReady,user?.id]);
 
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
