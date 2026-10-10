@@ -55,7 +55,7 @@ async function characters(names: unknown) {
   }
   return { characters: results, matched: results.filter(item => item.image).length, requested: list.length };
 }
-async function animeCharacters(anilistIdValue: unknown) {
+async function animeCharacters(anilistIdValue: unknown, expectedTitleValue: unknown) {
   const anilistId = Number(anilistIdValue);
   if (!Number.isInteger(anilistId) || anilistId < 1 || anilistId > 2147483647) throw new Error('A valid AniList anime ID is required.');
   const query = `query ($id: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: 1, perPage: 24, sort: [ROLE]) { edges { role node { id name { full native } image { large } description(asHtml: false) siteUrl } } } } }`;
@@ -66,6 +66,15 @@ async function animeCharacters(anilistIdValue: unknown) {
   }, 3);
   const media = result?.data?.Media;
   if (!media) throw new Error('AniList returned no character catalogue for this anime.');
+  const expectedTitle = String(expectedTitleValue || '').trim();
+  if (expectedTitle) {
+    const normalizeTitle = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const expected = normalizeTitle(expectedTitle);
+    const actual = [media.title?.english, media.title?.romaji, media.title?.native, media.title?.userPreferred].filter(Boolean).map((value: string) => normalizeTitle(String(value)));
+    if (!actual.some((value: string) => value === expected || (expected.length >= 5 && value.startsWith(expected)))) {
+      throw new Error('AniList ID does not match this anime title.');
+    }
+  }
   const edges = Array.isArray(media?.characters?.edges) ? media.characters.edges : [];
   const mapped = edges.filter((edge: any) => edge?.node?.name?.full).map((edge: any) => ({
     id: Number(edge.node.id) || undefined,
@@ -141,7 +150,7 @@ Deno.serve(async (request: Request) => {
   try {
     const action = String(body?.action || '');
     if (action === 'characters') return json(await characters(body?.names));
-    if (action === 'anime-characters') return json(await animeCharacters(body?.anilistId));
+    if (action === 'anime-characters') return json(await animeCharacters(body?.anilistId, body?.title));
     if (action === 'search') return json(await searchAnime(String(body?.query || '')));
     if (action === 'episode-page') return json(await episodePage(body?.malId, body?.page));
     if (action === 'episodes') return json(await episodes(String(body?.anime || '')));
