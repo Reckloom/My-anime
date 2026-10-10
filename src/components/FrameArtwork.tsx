@@ -4,7 +4,7 @@ import {ANILIST_URL,type AniListMedia,SEARCH_QUERY,DETAIL_QUERY} from '../anilis
 
 type Props={
  title:string; medium:Medium; poster?:string; anilistId?:number; parentPoster?:string; parentTitle?:string; parentMedium?:Medium; parentAnilistId?:number;
- sourceProvider?:string; externalId?:string; className?:string; alt?:string; loading?:'eager'|'lazy';
+ sourceProvider?:string; externalId?:string; posterSource?:string; className?:string; alt?:string; loading?:'eager'|'lazy';
 };
 const cache=new Map<string,Promise<string>>();
 let activeArtworkRequests=0;
@@ -27,6 +27,11 @@ const svgFallback=(title:string,medium:Medium)=>{
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 async function resolve(p:Props):Promise<string>{
+ const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
+ if(isEpisode){
+  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
+  return svgFallback(p.title,p.medium);
+ }
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  if(isNarutoHierarchy(p)){
   if(p.poster&&!isPlaceholderArtwork(p.poster))return p.poster;
