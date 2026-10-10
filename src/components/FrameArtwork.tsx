@@ -39,7 +39,7 @@ async function resolve(p:Props):Promise<string>{
   return svgFallback(p.title,p.medium);
  }
  if(isHierarchyNode(p)){
-  if(p.poster&&!isPlaceholderArtwork(p.poster))return p.poster;
+  if(hasSavedPoster)return p.poster as string;
   return svgFallback(p.title,p.medium);
  }
  if(!isSeriesMedia)return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
@@ -60,7 +60,7 @@ async function resolve(p:Props):Promise<string>{
    const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
   if(image&&media?.type===type&&titleMatches)return image;
   }catch{/* external metadata can be unavailable */}
-  if(isSeriesMedia)return hasSavedPoster?p.poster!:p.parentPoster||svgFallback(p.title,p.medium);
+  if(isSeriesMedia)return hasSavedPoster?p.poster as string:p.parentPoster||svgFallback(p.title,p.medium);
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  });
  cache.set(key,request);
