@@ -114,10 +114,16 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     const heading=document.querySelector<HTMLElement>('#frame-detail-title');
     const destinationReady=heading?.textContent?.trim()===previous.item.title;
     if(destinationReady){
-     if(overlay)overlay.scrollTop=Math.min(previous.overlayScrollTop,Math.max(0,overlay.scrollHeight-overlay.clientHeight));
-     if(drawer)drawer.scrollTop=Math.min(previous.drawerScrollTop,Math.max(0,drawer.scrollHeight-drawer.clientHeight));
-     if(body)body.scrollTop=Math.min(previous.bodyScrollTop,Math.max(0,body.scrollHeight-body.clientHeight));
-     window.scrollTo(0,previous.pageScrollTop);
+     const setInstantScroll=(element:HTMLElement,desired:number)=>{
+      const oldBehavior=element.style.scrollBehavior;
+      element.style.scrollBehavior='auto';
+      element.scrollTop=Math.min(desired,Math.max(0,element.scrollHeight-element.clientHeight));
+      element.style.scrollBehavior=oldBehavior;
+     };
+     if(overlay)setInstantScroll(overlay,previous.overlayScrollTop);
+     if(drawer)setInstantScroll(drawer,previous.drawerScrollTop);
+     if(body)setInstantScroll(body,previous.bodyScrollTop);
+     window.scrollTo({top:previous.pageScrollTop,left:0,behavior:'auto'});
     }
     restoreAttempts++;
     if(restoreAttempts>=250){
