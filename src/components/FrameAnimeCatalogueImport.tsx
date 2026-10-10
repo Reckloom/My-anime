@@ -277,11 +277,20 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
   if (MOVIE_FORMATS.has(format)) return { rows: [], verified: true, warnings: [] };
   const expected = Math.max(0, Number(media.episodes || 0));
   const status = String(media.status || '');
+  const nextEpisode = Number(media.nextAiringEpisode?.episode || 0);
   if (status === 'NOT_YET_RELEASED') return { rows: [], verified: expected === 0, warnings: expected ? ['AniList lists ' + expected + ' episodes before the title has released; no future episodes were marked watched.'] : [] };
   const malId = await resolveMalId(media).catch(() => undefined);
   if (!malId) {
-    if (expected === 0) return { rows: [], verified: true, warnings: [] };
-    return { rows: [], verified: false, warnings: ['No MyAnimeList ID or exact Jikan match for ' + preferredTitle(media) + '; no episode placeholders were generated.'] };
+    const count = status === 'FINISHED' && expected > 0 ? Math.min(2000, expected) : nextEpisode > 0 ? Math.min(2000, nextEpisode - 1) : 0;
+    const rows: EpisodeRow[] = Array.from({ length: count }, (_, index) => ({
+      number: index + 1,
+      title: 'Episode ' + pad(index + 1),
+      source: 'AniList count fallback',
+      sourceUrl: 'https://anilist.co/anime/' + Number(media.id) + '/',
+      synopsis: ''
+    }));
+    if (!count) return { rows: [], verified: false, warnings: ['No MyAnimeList ID or exact Jikan match for ' + preferredTitle(media) + '; episode details could not be verified.'] };
+    return { rows, verified: false, warnings: ['No MyAnimeList ID or exact Jikan match for ' + preferredTitle(media) + '; preserved ' + count + ' numbered episodes using clearly labeled placeholders rather than omitting the series.'] };
   }
 
   let primary: { rows: EpisodeRow[]; totalPages: number; sourceCount: number } | undefined;
@@ -290,7 +299,6 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
   catch (error) { sourceErrors.push(error instanceof Error ? error.message : 'Jikan episode request failed.'); }
 
   const finished = status === 'FINISHED';
-  const nextEpisode = Number(media.nextAiringEpisode?.episode || 0);
   let current: EpisodeRow[] = [];
   if (primary?.rows.length) {
     current = finished
