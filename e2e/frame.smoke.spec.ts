@@ -290,7 +290,9 @@ test.describe('FRAME detail navigation and scroll', () => {
     const originalArcCount = await drawer.locator('.hierarchy-part-card').count();
     expect(before).toBeGreaterThan(0);
 
-    await page.locator('.hierarchy-part-card').filter({ hasText: 'Arc 18' }).click();
+    // Trigger the already-visible card without Playwright's automatic
+    // scroll-into-view step, which otherwise changes the position being tested.
+    await page.locator('.hierarchy-part-card').filter({ hasText: 'Arc 18' }).evaluate(el => (el as HTMLButtonElement).click());
     await expect(page.getByRole('heading', { name: 'Arc 18', exact: true })).toBeVisible();
     await expect.poll(() => drawer.evaluate((el) => el.scrollTop)).toBe(0);
 
