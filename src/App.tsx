@@ -331,7 +331,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(!missing.length){popularitySyncRef.current=syncKey;return}
   popularitySyncRef.current=syncKey;
   let cancelled=false;
-  const normalizeTitle=(value:string)=>value.toLocaleLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const normalizeTitle=(value:string)=>value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
   const popularityQuery='query ($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id popularity averageScore title{romaji english native userPreferred}}}}';
   const titleQuery='query ($search:String){Page(page:1,perPage:10){media(search:$search,type:ANIME,sort:[SEARCH_MATCH]){id popularity averageScore title{romaji english native userPreferred} synonyms}}}';
   void(async()=>{
