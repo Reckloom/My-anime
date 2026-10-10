@@ -584,7 +584,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     if (!movie) {
       franchiseEpisodes += episodes.length;
     }
-    incoming.push(mapMediaItem(media, {
+    const mappedMedia = mapMediaItem(media, {
       id,
       parentId: task.key === 'naruto'
         ? rootId
@@ -594,7 +594,15 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       progress,
       total,
       characters: index === 0 ? charactersFrom(rootDetails) : undefined
-    }));
+    });
+    // Treat the existing TYBW Part 1 entry as an arc group too, so its
+    // episodes remain inside the same ordered arc hierarchy after refresh.
+    if (task.key === 'bleach' && Number(media.id) === 116674) {
+      mappedMedia.sourceProvider = 'frame-story-arc';
+      mappedMedia.externalId = 'frame-story-arc-bleach-17';
+      mappedMedia.source = 'FRAME curated story arc';
+    }
+    incoming.push(mappedMedia);
     if (!movie) {
       const malId = Number(media.idMal) > 0 ? Number(media.idMal) : undefined;
       for (const episode of episodes) {
