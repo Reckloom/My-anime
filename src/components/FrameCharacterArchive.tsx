@@ -120,7 +120,7 @@ export function FrameCharacterArchive(){
     const fields=batch.map((character,index)=>{
      const search=(aliases[character.name]?.[0]||character.name).replace(/\\/g,'\\\\').replace(/"/g,'\\"');
      return 'c'+index+': Character(search: "'+search+'", sort: SEARCH_MATCH) { name { full } image { large } }';
-    }).join('\\n');
+    }).join('\n');
     try{
      const response=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:'query { '+fields+' }'})});
      if(!response.ok)continue;
