@@ -301,6 +301,12 @@ test.describe('FRAME detail navigation and scroll', () => {
     // its maximum. Assert that Back restores as far as the current drawer allows.
     await expect.poll(() => drawer.evaluate((el, previousTop) =>
       el.scrollTop >= Math.min(previousTop, el.scrollHeight - el.clientHeight) - 2, before
-    )).toBe(true);
+    ), { timeout: 5000 }).toBe(true).catch(async error => {
+      console.log('Scroll restoration diagnostic:', await drawer.evaluate((el, previousTop) => ({
+        previousTop, currentTop: el.scrollTop, scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight, title: document.querySelector('#frame-detail-title')?.textContent?.trim()
+      }), before));
+      throw error;
+    });
   });
 });
