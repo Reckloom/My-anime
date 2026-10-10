@@ -710,7 +710,11 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  const importItem=async(raw:MediaItem)=>{
   const item=normalise(raw);
   if(item.medium==='anime'&&/^(naruto|naruto shippuden|naruto: shippuden)$/i.test(item.title.trim())){
-   const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&new RegExp('^'+( /shippuden/i.test(item.title)?'naruto\\s*:?\\s*shippuden':'naruto')+'
+   const isShippuden=/shippuden/i.test(item.title);
+   const pattern=isShippuden?/^naruto\s*:?\s*shippuden$/i:/^naruto$/i;
+   const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&pattern.test(x.title.trim()));
+   return await buildNarutoHierarchy(existing||item);
+  }
   if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
    const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
    if(existing)return await buildOnePieceHierarchy(existing,true);
