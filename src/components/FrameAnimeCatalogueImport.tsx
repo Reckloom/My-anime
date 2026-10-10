@@ -362,15 +362,15 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
     }
   }
   const missingPosterCount = current.filter(row => !String(row.poster || '').trim()).length;
-  // Do not create episode cards that would render without their own still poster.
-  current = current.filter(row => Boolean(String(row.poster || '').trim()));
+  // Never drop a real or count-verified episode just because a still image is missing.
+  // FrameArtwork renders a title-specific fallback until source artwork becomes available.
   const maxSourceNumber = current.reduce((n, row) => Math.max(n, row.number), 0);
   const countMismatch = expected > 0 && finished && current.length !== Math.min(2000, expected);
   const airingMismatch = !finished && nextEpisode > 0 && maxSourceNumber < nextEpisode - 1;
   const fallbackCount = current.filter(row => row.source === 'AniList count fallback').length;
   const warnings: string[] = [];
   if (fallbackCount) warnings.push(preferredTitle(media) + ': added ' + fallbackCount + ' numbered episode entries where source episode titles/pages were missing; verify titles later.');
-  if (missingPosterCount) warnings.push(preferredTitle(media) + ': ' + missingPosterCount + ' episode(s) have no source still poster and were not imported.');
+  if (missingPosterCount) warnings.push(preferredTitle(media) + ': ' + missingPosterCount + ' episode(s) have no source still poster and will use a title-specific fallback until artwork is available.');
   if (countMismatch) warnings.push(preferredTitle(media) + ': AniList reports ' + expected + ' episodes, but the sources did not establish the full numbered range.');
   if (airingMismatch) warnings.push(preferredTitle(media) + ': the upcoming AniList episode implies ' + (nextEpisode - 1) + ' released episodes, but source titles reach only episode ' + maxSourceNumber + '.');
   if (!primary?.rows.length && sourceErrors.length) warnings.push(preferredTitle(media) + ': episode source problem — ' + sourceErrors.join(' / '));
