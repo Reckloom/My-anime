@@ -53,7 +53,6 @@ const rows=[
 [48,'Zephyr','Z','Former Marine instructor','Neo Marines; Film Z','A film-original former Marine instructor whose story examines his strict ideals.','Pursue his vision of justice'],
 [49,'Gild Tesoro','Gold King','Casino magnate','Gran Tesoro; Film Gold','A film-original character who controls gold and rules a vast entertainment ship.','Gain wealth and control'],
 [50,'Uta','World’s Most Beloved Singer','Singer','Film Red; connected to Red-Haired Pirates','A singer whose extraordinary voice and music are central to Film Red.','Create a happier world through music'],
- ,
 [52,'Loki','Accursed Prince / Sun God','Prince of Elbaph','Warland Kingdom; Elbaph royal family','A giant prince tied to Elbaph’s royal history and the legendary Devil Fruit. He idolizes Rocks D. Xebec.','Pursue his own idea of the Sun God'],
 [53,'Rocks D. Xebec','Captain of the Rocks Pirates','Legendary pirate captain','Rocks Pirates','The infamous captain who gathered future emperors and other legendary pirates under one flag. His ambition made him a major threat to the world order.','Become King of the World'],
 [54,'King Harald','King of Elbaph','Former king','Elbaph royal family','A giant king whose choices shaped Elbaph’s modern history and the lives of Loki and Hajrudin.','Secure a future for Elbaph'],
@@ -115,11 +114,19 @@ export function FrameCharacterArchive(){
    'Zephyr':['Zephyr','Z (One Piece Film: Z)'],
    'Gild Tesoro':['Gild Tesoro','Tesoro (One Piece Film: Gold)'],
   };
+  // Stable, character-specific One Piece Wiki portraits for characters whose AniList
+  // entries are inconsistent or absent. These are infobox/portrait files, not scene stills.
+  const portraitOverrides:Record<string,string>={
+   'Sengoku':'https://static.wikia.nocookie.net/onepiece/images/8/8e/Sengoku_Manga_Pre_Timeskip_Infobox.png/revision/latest/scale-to-width-down/900?cb=20230618023730',
+   'Zephyr':'https://static.wikia.nocookie.net/onepiece/images/0/0f/Z_Anime_Infobox.png/revision/latest/scale-to-width-down/900?cb=20130704135054',
+   'Gild Tesoro':'https://static.wikia.nocookie.net/onepiece/images/9/91/Gild_Tesoro_Anime_Infobox.png/revision/latest/scale-to-width-down/900?cb=20190404152956',
+  };
   // Only query the character's own wiki page. Episode and technique pages
   // can return scene art, which is not a valid character portrait.
   const wikiTitle=(name:string)=>(aliases[name]?.[0]||name).replace(/ /g,'_');
   const load=async()=>{
    const result:Record<string,string>={};
+   Object.entries(portraitOverrides).forEach(([name,url])=>{result[name]=url;});
    const titleOwners=new Map<string,string>();
    const requests=characters.map(character=>{
     const title=wikiTitle(character.name);
