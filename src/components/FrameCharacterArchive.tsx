@@ -140,7 +140,7 @@ export function FrameCharacterArchive(){
      const json=await response.json() as {query?:{pages?:Record<string,{title?:string;thumbnail?:{source?:string};original?:{source?:string}}>}};
      Object.values(json.query?.pages||{}).forEach(page=>{
       const owner=titleOwners.get(normalize((page.title||'').replace(/_/g,' ')));
-      const image=(page.original?.source||page.thumbnail?.source)?.replace(/\\\\_/g,'_');
+      const image=(page.original?.source||page.thumbnail?.source)?.replace(/\\_/g,'_');
       if(owner&&image)result[owner]=image;
      });
     }catch{/* continue to the independent AniList fallback */}
