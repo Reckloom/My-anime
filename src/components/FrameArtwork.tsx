@@ -35,7 +35,7 @@ async function resolve(p:Props):Promise<string>{
  if(isEpisode)return hasSavedPoster?p.poster!:svgFallback(p.title,p.medium);
   const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  if(isNarutoHierarchy(p)){
-  if(p.poster&&!isPlaceholderArtwork(p.poster))return p.poster;
+  if(hasSavedPoster)return p.poster!;
   return svgFallback(p.title,p.medium);
  }
  if(isHierarchyNode(p)){
