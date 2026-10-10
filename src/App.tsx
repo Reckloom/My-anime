@@ -280,6 +280,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    return false;
   }
   const next=dedupeMediaItems(list.map(normalise));itemsRef.current=next;setItems(next);
+  // Persist immediately as well as through the debounced effect. A quick reload
+  // must not lose a guest edit made within the debounce window.
+  try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
   const client=supabase;
   if(!client||!user?.id)return true;
   const operation=saveQueue.current.then(async()=>{
