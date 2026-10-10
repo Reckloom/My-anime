@@ -6,9 +6,7 @@ const HEADERS={
  'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type',
  'Access-Control-Allow-Methods':'POST, OPTIONS',
 };
-const QUERY=`query ($ids:[Int!]!, $from:Int!, $to:Int!) {
-  Page(page:1, perPage:50) {
-    airingSchedules(mediaId_in:$ids, airingAt_greater:$from, airingAt_lesser:$to, sort:TIME) {
+const QUERY=`query ($ids:[Int!]!, $from:Int!, $to:Int!, $page:Int!) {\n  Page(page:$page, perPage:50) {\n    pageInfo { hasNextPage }\n    airingSchedules(mediaId_in:$ids, airingAt_greater:$from, airingAt_lesser:$to, sort:TIME) {
       id airingAt episode timeUntilAiring mediaId
       media { id title { userPreferred english romaji native } format type status }
     }
@@ -21,16 +19,16 @@ function titleOf(m:any){
 function json(body:Record<string,unknown>,status=200){
  return Response.json(body,{status,headers:HEADERS});
 }
-async function aniList(ids:number[],from:number,to:number){
+async function aniList(ids:number[],from:number,to:number,page:number){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),20000);
  try{
   const r=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body:JSON.stringify({query:QUERY,variables:{ids,from,to}}),signal:controller.signal});
+    body:JSON.stringify({query:QUERY,variables:{ids,from,to,page}}),signal:controller.signal});
   const text=await r.text();let j:any;
   try{j=JSON.parse(text)}catch{throw new Error('AniList returned an invalid response.');}
   if(!r.ok||j?.errors?.length)throw new Error(j?.errors?.[0]?.message||'AniList release lookup failed.');
-  return Array.isArray(j?.data?.Page?.airingSchedules)?j.data.Page.airingSchedules:[];
+  return {rows:Array.isArray(j?.data?.Page?.airingSchedules)?j.data.Page.airingSchedules:[],hasNextPage:Boolean(j?.data?.Page?.pageInfo?.hasNextPage)};
  }catch(e){
   if(e instanceof DOMException&&e.name==='AbortError')throw new Error('AniList release lookup timed out.');
   throw e;
@@ -45,8 +43,8 @@ export default {
   try{
    const scoped=ctx.supabase;
    const {data:items,error:itemError}=await scoped.from('media_items')
-     .select('id,title,poster,anilist_id,progress,total,next_release,next_release_number')
-     .eq('user_id',userId).not('anilist_id','is',null);
+     .select('id,title,poster,anilist_id,progress,total,next_release,next_release_number,medium,parent_id')
+     .eq('user_id',userId).eq('medium','anime').is('parent_id',null).not('anilist_id','is',null);
    if(itemError)throw itemError;
    const tracked=(items||[]).map(x=>({id:String(x.id),title:String(x.title),poster:String(x.poster||''),anilistId:Number(x.anilist_id),progress:Number(x.progress||0),total:x.total==null?null:Number(x.total)}))
      .filter(x=>Number.isInteger(x.anilistId));
@@ -54,7 +52,14 @@ export default {
    const now=Math.floor(Date.now()/1000);
    const to=now+45*86400;
    const schedules:any[]=[];
-   for(let i=0;i<tracked.length;i+=50)schedules.push(...await aniList(tracked.slice(i,i+50).map(x=>x.anilistId),now-48*3600,to));
+   for(let i=0;i<tracked.length;i+=50){
+    const ids=tracked.slice(i,i+50).map(x=>x.anilistId);
+    for(let page=1;page<=10;page++){
+     const result=await aniList(ids,now-48*3600,to,page);
+     schedules.push(...result.rows);
+     if(!result.hasNextPage)break;
+    }
+   }
    const byId=new Map(tracked.map(x=>[x.anilistId,x]));
    const releases=schedules.map((s:any)=>({
      mediaId:String(byId.get(Number(s.mediaId))?.id||''),
