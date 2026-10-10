@@ -45,7 +45,7 @@ async function resolve(p:Props):Promise<string>{
  }
  if(!isSeriesMedia)return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  const type=p.medium==='anime'?'ANIME':'MANGA';
- const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title);
+ const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':source:'+(p.posterSource||'');
  const existing=cache.get(key);if(existing)return existing;
  const request=withArtworkLimit(async()=>{
   try{
