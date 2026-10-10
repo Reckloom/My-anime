@@ -114,19 +114,11 @@ export function FrameCharacterArchive(){
    'Zephyr':['Zephyr','Z (One Piece Film: Z)'],
    'Gild Tesoro':['Gild Tesoro','Tesoro (One Piece Film: Gold)'],
   };
-  // Stable, character-specific One Piece Wiki portraits for characters whose AniList
-  // entries are inconsistent or absent. These are infobox/portrait files, not scene stills.
-  const portraitOverrides:Record<string,string>={
-   'Sengoku':'https://static.wikia.nocookie.net/onepiece/images/8/8e/Sengoku_Manga_Pre_Timeskip_Infobox.png/revision/latest/scale-to-width-down/900?cb=20230618023730',
-   'Zephyr':'https://static.wikia.nocookie.net/onepiece/images/0/0f/Z_Anime_Infobox.png/revision/latest/scale-to-width-down/900?cb=20130704135054',
-   'Gild Tesoro':'https://static.wikia.nocookie.net/onepiece/images/9/91/Gild_Tesoro_Anime_Infobox.png/revision/latest/scale-to-width-down/900?cb=20190404152956',
-  };
   // Only query the character's own wiki page. Episode and technique pages
   // can return scene art, which is not a valid character portrait.
   const wikiTitle=(name:string)=>(aliases[name]?.[0]||name).replace(/ /g,'_');
   const load=async()=>{
    const result:Record<string,string>={};
-   Object.entries(portraitOverrides).forEach(([name,url])=>{result[name]=url;});
    const titleOwners=new Map<string,string>();
    const requests=characters.map(character=>{
     const title=wikiTitle(character.name);
@@ -157,7 +149,7 @@ export function FrameCharacterArchive(){
     }
     Object.values(json.query?.pages||{}).forEach(page=>{
      const owner=canonicalOwners.get(normalize((page.title||'').replace(/_/g,' ')));
-     const image=undefined; // Never trust generic wiki page thumbnails as character portraits; exact AniList matches below or initials fallback.
+     const image=page.thumbnail?.source||page.original?.source;
      if(owner&&image&&!usedImages.has(image)){
       result[owner]=image;
       usedImages.add(image);
