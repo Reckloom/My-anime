@@ -708,7 +708,7 @@ Deno.serve(async(req:Request)=>{
       const rawUrl=String(body?.url||'').trim();
       let source:URL;
       try{source=new URL(rawUrl)}catch{return new Response('Invalid image URL.',{status:400,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}})}
-      const allowedWiki=source.hostname==='static.wikia.nocookie.net'&&source.pathname.startsWith('/onepiece/images/');
+      const allowedWiki=source.hostname==='static.wikia.nocookie.net'&&/^\/[a-z0-9_-]+\/images\/.+\.(?:jpe?g|png|webp|avif|gif)(?:\/|$)/i.test(source.pathname);
       const allowedOfficialEpisode=source.hostname==='one-piece.com'&&(
         // Official episode key visuals (including the newer Elbaph-era tvanime files).
         /^\/img\/anime\/tvanime_\d+(?:_[\d]+)*\.(?:jpe?g|png|webp)$/i.test(source.pathname)||
@@ -722,7 +722,8 @@ Deno.serve(async(req:Request)=>{
         return new Response('Image host or path is not allowed.',{status:403,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
       }
       const cacheHeaders={...HEADERS,'Cache-Control':'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400','X-Content-Type-Options':'nosniff'};
-      const referer=allowedWiki?'https://onepiece.fandom.com/':allowedOfficialEpisode?'https://one-piece.com/':allowedVodAnime?'https://www.vodanime.com/':'https://frame.reckloom.com/';
+      const wikiSlug=allowedWiki?(source.pathname.split('/')[1]||'onepiece'):'';
+      const referer=allowedWiki?'https://'+wikiSlug+'.fandom.com/':allowedOfficialEpisode?'https://one-piece.com/':allowedVodAnime?'https://www.vodanime.com/':'https://frame.reckloom.com/';
       let imageResponse:Response|undefined;
       try{
         imageResponse=await fetch(source.href,{headers:{
