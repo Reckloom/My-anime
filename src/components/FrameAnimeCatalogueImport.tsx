@@ -666,9 +666,13 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   // The root's progress represents the released episodes across its imported animated entries.
   const rootRow = incoming.find(x => x.id === rootId);
   if (rootRow && chosen.length > 1) {
-    // The root's total can summarize the imported franchise, but catalogue
-    // completeness must never be interpreted as watched progress.
-    rootRow.total = Math.min(2000, franchiseEpisodes);
+    // Keep the user's established root-level tracking total stable. Related
+    // seasons, specials and spin-offs remain individually tracked beneath it;
+    // blindly summing every relation can inflate the main-series episode count.
+    rootRow.total = Number(rootExisting?.total) > 0
+      ? Math.min(2000, Number(rootExisting!.total))
+      : Math.min(2000, franchiseEpisodes);
+    rootRow.progress = Math.min(Math.max(0, Number(rootExisting?.progress) || 0), rootRow.total || 0);
     rootRow.customTotal = undefined;
     rootRow.description = clean(rootDetails.description);
   }
