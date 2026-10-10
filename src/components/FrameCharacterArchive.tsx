@@ -145,6 +145,12 @@ export function FrameCharacterArchive(){
      });
     }catch{/* continue to the independent AniList fallback */}
    }
+   // Official Toei/ONE PIECE.com episode stills for the most iconic requested forms.
+   // These intentionally override generic profile art: Sanji's Wano Ifrit Jambe
+   // battle (episode 1061), Luffy's Gear 5 debut (1071), and Zoro vs King (1062).
+   result['Sanji']='https://one-piece.com/img/anime/tvanime_1061_1.png';
+   result['Monkey D. Luffy']='https://one-piece.com/img/anime/tvanime_1071_1.png';
+   result['Roronoa Zoro']='https://one-piece.com/img/anime/tvanime_1062_1.png';
    // Fill every missing portrait from AniList using alias-aware exact matching.
    for(let start=0;start<characters.length;start+=10){
     const batch=characters.slice(start,start+10).filter(character=>!result[character.name]);
@@ -230,7 +236,7 @@ export function FrameCharacterArchive(){
    <div className="frame-character-portrait"><CharacterPortrait name={c.name} image={portraits[c.name]||(c.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)}/><span style={{position:'absolute',top:8,left:8,zIndex:2,padding:'4px 8px',borderRadius:999,background:'rgba(10,15,28,.86)',color:'#fff',fontSize:12,fontWeight:800,border:'1px solid rgba(255,255,255,.25)'}}>{displayRank(c.name)===null?'Unranked':'#'+displayRank(c.name)}</span><span className="frame-character-open"><Users size={13}/> View profile</span></div>
    <div className="frame-character-copy"><a className="frame-character-name" href={google(c.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>{c.name}<ExternalLink size={13}/></a><span className="frame-character-alias">{c.alias}</span><div className="frame-character-role">{c.role}</div><p>{c.bio}</p><span className="frame-character-tap">Tap card for facts <span>↗</span></span></div>
   </article>)}</div><div className="frame-character-rail-hint"><span>← Swipe to explore →</span><span>{visible.length} profiles</span></div>
-  <p className="frame-character-source">Artwork prioritises One Piece character-page images, with AniList portraits as a fallback. Japanese and English cast fields identify common anime dub credits where available; other regional dubs may differ. Unknown values are labelled rather than guessed.</p>
+  <p className="frame-character-source">Artwork prioritises anime character-page images and official Toei episode stills for Sanji’s Wano Ifrit Jambe, Luffy’s Gear 5 debut, and Zoro vs. King; AniList portraits fill remaining gaps. No fan-art search results are used. Japanese and English cast fields identify common anime dub credits where available; other regional dubs may differ. Unknown values are labelled rather than guessed.</p>
   {selected&&<div className="frame-character-modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setSelected(null)}}><section className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selected.name+' character details'}>
    <button className="frame-character-modal-close" type="button" onClick={()=>setSelected(null)} aria-label="Close character details"><X size={19}/></button>
    <div className="frame-character-modal-hero"><CharacterPortrait name={selected.name} image={portraits[selected.name]||(selected.name==='Sanji'?'https://p325k7wa.twic.pics/high/one-piece/one-piece-odyssey/00-page-setup/OPOD_character_gallery/OPOD_Sanji.png?twic=v1%2Fcover%3D500%2Fstep%3D10%2Fquality%3D80%2Foutput%3Dpreview':undefined)} large/><div><small>ONE PIECE · CHARACTER FILE · {displayRank(selected.name)===null?'UNRANKED':'CUSTOM RANK #'+displayRank(selected.name)}</small><h2>{selected.name}</h2><p>{selected.alias} · {selected.role}</p><span className="frame-character-modal-affiliation">{selected.crew}</span><a className="frame-character-google" href={google(selected.name)} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}>Search exact character name on Google <ExternalLink size={13}/></a></div></div>
