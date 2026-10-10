@@ -112,6 +112,64 @@ test.describe('FRAME core smoke flow', () => {
 });
 
 
+test.describe('FRAME artwork identity', () => {
+  test('keeps each anime poster tied to its title and preserves saved art for a mismatched ID', async ({ page }) => {
+    const catalog: Record<number, { title: string; image: string }> = {
+      16498: { title: 'Attack on Titan', image: 'https://cdn.example.test/aot.jpg' },
+      269: { title: 'Bleach', image: 'https://cdn.example.test/bleach.jpg' },
+      9253: { title: 'Steins;Gate', image: 'https://cdn.example.test/steins.jpg' },
+      99999: { title: 'Monkey D. Luffy', image: 'https://cdn.example.test/luffy.jpg' }
+    };
+    await page.route('https://graphql.anilist.co', async route => {
+      const request = route.request().postDataJSON() as { variables?: { id?: number; search?: string } };
+      if (request.variables?.id) {
+        const media = catalog[Number(request.variables.id)];
+        if (!media) { await route.continue(); return; }
+        await route.fulfill({
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify({ data: { Media: {
+            id: Number(request.variables.id), type: 'ANIME',
+            title: { english: media.title, romaji: media.title, native: media.title, userPreferred: media.title },
+            synonyms: [], coverImage: { extraLarge: media.image }, bannerImage: null
+          } } })
+        });
+        return;
+      }
+      if (request.variables?.search) {
+        await route.fulfill({
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify({ data: { Page: { media: [{
+            id: 99999, type: 'ANIME',
+            title: { english: 'Monkey D. Luffy', romaji: 'Monkey D. Luffy', native: 'モンキー・D・ルフィ', userPreferred: 'Monkey D. Luffy' },
+            synonyms: [], coverImage: { extraLarge: 'https://cdn.example.test/luffy.jpg' }
+          }] } } })
+        });
+        return;
+      }
+      await route.continue();
+    });
+    await page.addInitScript(() => {
+      localStorage.setItem('frame-guest', '1');
+      localStorage.setItem('frame-library:guest', JSON.stringify([
+        { id: 'qa-aot', anilistId: 16498, sourceProvider: 'anilist', externalId: '16498', title: 'Attack on Titan', poster: 'https://saved.example/aot.jpg', medium: 'anime', status: 'completed', progress: 89, total: 89, genres: [], themes: [], favorite: false },
+        { id: 'qa-bleach', anilistId: 269, sourceProvider: 'anilist', externalId: '269', title: 'Bleach', poster: 'https://saved.example/bleach.jpg', medium: 'anime', status: 'completed', progress: 366, total: 366, genres: [], themes: [], favorite: false },
+        { id: 'qa-steins', anilistId: 9253, sourceProvider: 'anilist', externalId: '9253', title: 'Steins;Gate', poster: 'https://saved.example/steins.jpg', medium: 'anime', status: 'completed', progress: 24, total: 24, genres: [], themes: [], favorite: false },
+        { id: 'qa-jjk', anilistId: 99999, sourceProvider: 'anilist', externalId: '99999', title: 'Jujutsu Kaisen', poster: 'https://saved.example/jjk.jpg', medium: 'anime', status: 'completed', progress: 24, total: 24, genres: [], themes: [], favorite: false }
+      ]));
+    });
+    await page.goto('/');
+    await navigatePrimary(page, 'Library');
+    await expect(page.getByAltText('Attack on Titan').first()).toHaveAttribute('src', 'https://cdn.example.test/aot.jpg', { timeout: 10000 });
+    await expect(page.getByAltText('Bleach').first()).toHaveAttribute('src', 'https://cdn.example.test/bleach.jpg', { timeout: 10000 });
+    await expect(page.getByAltText('Steins;Gate').first()).toHaveAttribute('src', 'https://cdn.example.test/steins.jpg', { timeout: 10000 });
+    await expect(page.getByAltText('Jujutsu Kaisen').first()).toHaveAttribute('src', 'https://saved.example/jjk.jpg', { timeout: 10000 });
+    const sources = await Promise.all(['Attack on Titan', 'Bleach', 'Steins;Gate'].map(async title =>
+      page.getByAltText(title).first().getAttribute('src')
+    ));
+    expect(new Set(sources).size).toBe(3);
+  });
+});
+
 test.describe('FRAME movie discovery UI', () => {
   test('movie results resolve artwork in the actual modal', async ({ page }) => {
     await page.route(/functions\/v1\/media-discovery/, async route => {
