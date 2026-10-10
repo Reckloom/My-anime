@@ -55,6 +55,29 @@ async function characters(names: unknown) {
   }
   return { characters: results, matched: results.filter(item => item.image).length, requested: list.length };
 }
+async function animeCharacters(anilistIdValue: unknown) {
+  const anilistId = Number(anilistIdValue);
+  if (!Number.isInteger(anilistId) || anilistId < 1 || anilistId > 2147483647) throw new Error('A valid AniList anime ID is required.');
+  const query = `query ($id: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: 1, perPage: 24, sort: [ROLE]) { edges { role node { id name { full native } image { large } description(asHtml: false) siteUrl } } } } }`;
+  const result = await fetchJson('https://graphql.anilist.co', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables: { id: anilistId } }),
+  }, 3);
+  const media = result?.data?.Media;
+  if (!media) throw new Error('AniList returned no character catalogue for this anime.');
+  const edges = Array.isArray(media?.characters?.edges) ? media.characters.edges : [];
+  const mapped = edges.filter((edge: any) => edge?.node?.name?.full).map((edge: any) => ({
+    id: Number(edge.node.id) || undefined,
+    name: String(edge.node.name.full),
+    nativeName: edge.node.name.native ? String(edge.node.name.native) : undefined,
+    role: edge.role ? String(edge.role) : undefined,
+    image: edge.node.image?.large ? String(edge.node.image.large) : undefined,
+    description: edge.node.description ? String(edge.node.description).replace(/<br\\s*\\/?>(\\s*)/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim() : undefined,
+    sourceUrl: edge.node.siteUrl ? String(edge.node.siteUrl) : undefined,
+  }));
+  return { characters: mapped, matched: mapped.filter((item: any) => item.image).length, requested: mapped.length, source: 'AniList' };
+}
 async function searchAnime(query: string) {
   const cleanQuery = query.trim().slice(0, 120);
   if (!cleanQuery) throw new Error('Anime title is required.');
@@ -118,6 +141,7 @@ Deno.serve(async (request: Request) => {
   try {
     const action = String(body?.action || '');
     if (action === 'characters') return json(await characters(body?.names));
+    if (action === 'anime-characters') return json(await animeCharacters(body?.anilistId));
     if (action === 'search') return json(await searchAnime(String(body?.query || '')));
     if (action === 'episode-page') return json(await episodePage(body?.malId, body?.page));
     if (action === 'episodes') return json(await episodes(String(body?.anime || '')));
