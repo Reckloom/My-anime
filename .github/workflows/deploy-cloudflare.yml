@@ -31,7 +31,7 @@ jobs:
       - name: Normalize Cloudflare account ID
         shell: bash
         run: |
-          account_id="$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | tr -d '\r\n' | sed -e 's/^[[:space:]]*["'"'"']*//' -e 's/["'"'"']*[[:space:]]*$//')"
+          account_id="$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | tr -d '\r\n' | sed "s/^[[:space:]\"']*//;s/[[:space:]\"']*$//")"
           if [[ ! "$account_id" =~ ^[A-Za-z0-9_-]+$ ]]; then
             echo "::error::CLOUDFLARE_ACCOUNT_ID must be the raw Cloudflare account ID, without quotes or extra text."
             exit 1
