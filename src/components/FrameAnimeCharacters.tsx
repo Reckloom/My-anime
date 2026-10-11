@@ -115,11 +115,14 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
   const isBlackCloverTitle = /\bblack\s+clover\b/i.test(title);
   const isAttackOnTitanTitle = /\battack\s+on\s+titan\b/i.test(title);
   const isVinlandSagaTitle = /\bvinland\s+saga\b/i.test(title);
-  const isDragonBallTitle = /\bdragon\s+ball\b/i.test(title);\n  const isLinkClickTitle = /\blink\s*click\b/i.test(title);\n  const isToBeHeroXTitle = /\bto\s*be\s*hero\s*x\b/i.test(title);
+  const isDragonBallTitle = /\bdragon\s+ball\b/i.test(title);
+  const isLinkClickTitle = /\blink\s*click\b/i.test(title);
+  const isToBeHeroXTitle = /\bto\s*be\s*hero\s*x\b/i.test(title);
   // Dragon Ball roots must always have a stable AniList source even if the
   // parent card did not carry an anilist_id through the local library state.
   const effectiveAniListId = anilistId || (/^Dragon Ball$/i.test(title) ? 223 : /^Dragon Ball Z$/i.test(title) ? 813 : /^Dragon Ball Super$/i.test(title) ? 21175 : /^Dragon Ball GT$/i.test(title) ? 225 : /^Dragon Ball DAIMA$/i.test(title) ? 170083 : isLinkClickTitle ? 126403 : isToBeHeroXTitle ? 156092 : undefined);
-  const isAnimeArchive = medium === 'anime';\n  const isRichArchive = isAnimeArchive || isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle || isLinkClickTitle || isToBeHeroXTitle;
+  const isAnimeArchive = medium === 'anime';
+  const isRichArchive = isAnimeArchive || isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle || isLinkClickTitle || isToBeHeroXTitle;
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
@@ -394,7 +397,9 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
           {isBlackClover && <span className="frame-one-piece-poster-label">MAGIC KNIGHT</span>}
           {isAttackOnTitan && <span className="frame-one-piece-poster-label">SCOUT</span>}
           {isVinlandSaga && <span className="frame-one-piece-poster-label">VIKING</span>}
-          {isDragonBallTitle && <span className="frame-one-piece-poster-label">DRAGON BALL</span>}\n          {isLinkClickTitle && <span className="frame-one-piece-poster-label">TIME PHOTO STUDIO</span>}\n          {isToBeHeroXTitle && <span className="frame-one-piece-poster-label">HERO</span>}
+          {isDragonBallTitle && <span className="frame-one-piece-poster-label">DRAGON BALL</span>}
+          {isLinkClickTitle && <span className="frame-one-piece-poster-label">TIME PHOTO STUDIO</span>}
+          {isToBeHeroXTitle && <span className="frame-one-piece-poster-label">HERO</span>}
           {isRichArchive && <span className="frame-one-piece-rank">#{index + 1}</span>}
           <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
           <div className="frame-anime-character-copy">
