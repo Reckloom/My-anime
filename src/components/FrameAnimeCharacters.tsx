@@ -133,25 +133,42 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     return () => { active = false; };
   }, [anilistId, stableCharacters, title]);
 
-  const profiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
+  const rawProfiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
+  const isOnePiece = /\bone piece\b/i.test(title);
+  const famousOnePiece = new Set(['Monkey D. Luffy','Roronoa Zoro','Vinsmoke Sanji','Nami','Usopp','Tony Tony Chopper','Nico Robin','Franky','Brook','Jinbe','Portgas D. Ace','Sabo','Shanks','Trafalgar D. Water Law','Trafalgar Law','Marshall D. Teach','Blackbeard','Dracule Mihawk','Boa Hancock','Edward Newgate','Whitebeard','Kaido','Charlotte Linlin','Big Mom','Gol D. Roger','Monkey D. Garp','Sakazuki','Akainu','Kuzan','Aokiji','Borsalino','Kizaru','Issho','Fujitora','Aramaki','Ryokugyu','Smoker','Tashigi','Coby','Helmeppo']);
+  const marineNames = new Set(['Monkey D. Garp','Garp','Sakazuki','Akainu','Kuzan','Aokiji','Borsalino','Kizaru','Issho','Fujitora','Aramaki','Ryokugyu','Smoker','Tashigi','Coby','Helmeppo','Hina','Tsuru']);
+  const rankCharacters = (input: AnimeCharacterProfile[]) => {
+    if (!isOnePiece) return input;
+    const ranked = [...input];
+    const sanji = ranked.findIndex(character => /\bsanji\b/i.test(character.name));
+    const zoro = ranked.findIndex(character => /(?:roronoa\s+)?zoro/i.test(character.name));
+    if (sanji >= 0 && zoro >= 0 && sanji > zoro) [ranked[sanji], ranked[zoro]] = [ranked[zoro], ranked[sanji]];
+    return ranked;
+  };
+  const rankedProfiles = rankCharacters(rawProfiles);
+  const profiles = isOnePiece ? rankedProfiles.filter((character, index) => index < 10 || famousOnePiece.has(character.name)) : rankedProfiles;
   const [selectedCharacter, setSelectedCharacter] = useState<AnimeCharacterProfile | null>(null);
   if (!profiles.length && !loading && !failed) return null;
-  return <section className="frame-anime-characters detail-section" aria-label={title + ' character profiles'}>
+  return <section className={'frame-anime-characters detail-section' + (isOnePiece ? ' frame-one-piece-character-archive' : '')} aria-label={title + ' character profiles'}>
     <div className="detail-section-head">
-      <div><small>CHARACTER ARCHIVE</small><h3>Characters</h3></div>
-      <span>{loading ? 'Loading…' : profiles.length ? profiles.length + ' profiles' : 'Unavailable'}</span>
+      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isOnePiece ? 'One Piece Characters' : 'Characters'}</h3></div>
+      <span>{loading ? 'Loading…' : profiles.length ? profiles.length + (isOnePiece ? ' featured profiles' : ' profiles') : 'Unavailable'}</span>
     </div>
     {profiles.length > 0 ? <div className="frame-anime-character-grid" role="list">
-      {profiles.map((character, index) => <button type="button" className="frame-anime-character-card" key={(character.id || character.name) + '-' + index} onClick={() => setSelectedCharacter(character)} aria-label={'Open details for ' + character.name}>
-        <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
-        <div className="frame-anime-character-copy">
-          <b>{character.name}</b>
-          {character.nativeName && character.nativeName !== character.name && <small className="frame-anime-character-native">{character.nativeName}</small>}
-          <span>{character.role ? character.role.charAt(0).toUpperCase() + character.role.slice(1).toLowerCase() : 'Character'}</span>
-          <p>{shortDescription(character.description)}</p>
-          <small className="frame-anime-character-open">Tap for details</small>
-        </div>
-      </button>)}
+      {profiles.map((character, index) => {
+        const marine = isOnePiece && [...marineNames].some(name => name.toLowerCase() === character.name.toLowerCase());
+        return <button type="button" className="frame-anime-character-card" key={(character.id || character.name) + '-' + index} onClick={() => setSelectedCharacter(character)} aria-label={'Open details for ' + character.name}>
+          {isOnePiece && <span className="frame-one-piece-poster-label">{marine ? 'MARINE' : 'WANTED'}</span>}
+          {isOnePiece && index < 10 && <span className="frame-one-piece-rank">#{index + 1}</span>}
+          <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
+          <div className="frame-anime-character-copy">
+            <b>{character.name}</b>
+            <span>{marine ? 'Marine' : character.role ? character.role.charAt(0).toUpperCase() + character.role.slice(1).toLowerCase() : 'Character'}</span>
+            <p>{shortDescription(character.description)}</p>
+            <small className="frame-anime-character-open">Tap for details</small>
+          </div>
+        </button>;
+      })}
     </div> : <p className="frame-anime-character-footnote">{loading ? 'Loading verified character names and portraits from AniList…' : 'Character profiles could not be loaded right now. Try reopening this anime later.'}</p>}
     <p className="frame-anime-character-footnote">Character names, roles and portraits are supplied by AniList. Missing portraits are shown as placeholders instead of unrelated artwork.</p>
     {selectedCharacter && <div className="frame-character-modal-backdrop" role="presentation" onClick={() => setSelectedCharacter(null)}>
@@ -159,10 +176,9 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
         <button type="button" className="frame-character-modal-close" onClick={() => setSelectedCharacter(null)} aria-label="Close character details">×</button>
         <div className="frame-character-modal-portrait"><CharacterPortrait character={selectedCharacter} /></div>
         <div className="frame-character-modal-copy">
-          <small>CHARACTER PROFILE</small>
+          <small>{isOnePiece ? 'WANTED / MARINE FILE' : 'CHARACTER PROFILE'}</small>
           <h4>{selectedCharacter.name}</h4>
-          {selectedCharacter.nativeName && selectedCharacter.nativeName !== selectedCharacter.name && <span className="frame-anime-character-native">{selectedCharacter.nativeName}</span>}
-          <b>{selectedCharacter.role ? selectedCharacter.role.charAt(0).toUpperCase() + selectedCharacter.role.slice(1).toLowerCase() : 'Character'}</b>
+          <b>{isOnePiece && [...marineNames].some(name => name.toLowerCase() === selectedCharacter.name.toLowerCase()) ? 'Marine' : selectedCharacter.role ? selectedCharacter.role.charAt(0).toUpperCase() + selectedCharacter.role.slice(1).toLowerCase() : 'Character'}</b>
           <p>{shortDescription(selectedCharacter.description)}</p>
           {selectedCharacter.sourceUrl && <a href={selectedCharacter.sourceUrl} target="_blank" rel="noreferrer">View source <ExternalLink size={12}/></a>}
         </div>
