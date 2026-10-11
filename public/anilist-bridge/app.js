@@ -148,7 +148,7 @@
       const token = params.get('access_token');
       if (token) return token.trim();
     }
-    if (/^Bearer\\s+/i.test(value)) value = value.replace(/^Bearer\\s+/i, '').trim();
+    if (/^Bearer\s+/i.test(value)) value = value.replace(/^Bearer\s+/i, '').trim();
     return value;
   }
 
