@@ -110,6 +110,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   const characterSignature = characters.map(character => [character.id || '', character.name, character.image || ''].join(':')).join('|');
   const stableCharacters = useMemo(() => characters, [characterSignature]);
   const isOnePieceTitle = /\bone piece\b/i.test(title);
+  const isNarutoTitle = /\bnaruto\b/i.test(title);
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
@@ -133,7 +134,11 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
     const profilesWithImages = stableCharacters.filter(character => Boolean(character.image)).length;
     // A saved archive of 40+ illustrated profiles is useful even when optional
     // bio fields are absent; don't block every detail-page opening on re-fetch.
-    const needsRemote = isOnePieceTitle ? (profilesWithImages < 60 || stableCharacters.length < 60) : (stableCharacters.length === 0 || stableCharacters.some(character => !character.image));
+    const needsRemote = isOnePieceTitle
+      ? (profilesWithImages < 60 || stableCharacters.length < 60)
+      : isNarutoTitle
+        ? (stableCharacters.length < 60 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.gender || !character.bloodType || !character.voiceActors?.length))
+        : (stableCharacters.length === 0 || stableCharacters.some(character => !character.image));
     if (!needsRemote || !anilistId) {
       setLoading(false);
       return () => { active = false; };
@@ -184,10 +189,11 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
     return () => { active = false; };
   // Saving fetched profiles changes the parent prop; keep the original fetch alive.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anilistId, title, isOnePieceTitle]);
+  }, [anilistId, title, isOnePieceTitle, isNarutoTitle]);
 
   const rawProfiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
   const isOnePiece = /\bone piece\b/i.test(title);
+  const isNaruto = isNarutoTitle;
   const famousOnePiece = new Set(['Monkey D. Luffy','Roronoa Zoro','Vinsmoke Sanji','Nami','Usopp','Tony Tony Chopper','Nico Robin','Franky','Brook','Jinbe','Portgas D. Ace','Sabo','Shanks','Trafalgar D. Water Law','Trafalgar Law','Marshall D. Teach','Blackbeard','Dracule Mihawk','Boa Hancock','Edward Newgate','Whitebeard','Kaido','Charlotte Linlin','Big Mom','Gol D. Roger','Monkey D. Garp','Sakazuki','Akainu','Kuzan','Aokiji','Borsalino','Kizaru','Issho','Fujitora','Aramaki','Ryokugyu','Smoker','Tashigi','Coby','Helmeppo']);
   const marineNames = new Set(['Monkey D. Garp','Garp','Sakazuki','Akainu','Kuzan','Aokiji','Borsalino','Kizaru','Issho','Fujitora','Aramaki','Ryokugyu','Smoker','Tashigi','Coby','Helmeppo','Hina','Tsuru']);
   const rankCharacters = (input: AnimeCharacterProfile[]) => {
@@ -251,15 +257,15 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
       if(ordered.length>=60)break;
     }
     return ordered.slice(0,60);
-  })() : rankedProfiles;
+  })() : isNaruto ? rankedProfiles.slice(0, 60) : rankedProfiles;
   const characterFactStyles = '.frame-character-modal{grid-template-columns:minmax(0,1fr);width:min(560px,100%);max-height:88dvh;overflow:auto}.frame-character-modal-copy{min-width:0}.frame-character-modal-copy h4{overflow-wrap:anywhere}.frame-character-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.frame-character-modal-copy p{overflow-wrap:anywhere;word-break:normal}@media(max-width:600px){.frame-character-modal{width:calc(100vw - 20px);padding:13px;border-radius:16px}.frame-character-facts{gap:6px}.frame-character-facts span{padding:7px;font-size:.72rem}.frame-character-bounty{font-size:.62rem}.frame-character-bounty strong{font-size:.82rem}}.frame-character-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}.frame-character-facts span,.frame-character-voices span{display:flex;flex-direction:column;min-width:0;gap:2px;padding:7px 9px;border-radius:9px;background:rgba(255,255,255,.06);overflow:hidden}.frame-character-facts strong,.frame-character-voices>strong{font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;opacity:.65}.frame-character-facts span{font-size:.78rem;line-height:1.2;overflow-wrap:anywhere}.frame-character-voices{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}.frame-character-voices span{font-size:.76rem;line-height:1.2;overflow-wrap:anywhere}.frame-character-bounty{margin:10px 0;padding:8px 10px;border-radius:9px;background:rgba(160,120,40,.1);display:flex;align-items:center;justify-content:space-between;min-width:0;gap:8px;font-size:.68rem;letter-spacing:.05em}.frame-character-bounty strong{font-size:.9rem;white-space:nowrap}.frame-character-modal,.frame-character-modal-copy{min-width:0;overflow-wrap:anywhere}.frame-character-modal-copy p{font-size:.78rem;line-height:1.38;margin:9px 0;max-height:4.2em;overflow:hidden}.frame-character-modal-copy h4{line-height:1.05;overflow-wrap:anywhere}';
   const onePieceStyles = isOnePiece ? '.frame-one-piece-character-archive .frame-anime-character-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px;overflow:visible;padding:2px 0 8px}.frame-one-piece-character-archive .frame-anime-character-card{position:relative;display:flex;flex-direction:column;min-width:0;box-sizing:border-box;min-height:370px;padding:0;overflow:hidden;border-radius:18px;text-align:left;cursor:pointer;border:1px solid rgba(73,57,33,.35);background:linear-gradient(155deg,#f4ead0,#d9c29a);box-shadow:0 10px 28px rgba(0,0,0,.22);color:#241d14;transition:transform .2s ease,box-shadow .2s ease}.frame-one-piece-character-archive .frame-anime-character-card:hover{transform:translateY(-5px) rotate(-.3deg);box-shadow:0 18px 34px rgba(0,0,0,.3)}.frame-one-piece-character-archive .frame-anime-character-portrait{width:calc(100% - 20px);flex:0 0 auto;height:270px;margin:10px 10px 0;overflow:hidden;border:4px solid rgba(67,50,29,.48);background:linear-gradient(145deg,#c9b384,#eee0bd);box-shadow:inset 0 0 20px rgba(0,0,0,.18);display:grid;place-items:center}.frame-one-piece-character-archive .frame-anime-character-portrait img{width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:rgba(255,255,255,.08)}.frame-one-piece-character-archive .frame-anime-character-copy{padding:10px 13px 14px;display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}.frame-one-piece-character-archive .frame-anime-character-copy>b{font-family:Georgia,serif;font-size:1.05rem;line-height:1.12;min-height:2.24em;display:block;overflow-wrap:anywhere;word-break:normal}.frame-one-piece-character-archive .frame-anime-character-copy>span{font-size:.66rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;opacity:1;color:#241d14;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.frame-one-piece-character-archive .frame-one-piece-bounty{display:block;color:#241d14;opacity:1;font:900 .68rem/1 Georgia,serif;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1em}.frame-one-piece-character-archive .frame-anime-character-copy p{display:none}.frame-one-piece-character-archive .frame-anime-character-open{margin-top:auto;font-weight:800;font-size:.66rem;opacity:.68}.frame-one-piece-character-archive .frame-one-piece-poster-label{position:absolute;left:18px;top:18px;z-index:2;padding:5px 8px;border:2px solid currentColor;border-radius:5px;background:rgba(244,234,208,.9);font:900 .68rem/1 Georgia,serif;letter-spacing:.08em;transform:rotate(-4deg)}.frame-one-piece-character-archive .frame-one-piece-rank{position:absolute;right:16px;top:16px;z-index:2;display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#241d14;color:#f4ead0;font:900 .8rem Georgia,serif;box-shadow:0 3px 9px rgba(0,0,0,.28)}.frame-one-piece-character-archive .frame-anime-character-native{display:none}.frame-one-piece-character-archive .frame-character-modal-portrait{width:min(230px,42vw);height:300px}@media(max-width:600px){.frame-one-piece-character-archive .frame-anime-character-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;overflow:visible}.frame-one-piece-character-archive .frame-anime-character-card{min-height:300px}.frame-one-piece-character-archive .frame-anime-character-portrait{width:calc(100% - 20px);height:205px}.frame-one-piece-character-archive .frame-anime-character-copy{padding:8px 9px 11px}.frame-one-piece-character-archive .frame-anime-character-copy>b{font-size:.9rem}.frame-one-piece-character-archive .frame-one-piece-rank{width:29px;height:29px;right:10px;top:10px}.frame-one-piece-character-archive .frame-one-piece-poster-label{left:10px;top:10px}}' : '';
   const [selectedCharacter, setSelectedCharacter] = useState<AnimeCharacterProfile | null>(null);
   if (!profiles.length && !loading && !failed) return null;
   return <section className={'frame-anime-characters detail-section' + (isOnePiece ? ' frame-one-piece-character-archive' : '')} aria-label={title + ' character profiles'}><style>{characterFactStyles + onePieceStyles}</style>
     <div className="detail-section-head">
-      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isOnePiece ? 'Top 60 Characters' : 'Characters'}</h3></div>
-      <span>{loading ? 'Loading…' : profiles.length ? profiles.length + (isOnePiece ? ' ranked profiles' : ' profiles') : 'Unavailable'}</span>
+      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : isNaruto ? 'NINJA CHARACTER ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isOnePiece || isNaruto ? 'Top 60 Characters' : 'Characters'}</h3></div>
+      <span>{loading ? 'Loading…' : profiles.length ? profiles.length + (isOnePiece || isNaruto ? ' detailed profiles' : ' profiles') : 'Unavailable'}</span>
     </div>
     {profiles.length > 0 ? <div className="frame-anime-character-grid" role="list">
       {profiles.map((character, index) => {
@@ -278,7 +284,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
         </button>;
       })}
     </div> : <p className="frame-anime-character-footnote">{loading ? 'Loading verified character names and portraits from AniList…' : 'Character profiles could not be loaded right now. Try reopening this anime later.'}</p>}
-    <p className="frame-anime-character-footnote">Ranked from the 2026 WT100 global popularity results; facts and portraits come from AniList. Missing portraits stay as placeholders.</p>
+    <p className="frame-anime-character-footnote">Character facts, portraits, birthdays, ages, blood types, genders and available voice-actor data are enriched from AniList. Missing fields stay marked as unavailable.</p>
     {selectedCharacter && <div className="frame-character-modal-backdrop" role="presentation" onClick={() => setSelectedCharacter(null)}>
       <div className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selectedCharacter.name + ' character details'} onClick={event => event.stopPropagation()}>
         <button type="button" className="frame-character-modal-close" onClick={() => setSelectedCharacter(null)} aria-label="Close character details">×</button>
