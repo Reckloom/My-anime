@@ -663,9 +663,15 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:watchedThrough,status:priorRoot?.status||rawRoot.status||'planned'}];
   const assigned=new Set<number>();
   const usedEpisodePosterUrls=new Set<string>();
+  // Specials that have their own catalogue entries must not be swallowed by a
+  // broad story-arc range (for example Cidre 895–896 and Uta's Past 1029–1030).
+  // This keeps the hierarchy deterministic while preserving every episode.
+  const specialEpisodeNumbers=new Set([895,896,907,1029,1030]);
+  const specialArcNumbers=new Set([895,896,907,1029,1030]);
   for(let index=0;index<arcs.length;index++){
    const arc=arcs[index];
-   const arcEpisodes=included.filter((e:any)=>!assigned.has(Number(e.mal_id))&&Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end);
+   const isSpecialArc=arc.start===arc.end&&specialArcNumbers.has(arc.start)||arc.name.includes('Cidre Guild')||arc.name.includes('Uta’s Past');
+   const arcEpisodes=included.filter((e:any)=>!assigned.has(Number(e.mal_id))&&Number(e.mal_id)>=arc.start&&Number(e.mal_id)<=arc.end&&(isSpecialArc||!specialEpisodeNumbers.has(Number(e.mal_id))));
    if(!arcEpisodes.length)continue;
    const arcId='one-piece-arc-'+arc.start;
    // Give each story arc a content-related still of its own and reserve it so
