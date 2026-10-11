@@ -26,7 +26,7 @@ type Profile={id:string;username:string;display_name:string;avatar_url?:string|n
 type Radar={mediaId:string;anilistId:number;title:string;poster:string;episode:number;airingAt:string;released:boolean};
 
 function normalise(item:MediaItem):MediaItem{
- const total=item.total&&item.total>0?item.total:(item.medium==='game'||item.medium==='visual-novel'?100:item.medium==='movie'?1:500);
+ const total=item.total&&item.total>0?item.total:(item.medium==='game'||item.medium==='visual-novel'?100:item.medium==='movie'?1:undefined);
  const cleanBackdrop=item.backdrop&&item.backdrop.trim()!==item.poster.trim()?item.backdrop:'';
  return {...item,poster:item.poster||poster,backdrop:cleanBackdrop,total,progress:Math.max(0,Math.min(item.progress||0,total)),progressUnit:item.progressUnit||unitFor(item.medium)};
 }
@@ -396,8 +396,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    );
    if(found<0){merged.push(item);changed.set(item.id,item);continue}
    const current=merged[found];
-   // Source refreshes may update catalogue metadata and totals, but the user's
-   // progress/status are authoritative. Never mark episodes watched or rewind
+   // Source refreshes may update catalogue metadata and totals, but the user's   // progress/status are authoritative. Never mark episodes watched or rewind
    // progress just because an import batch contains different defaults.
    const customTotal=current.customTotal??item.customTotal;
    const total=customTotal!=null?customTotal:(item.total!=null?item.total:current.total);
@@ -796,8 +795,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const remaining=items.filter(x=>!descendantIds.has(x.id));
    const ok=await save([...created,...remaining]);
    if(ok){setAppMessage(seriesTitle+': '+sourceRows.length+' episodes loaded with arc grouping.');window.setTimeout(()=>setAppMessage(''),7000);openDetail(root)}
-   return ok;
-  }catch(error){
+   return ok;  }catch(error){
    const message=error instanceof Error?error.message:'Please retry the catalogue request.';
    setAppMessage('Could not fetch '+seriesTitle+' episodes: '+message);
    window.setTimeout(()=>setAppMessage(''),9000);
@@ -1019,7 +1017,7 @@ function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;li
   const parent=item.parentId?indexes.byId.get(item.parentId):undefined;
  const artworkParent=artworkFallbackAncestor(item,library);
  const childCount=indexes.childCounts.get(item.id)||0;
- return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={artworkParent.id!==item.id?artworkParent.poster:undefined} parentTitle={artworkParent.id!==item.id?artworkParent.title:undefined} parentMedium={artworkParent.id!==item.id?artworkParent.medium:undefined} parentAnilistId={artworkParent.id!==item.id?artworkParent.anilistId:undefined} sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total||500)} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
+ return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={artworkParent.id!==item.id?artworkParent.poster:undefined} parentTitle={artworkParent.id!==item.id?artworkParent.title:undefined} parentMedium={artworkParent.id!==item.id?artworkParent.medium:undefined} parentAnilistId={artworkParent.id!==item.id?artworkParent.anilistId:undefined} sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total??'—')} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
 }
 
 function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
@@ -1089,6 +1087,6 @@ function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){
 function SharedCard({item,library}:{item:MediaItem;library:MediaItem[]}){
  const pct=item.medium==='game'||item.medium==='visual-novel'?item.progress:item.progress/(item.total||1)*100;
  const artworkParent=artworkFallbackAncestor(item,library);
- return <article className="media-card shared-media-card"><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={artworkParent.id!==item.id?artworkParent.poster:undefined} parentTitle={artworkParent.id!==item.id?artworkParent.title:undefined} parentMedium={artworkParent.id!==item.id?artworkParent.medium:undefined} parentAnilistId={artworkParent.id!==item.id?artworkParent.anilistId:undefined} sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total||500)} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">Shared view · read only</span></div></article>;
+ return <article className="media-card shared-media-card"><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={artworkParent.id!==item.id?artworkParent.poster:undefined} parentTitle={artworkParent.id!==item.id?artworkParent.title:undefined} parentMedium={artworkParent.id!==item.id?artworkParent.medium:undefined} parentAnilistId={artworkParent.id!==item.id?artworkParent.anilistId:undefined} sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total??'—')} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">Shared view · read only</span></div></article>;
 }
 function Empty({text}:{text:string}){return <div className="empty-state"><Library size={25}/><p>{text}</p></div>}
