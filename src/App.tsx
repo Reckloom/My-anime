@@ -841,6 +841,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  const updateReleaseNotifications=async(enabled:boolean)=>{setReleaseNotificationsEnabled(enabled);const client=supabase;if(client&&user?.id){const {error}=await client.from('user_preferences').upsert({user_id:user.id,theme:'cinematic-archive',density:'comfortable',accent:'gold',default_sort:'popularity',default_media_filter:'anime',voice_enabled:true,compact_nav:false,appearance_mode:'dark',release_notifications_enabled:enabled,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error){setReleaseNotificationsEnabled(!enabled);setAppMessage('Notification setting could not be saved: '+error.message);window.setTimeout(()=>setAppMessage(''),5000)}return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs.release_notifications_enabled=enabled;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
  const removeOwnedArtwork=async(url?:string)=>{const client=supabase;if(!client||!user?.id||!url)return;try{const parsed=new URL(url);const prefix='/storage/v1/object/public/frame-media-art/';if(!parsed.pathname.startsWith(prefix))return;const path=decodeURIComponent(parsed.pathname.slice(prefix.length));if(path.startsWith(user.id+'/'))await client.storage.from('frame-media-art').remove([path]);}catch{}};
  const updateConnection=async(id:string)=>{const enabled=!connections[id];setConnections({...connections,[id]:enabled});const client=supabase;if(client&&user?.id)await client.from('connected_apps').upsert({user_id:user.id,provider:id,enabled,config:{}},{onConflict:'user_id,provider'})};
+ const libraryIndexes=useMemo(()=>getLibraryIndexes(items),[items]);
+ const sortedItems=useMemo(()=>sortMedia(items,sortMode),[items,sortMode]);
  const shown=useMemo(()=>{
  const normalized=query.trim().toLowerCase();
  const activeFilters=filters.filter(x=>x!=='all');
@@ -858,8 +860,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   return mediaMatch&&statusMatch;
  };
  const hasStatusFilter=activeStatus.length>0;
- const sorted=sortMedia(items,sortMode);
- const childrenByParent=getLibraryIndexes(items).childrenByParent;
+ const sorted=sortedItems;
+ const childrenByParent=libraryIndexes.childrenByParent;
  if(!hasStatusFilter){
   const roots=sorted.filter(x=>{
    if(x.parentId)return false;
@@ -885,7 +887,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(!facetMatches(x))return false;
   return true;
  });
-},[items,sortMode,query,filters]);
+},[items,query,filters,sortedItems,libraryIndexes]);
  const openDetail=(item:MediaItem)=>{
   const state={frameRoute:true,framePage:page,frameDetailId:item.id};
   history.pushState(state,'',window.location.href);
