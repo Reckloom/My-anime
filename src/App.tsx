@@ -962,7 +962,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={openDetail} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
-   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);setPage('friend-library')}} onCall={setDirectCall}/>}
+   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);go('friend-library')}} onCall={setDirectCall}/>}
    {page==='chat'&&<FrameGlobalChat uid={uid} guest={guest}/>} 
    {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
    {page==='connections'&&<><Connections connections={connections} toggle={updateConnection} onImportSteamGame={addSteamGame}/><FrameLibraryImport onImport={mergeImported}/></>}
