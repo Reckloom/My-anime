@@ -646,7 +646,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const arcPoster=arcCandidates[0]||existingArcArtwork||root.poster;
    if(arcPoster!==root.poster)usedEpisodePosterUrls.add(arcPoster);
    created.push({id:arcId,parentId:rootId,sourceProvider:'jikan',externalId:'one-piece-arc-'+arc.start,title:arc.name,description:arc.name+' · '+arcEpisodes.length+' episodes',poster:arcPoster,backdrop:root.backdrop,medium:'anime',status:arcEpisodes.every((e:any)=>Number(e.mal_id)<=watchedThrough)?'completed':'planned',progress:arcEpisodes.filter((e:any)=>Number(e.mal_id)<=watchedThrough).length,total:arcEpisodes.length,year:root.year,score:root.score,genres:root.genres,themes:root.themes,studio:root.studio,source:root.source,season:arc.name,favorite:false,notes:'FRAME_POSTER_VERSION=one-piece-stills-v3. Arc artwork is selected from distinct episode/archive stills. All numbered episodes in this arc are included, including filler and specials, and are marked completed per the library owner’s viewing status.'});
-   for(const e of arcEpisodes){assigned.add(Number(e.mal_id));created.push(makeOnePieceEpisode(e,arc,index+1,arcId,root,usedEpisodePosterUrls));}
+   for(const e of arcEpisodes){assigned.add(Number(e.mal_id));created.push(makeOnePieceEpisode(e,arc,index+1,arcId,root,usedEpisodePosterUrls,watchedThrough));}
   }
   const ungrouped=included.filter((e:any)=>!assigned.has(Number(e.mal_id)));
   if(ungrouped.length){
@@ -677,7 +677,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(ok){setAppMessage('One Piece updated: '+(created.length-1)+' arc and episode entries added.');window.setTimeout(()=>setAppMessage(''),7000);openDetail(created[0])}
   return ok;
  };
- const makeOnePieceEpisode=(e:any,arc:{name:string;start:number;end:number},arcNumber:number,parentId:string,root:MediaItem,usedPosters:Set<string>):MediaItem=>{
+ const makeOnePieceEpisode=(e:any,arc:{name:string;start:number;end:number},arcNumber:number,parentId:string,root:MediaItem,usedPosters:Set<string>,watchedThrough:number):MediaItem=>{
   const epNo=Number(e.mal_id);
   const score=Number(e.score);
   const aired=typeof e.aired==='string'?e.aired:(e.aired?.from||'');
