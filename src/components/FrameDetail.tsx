@@ -82,7 +82,6 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
   useEffect(()=>{setHierarchyLimit(24)},[item.id,hierarchyQuery]);
   const hierarchyData=useMemo(()=>{
    const parentItem=d.parentId?library.find(x=>x.id===d.parentId):undefined;
-   const isArcEntry=d.sourceProvider==='frame-story-arc'||d.sourceProvider==='frame-naruto-arc'||String(d.externalId||'').startsWith('one-piece-arc-');
    const isEpisodeRow=(x:MediaItem)=>x.sourceProvider==='frame-anime-episode'||/^one-piece-episode-\d+$/.test(String(x.externalId||''));
    const directChildren=library.filter(x=>x.parentId===d.id);
    // Anime hierarchy is deliberately season/arc only. Episode rows are never
