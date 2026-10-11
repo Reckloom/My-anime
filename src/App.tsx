@@ -607,10 +607,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    {name:'Punk Hazard',start:579,end:625},{name:'Caesar Retrieval (Filler)',start:626,end:628},
    {name:'Dressrosa',start:629,end:746},{name:'Silver Mine (Filler)',start:747,end:750},
    {name:'Zou',start:751,end:779},{name:'Marine Rookie (Filler)',start:780,end:782},
-   {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:891},
+   {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:891},{name:'Wano Country',start:892,end:1088},
    {name:'Cidre Guild (Filler)',start:895,end:896},{name:'Romance Dawn Anniversary Special',start:907,end:907},
-   {name:'Wano Country',start:892,end:1088},{name:'Uta’s Past',start:1029,end:1030},
-   {name:'Egghead',start:1089,end:1155},{name:'Elbaf',start:1156,end:2000}
+   {name:'Uta’s Past',start:1029,end:1030},{name:'Egghead',start:1089,end:1155},{name:'Elbaf',start:1156,end:2000}
 
   ];
   const rootId=root.id;
