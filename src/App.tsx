@@ -563,8 +563,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    episodes=[...byNumber.values()];
   }
   root=normalise({...root,poster:ONE_PIECE_SERIES_POSTER,backdrop:catalogueSeriesBackdrop||root.backdrop});
-  // Include every numbered episode, including filler and anime-original episodes.
-  // Build a complete episode index from 1–1180, preserving real provider metadata wherever available.
+  // Include every verified numbered episode, including filler and anime-original episodes.
+  // Never cap the catalogue at a historical episode number: the provider is allowed
+  // to grow the library automatically as new episodes are released.
   const catalogueByNumber=new Map<number,any>();
   const meaningfulEpisodeTitle=(value:unknown,number:number)=>{
    const title=String(value||'').trim().replace(/^(?:(?:episode|ep)\s*\d+\s*[.:·—-]?\s*)+/i,'').replace(/^\d+\.\s*/,'').trim();
@@ -572,7 +573,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   };
   for(const e of episodes){
    const number=Number(e.mal_id);
-   if(!Number.isInteger(number)||number<1||number>1180||!meaningfulEpisodeTitle(e.title,number))continue;
+   if(!Number.isInteger(number)||number<1||number>2000||!meaningfulEpisodeTitle(e.title,number))continue;
    const prior=catalogueByNumber.get(number);
    if(!prior||!meaningfulEpisodeTitle(prior.title,number))catalogueByNumber.set(number,{...e,title:String(e.title||'').trim().replace(/^(?:(?:episode|ep)\s*\d+\s*[.:·—-]?\s*)+/i,'').replace(/^\d+\.\s*/,'').trim()});
   }
@@ -606,10 +607,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    {name:'Punk Hazard',start:579,end:625},{name:'Caesar Retrieval (Filler)',start:626,end:628},
    {name:'Dressrosa',start:629,end:746},{name:'Silver Mine (Filler)',start:747,end:750},
    {name:'Zou',start:751,end:779},{name:'Marine Rookie (Filler)',start:780,end:782},
-   {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:889},
+   {name:'Whole Cake Island',start:783,end:877},{name:'Levely / Reverie',start:878,end:891},
    {name:'Cidre Guild (Filler)',start:895,end:896},{name:'Romance Dawn Anniversary Special',start:907,end:907},
-   {name:'Uta’s Past',start:1029,end:1030},{name:'Wano Country',start:890,end:1085},
-   {name:'Egghead',start:1086,end:2000}
+   {name:'Wano Country',start:892,end:1088},{name:'Uta’s Past',start:1029,end:1030},
+   {name:'Egghead',start:1089,end:1155},{name:'Elbaf',start:1156,end:2000}
 
   ];
   const rootId=root.id;
@@ -617,7 +618,14 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   // The catalogue determines the real current total. Preserve the user's
   // progress/status instead of turning a refresh into a fake "1180 watched".
   const seriesTotal=latestVerifiedEpisode||Number(priorRoot?.total||rawRoot.total||0)||1;
-  const watchedThrough=Math.min(Math.max(0,Number(priorRoot?.progress??rawRoot.progress)||0),seriesTotal);
+  const legacyOnePieceFalseComplete=Boolean(
+   priorRoot&&Number(priorRoot.progress)===1180&&Number(priorRoot.customTotal)===1180&&Number(priorRoot.total)===1180&&seriesTotal<1180
+  );
+  // A previous FRAME build accidentally stored 1180/1180 as the watched state for
+  // every One Piece library. If that exact legacy fingerprint is still present,
+  // reset only that synthetic value; real user progress is preserved.
+  const storedProgress=legacyOnePieceFalseComplete?0:Number(priorRoot?.progress??rawRoot.progress)||0;
+  const watchedThrough=Math.min(Math.max(0,storedProgress),seriesTotal);
   const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:watchedThrough,status:priorRoot?.status||rawRoot.status||'planned'}];
   const assigned=new Set<number>();
   const usedEpisodePosterUrls=new Set<string>();
@@ -654,7 +662,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const existingByExternalId=new Map(items.filter(x=>x.externalId&&String(x.externalId).startsWith('one-piece-')).map(x=>[String(x.externalId),x] as const));
   const reconciled=created.map(next=>{
    const prior=next.externalId?existingByExternalId.get(String(next.externalId)):undefined;
-   if(next.id===rootId)return {...next,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(Math.max(0,Number(prior?.progress??next.progress)||0),seriesTotal),status:prior?.status??next.status,personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
+   if(next.id===rootId)return {...next,total:seriesTotal,customTotal:seriesTotal,progress:legacyOnePieceFalseComplete?0:Math.min(Math.max(0,Number(prior?.progress??next.progress)||0),seriesTotal),status:legacyOnePieceFalseComplete?'planned':prior?.status??next.status,personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
    const episodeMatch=String(next.externalId||'').match(/^one-piece-episode-(\d+)$/);
    if(episodeMatch){
     const number=Number(episodeMatch[1]);
