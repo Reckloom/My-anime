@@ -8,7 +8,7 @@ const HEADERS={
   'Access-Control-Allow-Methods':'POST, OPTIONS',
 };
 
-const MEDIA_QUERY='query ($ids:[Int!]!) { Page(page:1, perPage:50) { media(id_in:$ids) { id type format status chapters episodes title { userPreferred english romaji native } description coverImage { extraLarge } bannerImage genres tags { name } season seasonYear averageScore meanScore popularity favourites studios { nodes { name } } source duration startDate { year month day } endDate { year month day } relations { edges { relationType node { id type format status chapters episodes title { userPreferred english romaji native } coverImage { extraLarge } siteUrl startDate { year month day } } } } } } }';
+const MEDIA_QUERY='query ($ids:[Int!]!) { Page(page:1, perPage:50) { media(id_in:$ids) { id idMal type format status chapters episodes title { userPreferred english romaji native } description coverImage { extraLarge } bannerImage genres tags { name } season seasonYear averageScore meanScore popularity favourites studios { nodes { name } } source duration startDate { year month day } endDate { year month day } relations { edges { relationType node { id idMal type format status chapters episodes title { userPreferred english romaji native } coverImage { extraLarge } siteUrl startDate { year month day } } } } } } }';
 const SCHEDULE_QUERY='query ($ids:[Int!]!, $from:Int!, $to:Int!) { Page(page:1, perPage:50) { airingSchedules(mediaId_in:$ids, airingAt_greater:$from, airingAt_lesser:$to, sort:TIME) { id airingAt episode mediaId media { id title { userPreferred english romaji native } } } } }';
 
 function json(body:Record<string,unknown>,status=200){ return Response.json(body,{status,headers:HEADERS}); }
@@ -85,8 +85,13 @@ async function runRadar(admin:any){
 
   const ids=[...new Set(tracked.map((r:any)=>r.anilist_id))];
   const now=Math.floor(Date.now()/1000),from=now-48*3600,to=now+45*86400;
-  const [media,schedules]=await Promise.all([fetchMedia(ids),fetchSchedules(ids,from,to)]);
-  const byId=new Map<number,any>(media.map((m:any)=>[Number(m.id),m]));
+  const media=await fetchMedia(ids);
+  const relationIds=[...new Set(media.flatMap((m:any)=>Array.isArray(m?.relations?.edges)?m.relations.edges.map((e:any)=>Number(e?.node?.id)).filter((id:any)=>Number.isInteger(id)&&id>0):[]))].filter((id:number)=>!ids.includes(id));
+  const relatedMedia=relationIds.length?await fetchMedia(relationIds):[];
+  const allMedia=[...media,...relatedMedia];
+  const allIds=[...new Set([...ids,...relationIds])];
+  const schedules=await fetchSchedules(allIds,from,to);
+  const byId=new Map<number,any>(allMedia.map((m:any)=>[Number(m.id),m]));
   const schedulesById=new Map<number,any[]>();
   for(const s of schedules){
     const id=Number(s.mediaId),list=schedulesById.get(id)||[];
@@ -103,6 +108,12 @@ async function runRadar(admin:any){
 
   for(const [userId,userRows] of users){
     const ownedIds=new Set(userRows.map((r:any)=>r.anilist_id));
+    const {data:hierarchyRows,error:hierarchyError}=await admin.from('media_items')
+      .select('id,user_id,parent_id,title,medium,status,progress,total,anilist_id,poster,backdrop,description,genres,themes,studio,source,year,score,data')
+      .eq('user_id',userId).eq('medium','anime');
+    if(hierarchyError)throw hierarchyError;
+    const hierarchy=(hierarchyRows||[]).map((r:any)=>({...r,id:String(r.id),parent_id:r.parent_id?String(r.parent_id):null,data:r.data&&typeof r.data==='object'?r.data:{}}));
+
 
     for(const row of userRows){
       const m=byId.get(row.anilist_id);
@@ -155,6 +166,63 @@ async function runRadar(admin:any){
       const rowSchedules=(schedulesById.get(row.anilist_id)||[])
         .filter((s:any)=>Number.isFinite(Number(s.airingAt))&&Number.isFinite(Number(s.episode)))
         .sort((a:any,b:any)=>Number(a.airingAt)-Number(b.airingAt));
+
+      // Automatically materialize newly aired episodes into the user's catalogue.
+      // Existing episodes are never changed to "watched" by this job: only episodes
+      // that were already released before the sync are marked completed when they
+      // were part of the user's existing current catalogue; newly discovered episodes
+      // are always planned/unwatched.
+      if(row.medium==='anime' && row.title.trim().toLowerCase()!=='one piece'){
+        const relatedAnimeIds=[row.anilist_id,...(Array.isArray(m?.relations?.edges)?m.relations.edges.map((e:any)=>Number(e?.node?.id)).filter((id:any)=>Number.isInteger(id)&&id>0):[])];
+        const directChildren=hierarchy.filter((x:any)=>x.parent_id===row.id);
+        const isEpisode=(x:any)=>x.data?.provider==='frame-anime-episode'||x.data?.provider==='frame-naruto-episode'||Boolean(x.data?.episode)||/episode:\\d+$/i.test(String(x.data?.externalId||''));
+        for(const relatedId of [...new Set(relatedAnimeIds)]){
+          const related=byId.get(relatedId);
+          if(!related||String(related.format||'')!=='TV')continue;
+          const aired=(schedulesById.get(relatedId)||[]).filter((s:any)=>Number(s.airingAt)<=now&&Number(s.episode)>0);
+          if(!aired.length)continue;
+          let group=directChildren.find((x:any)=>Number(x.anilist_id)===relatedId);
+          if(!group){
+            const hasArcGroups=directChildren.some((x:any)=>x.data?.provider==='frame-story-arc'||x.data?.provider==='frame-naruto-arc'||String(x.data?.provider||'')==='jikan'&&String(x.data?.externalId||'').startsWith('one-piece-arc-'));
+            const groupTitle=titleOf(related);
+            const groupId='frame-auto-group-'+row.id+'-'+relatedId;
+            group={
+              id:groupId,user_id:userId,parent_id:row.id,title:groupTitle,medium:'anime',status:'planned',progress:0,total:Number(related.episodes||0)||0,
+              anilist_id:relatedId,poster:String(related.coverImage?.extraLarge||row.poster||''),backdrop:String(related.bannerImage||row.backdrop||''),
+              description:clean(related.description)||groupTitle,genres:Array.isArray(related.genres)?related.genres.map(String):row.genres||[],themes:Array.isArray(related.tags)?related.tags.slice(0,12).map((x:any)=>String(x.name)).filter(Boolean):row.themes||[],
+              studio:related.studios?.nodes?.[0]?.name||row.studio||null,source:related.source||row.source||null,year:related.startDate?.year?Number(related.startDate.year):row.year||null,
+              score:related.averageScore==null?row.score:Number(related.averageScore)/10,
+              data:{provider:hasArcGroups?'frame-story-arc':'frame-season',externalId:'anilist:'+relatedId,progressUnit:'episodes',customTotal:Number(related.episodes||0)||0}
+            };
+            const {error:e}=await admin.from('media_items').insert(group);
+            if(e)throw e;
+            hierarchy.push(group);directChildren.push(group);
+          }
+          const existingKeys=new Set(hierarchy.filter((x:any)=>x.parent_id===group.id&&isEpisode(x)).map((x:any)=>String(x.data?.externalId||'')));
+          let groupProgress=0;
+          for(const s of aired.sort((a:any,b:any)=>Number(a.episode)-Number(b.episode))){
+            const ep=Number(s.episode),key='anilist-airing:'+relatedId+':'+ep;
+            if(existingKeys.has(key))continue;
+            const epId='frame-auto-episode-'+row.id+'-'+relatedId+'-'+ep;
+            const airedAt=new Date(Number(s.airingAt)*1000).toISOString();
+            const episodeRow={
+              id:epId,user_id:userId,parent_id:group.id,title:'Episode '+String(ep).padStart(3,'0'),medium:'anime',
+              status:'planned',progress:0,total:1,anilist_id:relatedId,poster:String(related.coverImage?.extraLarge||group.poster||row.poster||''),
+              backdrop:String(related.bannerImage||group.backdrop||row.backdrop||''),description:clean(related.description)||'Episode catalogue entry.',
+              genres:group.genres||[],themes:group.themes||[],studio:group.studio||null,source:'AniList',year:new Date(Number(s.airingAt)*1000).getUTCFullYear(),score:related.averageScore==null?group.score:Number(related.averageScore)/10,
+              data:{provider:'frame-anime-episode',externalId:key,progressUnit:'episodes',customTotal:1,episode:{seasonNumber:1,episodeNumber:ep,episodeCode:'EP '+String(ep).padStart(4,'0'),airDate:airedAt.slice(0,10),airingAt},notes:'Automatically added from AniList release data. Marked unwatched until the library owner confirms it was watched.'}
+            };
+            const {error:e}=await admin.from('media_items').insert(episodeRow);
+            if(e){ if(String(e.message||'').includes('duplicate')||String(e.code||'')==='23505')continue; throw e; }
+            hierarchy.push(episodeRow);existingKeys.add(key);
+          }
+          const groupEpisodes=hierarchy.filter((x:any)=>x.parent_id===group.id&&isEpisode(x));
+          groupProgress=groupEpisodes.filter((x:any)=>x.status==='completed').length;
+          const groupTotal=Math.max(Number(group.total||0),groupEpisodes.length);
+          const {error:ge}=await admin.from('media_items').update({total:groupTotal,progress:groupProgress,status:groupProgress>=groupTotal&&groupTotal>0?'completed':'watching'}).eq('id',group.id).eq('user_id',userId);
+          if(ge)throw ge;
+        }
+      }
 
       const future=rowSchedules.find((s:any)=>Number(s.airingAt)>now);
       update.next_release=future?new Date(Number(future.airingAt)*1000).toISOString():null;
