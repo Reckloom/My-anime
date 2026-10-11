@@ -33,7 +33,7 @@ async function withArtworkLimit<T>(job:()=>Promise<T>):Promise<T>{
 const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
 const isPlaceholderArtwork=(value?:string)=>!value||value.toLowerCase().includes('frame-logo.svg');
-const isHierarchyNode=(p:Props)=>p.sourceProvider==='frame-story-arc'||isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'');
+const isHierarchyNode=(p:Props)=>p.sourceProvider==='frame-story-arc'||/^frame-anime-(?:season|arc|episode)$/i.test(p.sourceProvider||'')||isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'')||/(?:^|[-_])(season|s)\d+(?:[-_]|$)/i.test(p.externalId||'')||/(?:^|[-_])arc[-_]/i.test(p.externalId||'');
 const svgFallback=(title:string,medium:Medium)=>{
  const hash=[...title].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,7);
  const hue=hash%360,second=(hue+62)%360;
@@ -44,9 +44,11 @@ const svgFallback=(title:string,medium:Medium)=>{
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');\nconst dedicatedHierarchyArtwork=(title:string)=>{
  const t=normal(title);
  // Explicit poster map for Link Click and To Be Hero X, plus Dragon Ball hierarchy.
- if(t.includes('link click')&&t.includes('season 1'))return 'https://i0.wp.com/anitrendz.net/news/wp-content/uploads/2023/06/Link-Click-Season-2-key-visual.jpg';
- if(t.includes('link click')&&t.includes('season 2'))return 'https://i0.wp.com/anitrendz.net/news/wp-content/uploads/2023/06/Link-Click-Season-2-key-visual.jpg';
+ if(t.includes('link click')&&t.includes('season 1'))return 'https://images.justwatch.com/poster/311397638/s718/temporada-1.jpg';
+ if(t.includes('link click')&&t.includes('season 2'))return 'https://images.plex.tv/photo?scale=2&size=medium-360&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2F3cyLMR577jQ2steJATIJ3tpxtoP.jpg';
  if(t.includes('to be hero x')&&t.includes('season 1'))return 'https://tbhx.net/wp-content/uploads/2025/03/keyvisual.jpg';
+ if(t.includes('link click')&&t.includes('bridon'))return 'https://a.storyblok.com/f/178900/1280x720/ab35cef3fe/link-click-bridon-arc-kv-wide.jpg';
+ if(t.includes('link click')&&t.includes('season 3'))return 'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/b191832.jpg';
  if(t.includes('daima')&&t.includes('season 1'))return 'https://www.toei-animation-usa.com/newsAdmin/uploads/posts/617121621.jpg';
  if(t==='daima arc'||t.includes('daima arc'))return 'https://ogre.natalie.mu/media/news/comic/2024/0719/DBDAIMA_KV.jpg';
  if(t.includes('season 1')&&t.includes('black star dragon balls'))return 'https://metrunui.github.io/images/dbgts1.jpg';
@@ -62,6 +64,7 @@ async function resolve(p:Props):Promise<string>{
  const sharedOnePiecePoster='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const isOnePiece=/^one piece$/i.test(p.title.trim());
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
+ const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
  // Saved artwork is authoritative for custom/imported sources. For normal
  // AniList series records, validate the stored ID once so a stale poster cannot
  // remain attached to the wrong title (while still preserving artwork when the
@@ -73,7 +76,7 @@ async function resolve(p:Props):Promise<string>{
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);\n const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
  if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
-  if(hasSavedPoster)return p.poster!;
+  if(hasDistinctSavedPoster)return p.poster!;
   if(p.parentAnilistId){
    try{
     const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.parentAnilistId}})});
@@ -87,7 +90,7 @@ async function resolve(p:Props):Promise<string>{
   return p.parentPoster||svgFallback(p.title,p.medium);
  }
  if(isHierarchyNode(p)){
-  if(hasSavedPoster)return p.poster as string;
+  if(hasDistinctSavedPoster)return p.poster as string;
   // First try to find artwork for the exact season/arc title. This keeps
   // every anime consistent instead of making special-case poster rules.
   if(isSeriesMedia){
@@ -159,7 +162,7 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
 }
 function safeInitialArtwork(p:Props){
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
- if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||svgFallback(p.title,p.medium);
+ if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||svgFallback(p.title,p.medium);
  if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
  return p.parentPoster||svgFallback(p.title,p.medium);
 }
