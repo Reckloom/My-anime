@@ -184,6 +184,15 @@ export default function App(){
  const [finder,setFinder]=useState(false),[manualEntry,setManualEntry]=useState(false),[selected,setSelected]=useState<MediaItem|null>(null),[menu,setMenu]=useState(false),[profile,setProfile]=useState<Profile|null>(null),[appMessage,setAppMessage]=useState('');
  const [directCall,setDirectCall]=useState<Profile|null>(null),[friendLibrary,setFriendLibrary]=useState<string|null>(null),[commandOpen,setCommandOpen]=useState(false);
  const [releaseNotificationsEnabled,setReleaseNotificationsEnabled]=useState(true);
+ // Restore a deep-linked detail after the library has loaded, and keep an open
+ // detail synchronized with the canonical item instead of showing stale state.
+ useEffect(()=>{
+  const detailId=typeof window!=='undefined'&&typeof window.history.state?.frameDetailId==='string'
+   ?window.history.state.frameDetailId:null;
+  if(!detailId){setSelected(current=>current&&items.some(x=>x.id===current.id)?items.find(x=>x.id===current.id)||null:null);return}
+  const match=items.find(x=>x.id===detailId);
+  if(match)setSelected(match);
+ },[items]);
  const [radar,setRadar]=useState<Radar[]>([]),[radarBusy,setRadarBusy]=useState(false),[radarError,setRadarError]=useState('');
  const [density,setDensity]=useState('comfortable'),[theme,setTheme]=useState('cinematic-archive'),[appearanceMode,setAppearanceMode]=useState<'light'|'dark'|'system'>('dark');
  const [connections,setConnections]=useState<Record<string,boolean>>({anilist:true,steam:true,tvmaze:true,vndb:true,openlibrary:true,imdb:true,justwatch:true});
