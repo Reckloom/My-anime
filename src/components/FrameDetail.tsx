@@ -6,8 +6,6 @@ import {supabase} from '../lib/supabase';
 import {FrameArtwork,artworkFallbackAncestor} from './FrameArtwork';
 import {FrameAnimeCharacters} from './FrameAnimeCharacters';
 import {FrameEpisodeList} from './FrameEpisodeList';
-import {FrameCharacterArchive} from './FrameCharacterArchive';
-import {FrameNarutoCharacterArchive} from './FrameNarutoCharacterArchive';
 
 const labels:Record<Status,string>={watching:'Watching',reading:'Reading',playing:'Playing',completed:'Completed',planned:'Planned',paused:'Paused',dropped:'Dropped'};
 const units={anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as const;
@@ -306,8 +304,6 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
 
     
    <section className="detail-section"><div className="detail-section-head"><h3>Progress</h3><span>{Math.round(pct)}%</span></div><input className="progress-slider" type="range" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value))}/><div className="progress-edit"><input type="number" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value)||0)}/><span>{d.progressUnit||units[d.medium]}</span><span>/</span><input type="number" min="1" max="2000" value={d.total|| (movie?1:500)} onChange={e=>setTotal(Number(e.target.value))}/><span>{movie?'watched state':'total'}</span></div><small className="hint">Change the total when an edition or source count is different.</small></section>
-      {d.medium==='anime'&&!d.episode&&d.title.trim().toLowerCase()==='one piece'&&<FrameCharacterArchive/>}
-      {d.medium==='anime'&&!d.episode&&/^naruto$/i.test(d.title.trim())&&!d.parentId&&<FrameNarutoCharacterArchive/>}
 
    <section className="detail-section two-col"><label>Status<select value={d.status} onChange={e=>update('status',e.target.value as Status)}>{statuses.map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={d.personalRating??''} onChange={e=>update('personalRating',numberOrUndefined(e.target.value))}/></label><label>Parent entry<select value={d.parentId||''} onChange={e=>update('parentId',e.target.value||undefined)}><option value="">None</option>{parentCandidates.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label><label>Favorite<select value={d.favorite?'yes':'no'} onChange={e=>update('favorite',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label></section>
 
