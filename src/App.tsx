@@ -936,11 +936,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
 
  return <div className="frame-app">
-  {/* Automatically repair an empty One Piece character archive in the background.
-      It uses the same validated AniList profile loader as the visible character page. */}
+  {/* Repair incomplete One Piece and Naruto character archives in the background.
+      The same validated AniList loader powers the visible character page. */}
   {cloudLibraryReady && !guest && items.filter(item =>
-    item.medium==='anime' && !item.parentId && /^one piece$/i.test(item.title.trim()) &&
-    Boolean(item.anilistId) && (item.characters?.length||0)<45
+    item.medium==='anime' && Boolean(item.anilistId) &&
+    ((!item.parentId && /^(?:one piece|naruto)$/i.test(item.title.trim())) ||
+     item.id==='frame-naruto-part-shippuden') &&
+    (item.characters?.length||0)<45
    ).map(item=><div key={'character-prefetch-'+item.id} hidden aria-hidden="true">
     <FrameAnimeCharacters title={item.title} characters={item.characters||[]} anilistId={item.anilistId}
       onCharactersLoaded={async profiles=>{await persistCharacterProfiles(item.id,profiles);}}/>
