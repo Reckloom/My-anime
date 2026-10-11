@@ -15,6 +15,9 @@ type EpisodeResponse={
   pagination?:{last_visible_page?:number;has_next_page?:boolean};
 };
 
+type CachedEpisodePage={data:JikanEpisode[];lastPage:number};
+const episodePageCache=new Map<string,CachedEpisodePage>();
+const animeSearchCache=new Map<string,string>();
 async function fetchJikan(url:string,signal:AbortSignal):Promise<Response>{
   if(signal.aborted)throw new DOMException('Aborted','AbortError');
   if(!supabase)throw new Error('The episode service is not configured.');
@@ -53,15 +56,18 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
     if(malId){setResolving(false);return()=>{alive=false;controller.abort()};}
     const query=title.trim();
     if(!query){setResolving(false);setError('Add a title or MyAnimeList ID to load episodes.');return()=>{alive=false;controller.abort()};}
+    const norm=(v:string)=>v.toLocaleLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+    const cachedId=animeSearchCache.get(norm(query));
+    if(cachedId){setResolvedMalId(cachedId);setResolving(false);return()=>{alive=false;controller.abort()};}
     fetchJikan('https://api.jikan.moe/v4/anime?q='+encodeURIComponent(query)+'&limit=8',controller.signal)
       .then(async response=>{
         const raw=await response.text();let data:{data?:Array<{mal_id:number;title?:string|null;title_english?:string|null;title_japanese?:string|null}>};
         try{data=JSON.parse(raw)}catch{throw new Error('Anime lookup returned an invalid response.')}
         if(!response.ok)throw new Error(response.status===429?'Episode source is rate-limiting requests. Wait a moment and retry.':'Could not identify this anime (HTTP '+response.status+').');
         const results=Array.isArray(data.data)?data.data:[];
-        const norm=(v:string)=>v.toLocaleLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
         const picked=results.find(x=>[x.title,x.title_english,x.title_japanese].some(v=>v&&norm(v)===norm(query)));
         if(!picked?.mal_id)throw new Error('No matching anime was found. Add a MyAnimeList ID in Edit all details and retry.');
+        animeSearchCache.set(norm(query),String(picked.mal_id));
         if(alive)setResolvedMalId(String(picked.mal_id));
       })
       .catch(e=>{if(alive&&!(e instanceof DOMException&&e.name==='AbortError'))setError(e instanceof Error?e.message:'Anime lookup failed.')})
@@ -72,6 +78,9 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
   useEffect(()=>{
     if(!resolvedMalId)return;
     const controller=new AbortController();let alive=true;
+    const cacheKey=resolvedMalId+':'+page;
+    const cached=episodePageCache.get(cacheKey);
+    if(cached){setEpisodes(cached.data);setLastPage(cached.lastPage);setLoading(false);return()=>{alive=false;controller.abort()};}
     setLoading(true);setError('');
     fetchJikan('https://api.jikan.moe/v4/anime/'+encodeURIComponent(resolvedMalId)+'/episodes?page='+page,controller.signal)
       .then(async response=>{
@@ -79,7 +88,9 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
         try{data=JSON.parse(raw) as EpisodeResponse}catch{throw new Error('Episode source returned an invalid response.')}
         if(!response.ok)throw new Error(response.status===429?'Episode source is rate-limiting requests. Wait a moment and retry.':'Episode list could not be loaded (HTTP '+response.status+').');
         if(!Array.isArray(data.data))throw new Error('No episode list was returned.');
-        if(alive){setEpisodes(data.data);setLastPage(Math.max(1,Number(data.pagination?.last_visible_page||1)));}
+        const lastPage=Math.max(1,Number(data.pagination?.last_visible_page||1));
+        episodePageCache.set(cacheKey,{data:data.data,lastPage});
+        if(alive){setEpisodes(data.data);setLastPage(lastPage);}
       })
       .catch(e=>{if(alive&&!(e instanceof DOMException&&e.name==='AbortError'))setError(e instanceof Error?e.message:'Episode list could not be loaded.')})
       .finally(()=>{if(alive)setLoading(false)});
