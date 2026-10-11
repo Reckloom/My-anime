@@ -801,19 +801,12 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   }
  };
  const importItem=async(raw:MediaItem)=>{
-  const item=normalise(raw);
-  if(item.medium==='anime'&&/^(naruto|naruto shippuden|naruto: shippuden)$/i.test(item.title.trim())){
-   const isShippuden=/shippuden/i.test(item.title);
-   const pattern=isShippuden?/^naruto\s*:?\s*shippuden$/i:/^naruto$/i;
-   const existing=items.find(x=>!x.parentId&&x.medium==='anime'&&pattern.test(x.title.trim()));
-   return await buildNarutoHierarchy(existing||item);
-  }
-  if(item.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(item.title.trim())){
-   const existing=items.find(x=>x.medium==='anime'&&/^(one piece|one piece \(tv\))$/i.test(x.title.trim()));
-   if(existing)return await buildOnePieceHierarchy(existing,true);
-   setAppMessage('Loading One Piece arcs and episode catalogue…');
-   try{return await buildOnePieceHierarchy(item)}catch(error){setAppMessage('Could not load One Piece episodes: '+(error instanceof Error?error.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),6000);return false}
-  }
+  const normalized=normalise(raw);
+  // Anime in FRAME is intentionally lightweight: one main title plus optional
+  // season/arc child cards and characters. Never create or track episode rows.
+  const item:MediaItem=normalized.medium==='anime'
+   ?{...normalized,progress:0,total:undefined,customTotal:undefined,progressUnit:undefined,episode:undefined}
+   :normalized;
   const duplicate=items.find(x=>(item.anilistId&&x.anilistId===item.anilistId)||(item.sourceProvider&&item.externalId&&x.sourceProvider===item.sourceProvider&&x.externalId===item.externalId));
   if(duplicate){setAppMessage('This title is already in your library.');window.setTimeout(()=>setAppMessage(''),3000);return false}
   return await save([item,...items]);
@@ -873,18 +866,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    if(!textMatches(x)||!facetMatches(x))return false;
    return true;
   });
-  const result:MediaItem[]=[];
-  for(const root of roots){
-   result.push(root);
-   // Multi-part anime get a paired Season 1 card immediately beside the main
-   // aggregate entry. Keep single-season anime and One Piece unchanged.
-   if(root.medium==='anime' && root.title.trim().toLowerCase()!=='one piece'){
-    const children=childrenByParent.get(root.id)||[];
-    const season1=children.find(x=>/\\bseason\\s*1\\b/i.test(x.title));
-    if(children.length>1 && season1 && textMatches(season1) && facetMatches(season1)) result.push(season1);
-   }
-  }
-  return result;
+  // Library grid shows only root cards. Anime seasons/arcs live inside the
+  // main anime detail page rather than appearing as duplicate library cards.
+  return roots;
  }
  return sorted.filter(x=>{
   if(x.parentId)return false;
