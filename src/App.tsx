@@ -859,7 +859,6 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const hasStatusFilter=activeStatus.length>0;
  const sorted=sortedItems;
- const childrenByParent=libraryIndexes.childrenByParent;
  if(!hasStatusFilter){
   const roots=sorted.filter(x=>{
    if(x.parentId)return false;
