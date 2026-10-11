@@ -40,6 +40,10 @@ function hierarchyPartOrder(item:MediaItem){
   'vinland saga season 2':20,
   'chainsaw man season 1':10,
   'chainsaw man: reze arc':20,
+  'season 1 — link click':10,
+  'season 2 — link click':20,
+  'bridon arc — link click':30,
+  'season 3 — link click':40,
  };
  if(exact[t]!=null)return exact[t];
  const season=t.match(/season\s+(\d+)/i);
