@@ -4,7 +4,8 @@ const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL?.trim() || DEFAULT_SUPABA
 
 export function posterImageSrc(value?: string | null): string {
   const url = String(value || '').trim();
-  if (!url) return '/frame-logo.svg';
+  if (!url) return `${import.meta.env.BASE_URL}frame-logo.svg`;
+  if (url.startsWith('/')) return `${import.meta.env.BASE_URL}${url.slice(1)}`;
 
   try {
     const parsed = new URL(url);
