@@ -247,6 +247,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     return ranked;
   };
   const rankedProfiles = rankCharacters(rawProfiles);
+  const recoveredByRank = new Map<string, AnimeCharacterProfile>();
   const bounties: Record<string,string> = {'Monkey D. Luffy':'3,000,000,000 B','Roronoa Zoro':'1,111,000,000 B','Vinsmoke Sanji':'1,032,000,000 B','Nami':'366,000,000 B','Usopp':'500,000,000 B','Tony Tony Chopper':'1,000 B','Nico Robin':'930,000,000 B','Franky':'394,000,000 B','Brook':'383,000,000 B','Jinbe':'1,100,000,000 B','Portgas D. Ace':'550,000,000 B','Sabo':'602,000,000 B','Shanks':'4,048,900,000 B','Marshall D. Teach':'3,996,000,000 B','Blackbeard':'3,996,000,000 B','Dracule Mihawk':'3,590,000,000 B','Boa Hancock':'1,659,000,000 B','Edward Newgate':'5,046,000,000 B','Whitebeard':'5,046,000,000 B','Kaido':'4,611,100,000 B','Charlotte Linlin':'4,388,000,000 B','Big Mom':'4,388,000,000 B','Gol D. Roger':'5,564,800,000 B','Monkey D. Garp':'3,000,000,000 B'};
   const onePiecePopularity = [
     'Monkey D. Luffy','Roronoa Zoro','Vinsmoke Sanji','Nami','Trafalgar D. Water Law','Nico Robin','Portgas D. Ace','Shanks','Dracule Mihawk','Crocodile',
