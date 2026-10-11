@@ -134,26 +134,39 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
   }, [anilistId, stableCharacters, title]);
 
   const profiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
+  const [selectedCharacter, setSelectedCharacter] = useState<AnimeCharacterProfile | null>(null);
   if (!profiles.length && !loading && !failed) return null;
   return <section className="frame-anime-characters detail-section" aria-label={title + ' character profiles'}>
     <div className="detail-section-head">
       <div><small>CHARACTER ARCHIVE</small><h3>Characters</h3></div>
       <span>{loading ? 'Loading…' : profiles.length ? profiles.length + ' profiles' : 'Unavailable'}</span>
     </div>
-    {profiles.length > 0 ? <div className="frame-anime-character-grid">
-      {profiles.map((character, index) => <article className="frame-anime-character-card" key={(character.id || character.name) + '-' + index}>
-        <div className="frame-anime-character-portrait">
-          <CharacterPortrait character={character} />
-        </div>
+    {profiles.length > 0 ? <div className="frame-anime-character-grid" role="list">
+      {profiles.map((character, index) => <button type="button" className="frame-anime-character-card" key={(character.id || character.name) + '-' + index} onClick={() => setSelectedCharacter(character)} aria-label={'Open details for ' + character.name}>
+        <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
         <div className="frame-anime-character-copy">
           <b>{character.name}</b>
           {character.nativeName && character.nativeName !== character.name && <small className="frame-anime-character-native">{character.nativeName}</small>}
           <span>{character.role ? character.role.charAt(0).toUpperCase() + character.role.slice(1).toLowerCase() : 'Character'}</span>
           <p>{shortDescription(character.description)}</p>
-          {character.sourceUrl && <a href={character.sourceUrl} target="_blank" rel="noreferrer">Character source <ExternalLink size={11}/></a>}
+          <small className="frame-anime-character-open">Tap for details</small>
         </div>
-      </article>)}
+      </button>)}
     </div> : <p className="frame-anime-character-footnote">{loading ? 'Loading verified character names and portraits from AniList…' : 'Character profiles could not be loaded right now. Try reopening this anime later.'}</p>}
     <p className="frame-anime-character-footnote">Character names, roles and portraits are supplied by AniList. Missing portraits are shown as placeholders instead of unrelated artwork.</p>
+    {selectedCharacter && <div className="frame-character-modal-backdrop" role="presentation" onClick={() => setSelectedCharacter(null)}>
+      <div className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selectedCharacter.name + ' character details'} onClick={event => event.stopPropagation()}>
+        <button type="button" className="frame-character-modal-close" onClick={() => setSelectedCharacter(null)} aria-label="Close character details">×</button>
+        <div className="frame-character-modal-portrait"><CharacterPortrait character={selectedCharacter} /></div>
+        <div className="frame-character-modal-copy">
+          <small>CHARACTER PROFILE</small>
+          <h4>{selectedCharacter.name}</h4>
+          {selectedCharacter.nativeName && selectedCharacter.nativeName !== selectedCharacter.name && <span className="frame-anime-character-native">{selectedCharacter.nativeName}</span>}
+          <b>{selectedCharacter.role ? selectedCharacter.role.charAt(0).toUpperCase() + selectedCharacter.role.slice(1).toLowerCase() : 'Character'}</b>
+          <p>{shortDescription(selectedCharacter.description)}</p>
+          {selectedCharacter.sourceUrl && <a href={selectedCharacter.sourceUrl} target="_blank" rel="noreferrer">View source <ExternalLink size={12}/></a>}
+        </div>
+      </div>
+    </div>}
   </section>;
 }
