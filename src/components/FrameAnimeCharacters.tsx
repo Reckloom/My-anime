@@ -74,65 +74,6 @@ async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Pr
   }));
 }
 
-async function fetchMissingOnePieceCharacters(names: string[]): Promise<AnimeCharacterProfile[]> {
-  if (!names.length) return [];
-  const normalize = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
-  const found: AnimeCharacterProfile[] = [];
-  const searchAliases: Record<string, string[]> = {
-    'Trafalgar D. Water Law': ['Trafalgar D. Water Law', 'Trafalgar Law'],
-    'Donquixote Rosinante': ['Donquixote Rosinante', 'Rosinante', 'Corazon'],
-    'Tony Tony Chopper': ['Tony Tony Chopper', 'Chopper'],
-    'Nefertari Vivi': ['Nefertari Vivi', 'Vivi'],
-    'Charlotte Katakuri': ['Charlotte Katakuri', 'Katakuri'],
-    'Bartholomew Kuma': ['Bartholomew Kuma', 'Kuma'],
-    'Edward Newgate': ['Edward Newgate', 'Whitebeard'],
-    'Monkey D. Garp': ['Monkey D. Garp', 'Monkey D Garp', 'Garp'],
-    'Benn Beckman': ['Benn Beckman', 'Benn Beckman'],
-    'Jewelry Bonney': ['Jewelry Bonney', 'Jewelry Bonney'],
-    'Vegapunk Punk-02 Lilith': ['Vegapunk Punk-02 Lilith', 'Lilith'],
-    'Charlotte Perospero': ['Charlotte Perospero', 'Perospero'],
-    'Marshall D. Teach': ['Marshall D. Teach', 'Blackbeard'],
-    'Joy Boy': ['Joy Boy', 'Joyboy'],
-    'Namule': ['Namule', 'Namur'],
-  };
-  for (let start = 0; start < names.length; start += 5) {
-    const batch = names.slice(start, start + 5);
-    const results = await Promise.allSettled(batch.map(async name => {
-      const candidates = searchAliases[name] || [name];
-      for (const candidate of candidates) {
-        try {
-          const result = await aniList<any>(CHARACTER_SEARCH_QUERY, { search: candidate });
-          const rows = result?.Page?.characters || [];
-          const exact = rows.find((row: any) => row?.name?.full && normalize(String(row.name.full)) === normalize(candidate));
-          if (exact) return exact;
-        } catch {
-          // Try the next known alias.
-        }
-      }
-      return null;
-    }));
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      if (result.status !== 'fulfilled') continue;
-      const row = result.value;
-      if (!row?.name?.full) continue;
-      found.push({
-        id: Number(row.id) || undefined,
-        name: String(row.name.full),
-        nativeName: row.name.native || undefined,
-        image: row.image?.large || undefined,
-        description: row.description || undefined,
-        sourceUrl: row.siteUrl || undefined,
-        birthday: row.dateOfBirth?.year && row.dateOfBirth?.month && row.dateOfBirth?.day ? `${row.dateOfBirth.year}-${String(row.dateOfBirth.month).padStart(2,'0')}-${String(row.dateOfBirth.day).padStart(2,'0')}` : undefined,
-        age: row.age || undefined,
-        bloodType: row.bloodType || undefined,
-        gender: row.gender || undefined,
-      });
-    }
-  }
-  return found;
-}
-
 const characterCache = new Map<string, { expiresAt: number; profiles: AnimeCharacterProfile[] }>();
 const characterRequests = new Map<string, Promise<AnimeCharacterProfile[]>>();
 
@@ -221,17 +162,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
           });
           const names = new Set(merged.map(character => normalizeName(character.name)));
           const combined = [...merged, ...mapped.filter(character => !names.has(normalizeName(character.name)))];
-          // Publish the verified core cast now. The optional name-by-name
-          // enrichment below is slower and must never keep character cards hidden.
-          publishCharacters(combined);
-          setFailed(!combined.some(character => Boolean(character.image)));
           if (/\bone piece\b/i.test(title)) {
-            const rankedNames = ['Monkey D. Luffy','Roronoa Zoro','Vinsmoke Sanji','Nami','Trafalgar D. Water Law','Nico Robin','Portgas D. Ace','Shanks','Dracule Mihawk','Crocodile','Donquixote Rosinante','Boa Hancock','Tony Tony Chopper','Sabo','Uta','Carrot','Rocks D. Xebec','Yamato','Usopp','Loki','Charlotte Cracker','Donquixote Doflamingo','Eustass Kid','Perona','Buggy','Marco','Brook','Nefertari Vivi','Franky','Jinbe','Charlotte Katakuri','Bartholomew Kuma','Smoker','Bentham','Rob Lucci','Edward Newgate','Koby','Kaku','Cavendish','Monkey D. Garp','Kuzan','Izo','Benn Beckman','Silvers Rayleigh','Going Merry','Jewelry Bonney','Alber','Borsalino','Enel','Lilith','Charlotte Perospero','Killer','Imu','Sakazuki','Kuro','Bartolomeo','Namule','Gol D. Roger','Joy Boy','Marshall D. Teach'];
-            const aliases: Record<string,string> = { 'Trafalgar D. Water Law':'Trafalgar Law','Bentham':'Bentham (Mr. 2 / Bon Clay)','Koby':'Coby','Lilith':'Vegapunk Punk-02 Lilith','Joy Boy':'Joyboy' };
-            const missing = rankedNames.filter(name => !combined.some(character => normalizeName(character.name) === normalizeName(name) || normalizeName(character.name) === normalizeName(aliases[name] || '')));
-            const recovered = await fetchMissingOnePieceCharacters(missing);
-            const recoveredNames = new Set(combined.map(character => normalizeName(character.name)));
-            combined.push(...recovered.filter(character => !recoveredNames.has(normalizeName(character.name))));
             if (!combined.some(character => normalizeName(character.name) === 'goingmerry')) {
               combined.push({
                 id: 9000001,
