@@ -58,13 +58,14 @@ async function characters(names: unknown) {
 async function animeCharacters(anilistIdValue: unknown, expectedTitleValue: unknown) {
   const anilistId = Number(anilistIdValue);
   if (!Number.isInteger(anilistId) || anilistId < 1 || anilistId > 2147483647) throw new Error('A valid AniList anime ID is required.');
-  const query = `query ($id: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: 1, perPage: 50, sort: [ROLE]) { edges { role voiceActors { name { full } languageV2 image { large } siteUrl } node { id name { full native } image { large } description(asHtml: false) siteUrl dateOfBirth { year month day } age bloodType gender } } } } }`;
-  const result = await fetchJson('https://graphql.anilist.co', {
+  const query = `query ($id: Int!, $page: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: $page, perPage: 50, sort: [ROLE]) { edges { role voiceActors { name { full } languageV2 image { large } siteUrl } node { id name { full native } image { large } description(asHtml: false) siteUrl dateOfBirth { year month day } age bloodType gender } } } } }`;
+  const results = await Promise.all([1, 2].map(page => fetchJson('https://graphql.anilist.co', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables: { id: anilistId } }),
-  }, 3);
-  const media = result?.data?.Media;
+    body: JSON.stringify({ query, variables: { id: anilistId, page } }),
+  }, 3)));
+  const media = results[0]?.data?.Media;
+  const secondEdges = Array.isArray(results[1]?.data?.Media?.characters?.edges) ? results[1].data.Media.characters.edges : [];
   if (!media) throw new Error('AniList returned no character catalogue for this anime.');
   const expectedTitle = String(expectedTitleValue || '').trim();
   if (expectedTitle) {
@@ -76,7 +77,10 @@ async function animeCharacters(anilistIdValue: unknown, expectedTitleValue: unkn
       throw new Error('AniList ID does not match this anime title.');
     }
   }
-  const edges = Array.isArray(media?.characters?.edges) ? media.characters.edges : [];
+  const edges = [
+    ...(Array.isArray(media?.characters?.edges) ? media.characters.edges : []),
+    ...secondEdges,
+  ];
   const mapped = edges.filter((edge: any) => edge?.node?.name?.full).map((edge: any) => ({
     id: Number(edge.node.id) || undefined,
     name: String(edge.node.name.full),
