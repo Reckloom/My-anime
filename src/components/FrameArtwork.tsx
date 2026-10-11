@@ -31,14 +31,16 @@ async function resolve(p:Props):Promise<string>{
  const sharedOnePiecePoster='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const isOnePiece=/^one piece$/i.test(p.title.trim());
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
- // A saved poster is already part of the user's library data. Do not re-query
- // AniList for every card that already has valid artwork; that made large
- // libraries painfully slow and could also replace correct custom artwork.
- if(hasSavedPoster)return p.poster as string;
+ // Saved artwork is authoritative for custom/imported sources. For normal
+ // AniList series records, validate the stored ID once so a stale poster cannot
+ // remain attached to the wrong title (while still preserving artwork when the
+ // external ID itself is mismatched).
+ const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
+ const shouldValidateSaved=hasSavedPoster&&isSeriesMedia&&String(p.sourceProvider||'').toLowerCase()==='anilist'&&Boolean(p.anilistId);
+ if(hasSavedPoster&&!shouldValidateSaved)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
-  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
- if(isNarutoHierarchy(p)){
+  if(isNarutoHierarchy(p)){
   if(hasSavedPoster)return p.poster!;
   return svgFallback(p.title,p.medium);
  }
