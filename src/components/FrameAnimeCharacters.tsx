@@ -247,7 +247,6 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     return ranked;
   };
   const rankedProfiles = rankCharacters(rawProfiles);
-  const recoveredByRank = new Map<string, AnimeCharacterProfile>();
   const bounties: Record<string,string> = {'Monkey D. Luffy':'3,000,000,000 B','Roronoa Zoro':'1,111,000,000 B','Vinsmoke Sanji':'1,032,000,000 B','Nami':'366,000,000 B','Usopp':'500,000,000 B','Tony Tony Chopper':'1,000 B','Nico Robin':'930,000,000 B','Franky':'394,000,000 B','Brook':'383,000,000 B','Jinbe':'1,100,000,000 B','Portgas D. Ace':'550,000,000 B','Sabo':'602,000,000 B','Shanks':'4,048,900,000 B','Marshall D. Teach':'3,996,000,000 B','Blackbeard':'3,996,000,000 B','Dracule Mihawk':'3,590,000,000 B','Boa Hancock':'1,659,000,000 B','Edward Newgate':'5,046,000,000 B','Whitebeard':'5,046,000,000 B','Kaido':'4,611,100,000 B','Charlotte Linlin':'4,388,000,000 B','Big Mom':'4,388,000,000 B','Gol D. Roger':'5,564,800,000 B','Monkey D. Garp':'3,000,000,000 B'};
   const onePiecePopularity = [
     'Monkey D. Luffy','Roronoa Zoro','Vinsmoke Sanji','Nami','Trafalgar D. Water Law','Nico Robin','Portgas D. Ace','Shanks','Dracule Mihawk','Crocodile',
@@ -258,7 +257,9 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     'Charlotte Perospero','Killer','Imu','Sakazuki','Kuro','Bartolomeo','Namule','Gol D. Roger','Joy Boy','Marshall D. Teach'
   ];
   const onePieceAliases: Record<string,string> = {
-    'Trafalgar Law':'Trafalgar D. Water Law','Marshall D. Teach':'Marshall D. Teach','Blackbeard':'Marshall D. Teach',
+    'Trafalgar Law':'Trafalgar D. Water Law',
+    'Donquixote Rosinante':'Donquixote Rosinante','Donquixote Doflamingo':'Donquixote Doflamingo','Eustass Kid':'Eustass Kid','Charlotte Cracker':'Charlotte Cracker','Rocks D. Xebec':'Rocks D. Xebec','Nefertari Vivi':'Nefertari Vivi','Charlotte Katakuri':'Charlotte Katakuri','Bartholomew Kuma':'Bartholomew Kuma','Rob Lucci':'Rob Lucci','Cavendish':'Cavendish','Silvers Rayleigh':'Silvers Rayleigh','Jewelry Bonney':'Jewelry Bonney','Charlotte Perospero':'Charlotte Perospero','Gol D. Roger':'Gol D. Roger','Namule':'Namur','Vegapunk Punk-02 Lilith':'Lilith','Marshall D. Teach':'Marshall D. Teach',
+,'Marshall D. Teach':'Marshall D. Teach','Blackbeard':'Marshall D. Teach',
     'Whitebeard':'Edward Newgate','Charlotte Linlin':'Charlotte Linlin','Big Mom':'Charlotte Linlin','Coby':'Koby',
     'Vegapunk Punk-02 Lilith':'Lilith','Dracule Mihawk':'Dracule Mihawk','Bentham (Mr. 2 / Bon Clay)':'Bentham',
     'Joyboy':'Joy Boy','Alber':'Alber','Kaku':'Kaku','Kuzan':'Kuzan','Borsalino':'Borsalino','Sakazuki':'Sakazuki'
@@ -269,9 +270,10 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
         const target = normalizeCharacterName(rankedName);
         const character = rankedProfiles.find(item => {
           const name = normalizeCharacterName(item.name);
-          const alias = onePieceAliases[item.name];
-          const aliasName = normalizeCharacterName(alias || '');
-          return name === target || aliasName === target;
+          const aliasesForRankedName = Object.entries(onePieceAliases)
+            .filter(([, canonical]) => normalizeCharacterName(canonical) === target)
+            .map(([aliasName]) => normalizeCharacterName(aliasName));
+          return name === target || aliasesForRankedName.includes(name);
         });
         return character ? {...character, bounty: character.bounty || bounties[character.name], popularityRank: index + 1} : null;
       }).filter(Boolean).map(character => character as AnimeCharacterProfile & {popularityRank:number})
@@ -290,7 +292,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
         const marine = isOnePiece && [...marineNames].some(name => name.toLowerCase() === character.name.toLowerCase());
         return <button type="button" className="frame-anime-character-card" key={(character.id || character.name) + '-' + index} onClick={() => setSelectedCharacter(character)} aria-label={'Open details for ' + character.name}>
           {isOnePiece && <span className="frame-one-piece-poster-label">{marine ? 'MARINE' : 'WANTED'}</span>}
-          {isOnePiece && (character as any).popularityRank && <span className="frame-one-piece-rank">#{(character as any).popularityRank}</span>}
+          {isOnePiece && (character as any).popularityRank && <span className="frame-one-piece-rank">#{character.popularityRank}</span>}
           <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
           <div className="frame-anime-character-copy">
             <b>{character.name}</b>
