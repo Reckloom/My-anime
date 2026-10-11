@@ -576,12 +576,14 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const prior=catalogueByNumber.get(number);
    if(!prior||!meaningfulEpisodeTitle(prior.title,number))catalogueByNumber.set(number,{...e,title:String(e.title||'').trim().replace(/^(?:(?:episode|ep)\s*\d+\s*[.:·—-]?\s*)+/i,'').replace(/^\d+\.\s*/,'').trim()});
   }
-  const included=Array.from({length:1180},(_,index)=>{
-   const number=index+1,found=catalogueByNumber.get(number);
-   return found&&meaningfulEpisodeTitle(found.title,number)?{...found,mal_id:number,title:String(found.title).trim()}:null;
-  }).filter((e):e is any=>Boolean(e));
-  const missingReleasedNumbers=1180-included.length;
-  if(missingReleasedNumbers>0)console.warn('[FRAME One Piece catalogue] Verified titles unavailable for '+missingReleasedNumbers+' of 1180 released episodes; no placeholder titles were generated.');
+  // Never invent a fixed/future episode count. The provider catalogue is the
+  // source of truth; only episodes with verified titles become real records.
+  const included=Array.from(catalogueByNumber.entries())
+   .filter(([number,e])=>Number.isInteger(number)&&number>0&&number<=2000&&meaningfulEpisodeTitle(e?.title,number))
+   .sort(([a],[b])=>a-b)
+   .map(([number,e])=>({...e,mal_id:number,title:String(e.title).trim()}));
+  const latestVerifiedEpisode=included.reduce((max,e)=>Math.max(max,Number(e.mal_id)||0),0);
+  if(!latestVerifiedEpisode)console.warn('[FRAME One Piece catalogue] No verified numbered episodes were returned; preserving the existing library catalogue.');
   const arcs=[
    {name:'Romance Dawn',start:1,end:3},{name:'Orange Town',start:4,end:8},{name:'Syrup Village',start:9,end:18},
    {name:'Baratie',start:19,end:30},{name:'Arlong Park',start:31,end:44},{name:'Loguetown',start:45,end:53},
@@ -611,9 +613,12 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
   ];
   const rootId=root.id;
-  const watchedThrough=1180;
-  const seriesTotal=1180;
-  const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(watchedThrough,seriesTotal),status:'watching'}];
+  const priorRoot=items.find(x=>x.id===rootId||x.externalId==='21');
+  // The catalogue determines the real current total. Preserve the user's
+  // progress/status instead of turning a refresh into a fake "1180 watched".
+  const seriesTotal=latestVerifiedEpisode||Number(priorRoot?.total||rawRoot.total||0)||1;
+  const watchedThrough=Math.min(Math.max(0,Number(priorRoot?.progress??rawRoot.progress)||0),seriesTotal);
+  const created:MediaItem[]=[{...root,total:seriesTotal,customTotal:seriesTotal,progress:watchedThrough,status:priorRoot?.status||rawRoot.status||'planned'}];
   const assigned=new Set<number>();
   const usedEpisodePosterUrls=new Set<string>();
   for(let index=0;index<arcs.length;index++){
@@ -649,7 +654,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const existingByExternalId=new Map(items.filter(x=>x.externalId&&String(x.externalId).startsWith('one-piece-')).map(x=>[String(x.externalId),x] as const));
   const reconciled=created.map(next=>{
    const prior=next.externalId?existingByExternalId.get(String(next.externalId)):undefined;
-   if(next.id===rootId)return {...next,total:1180,customTotal:1180,progress:1180,status:'watching' as MediaItem['status'],personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
+   if(next.id===rootId)return {...next,total:seriesTotal,customTotal:seriesTotal,progress:Math.min(Math.max(0,Number(prior?.progress??next.progress)||0),seriesTotal),status:prior?.status??next.status,personalRating:prior?.personalRating??next.personalRating,favorite:prior?.favorite??next.favorite,notes:prior?.notes??next.notes};
    const episodeMatch=String(next.externalId||'').match(/^one-piece-episode-(\d+)$/);
    if(episodeMatch){
     const number=Number(episodeMatch[1]);
