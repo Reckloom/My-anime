@@ -137,7 +137,7 @@
     const state = Array.from(stateBytes).map(x => x.toString(16).padStart(2, '0')).join('');
     sessionStorage.setItem('frameAniListOAuthState', state);
     if (window.location.search) sessionStorage.setItem('frameAniListPendingSearch', window.location.search);
-    const url = 'https://anilist.co/api/v2/oauth/authorize?client_id=' + encodeURIComponent(CLIENT_ID) + '&response_type=token&redirect_uri=' + encodeURIComponent(appBase()) + '&state=' + encodeURIComponent(state);
+    const url = 'https://anilist.co/api/v2/oauth/authorize?client_id=' + encodeURIComponent(CLIENT_ID) + '&response_type=token&state=' + encodeURIComponent(state);
     window.location.assign(url);
   }
   function disconnect() {
