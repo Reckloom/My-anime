@@ -943,7 +943,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     Boolean(item.anilistId) && (item.characters?.length||0)<45
    ).map(item=><div key={'character-prefetch-'+item.id} hidden aria-hidden="true">
     <FrameAnimeCharacters title={item.title} characters={item.characters||[]} anilistId={item.anilistId}
-      onCharactersLoaded={profiles=>persistCharacterProfiles(item.id,profiles)}/>
+      onCharactersLoaded={async profiles=>{await persistCharacterProfiles(item.id,profiles);}}/>
    </div>)}
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
   <header className="frame-topbar" role="banner">
