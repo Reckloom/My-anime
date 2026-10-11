@@ -58,7 +58,7 @@ async function characters(names: unknown) {
 async function animeCharacters(anilistIdValue: unknown, expectedTitleValue: unknown) {
   const anilistId = Number(anilistIdValue);
   if (!Number.isInteger(anilistId) || anilistId < 1 || anilistId > 2147483647) throw new Error('A valid AniList anime ID is required.');
-  const query = `query ($id: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: 1, perPage: 24, sort: [ROLE]) { edges { role node { id name { full native } image { large } description(asHtml: false) siteUrl } } } } }`;
+  const query = `query ($id: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: 1, perPage: 24, sort: [ROLE]) { edges { role voiceActors { name { full } languageV2 image { large } siteUrl } node { id name { full native } image { large } description(asHtml: false) siteUrl dateOfBirth { year month day } age bloodType gender } } } } }`;
   const result = await fetchJson('https://graphql.anilist.co', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -85,6 +85,11 @@ async function animeCharacters(anilistIdValue: unknown, expectedTitleValue: unkn
     image: edge.node.image?.large ? String(edge.node.image.large) : undefined,
     description: edge.node.description ? String(edge.node.description).replace(/<br\s*\/?>(\s*)/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : undefined,
     sourceUrl: edge.node.siteUrl ? String(edge.node.siteUrl) : undefined,
+    birthday: edge.node.dateOfBirth?.year && edge.node.dateOfBirth?.month && edge.node.dateOfBirth?.day ? String(edge.node.dateOfBirth.year) + '-' + String(edge.node.dateOfBirth.month).padStart(2, '0') + '-' + String(edge.node.dateOfBirth.day).padStart(2, '0') : undefined,
+    age: edge.node.age ? String(edge.node.age) : undefined,
+    bloodType: edge.node.bloodType ? String(edge.node.bloodType) : undefined,
+    gender: edge.node.gender ? String(edge.node.gender) : undefined,
+    voiceActors: Array.isArray(edge.voiceActors) ? edge.voiceActors.filter((voice: any) => voice?.name?.full).map((voice: any) => ({ name: String(voice.name.full), language: voice.languageV2 ? String(voice.languageV2) : undefined, image: voice.image?.large ? String(voice.image.large) : undefined, sourceUrl: voice.siteUrl ? String(voice.siteUrl) : undefined })) : undefined,
   }));
   return { characters: mapped, matched: mapped.filter((item: any) => item.image).length, requested: mapped.length, source: 'AniList' };
 }
