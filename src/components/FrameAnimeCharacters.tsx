@@ -154,6 +154,7 @@ function shortDescription(value?: string) {
 export function FrameAnimeCharacters({ title, characters, anilistId }: { title: string; characters: AnimeCharacterProfile[]; anilistId?: number }) {
   const characterSignature = characters.map(character => [character.id || '', character.name, character.image || ''].join(':')).join('|');
   const stableCharacters = useMemo(() => characters, [characterSignature]);
+  const isOnePieceTitle = /\bone piece\b/i.test(title);
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
@@ -162,7 +163,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
     let active = true;
     setRemoteCharacters([]);
     setFailed(false);
-    const needsRemote = stableCharacters.length === 0 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.voiceActors?.length);
+    const needsRemote = isOnePieceTitle || stableCharacters.length === 0 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.voiceActors?.length);
     if (!needsRemote || !anilistId) {
       setLoading(false);
       return () => { active = false; };
@@ -217,7 +218,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
       .catch(() => { if (active) setFailed(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [anilistId, stableCharacters, title]);
+  }, [anilistId, stableCharacters, title, isOnePieceTitle]);
 
   const rawProfiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
   const isOnePiece = /\bone piece\b/i.test(title);
