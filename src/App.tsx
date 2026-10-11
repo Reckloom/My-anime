@@ -68,8 +68,18 @@ function progressPercent(item:MediaItem){
  if(total>0)return Math.max(0,Math.min(100,(item.progress/total)*100));
  return item.status==='completed'?100:0;
 }
+const animeCatalogueOrder=['One Piece','Naruto','Bleach','Dragon Ball','Attack on Titan','Jujutsu Kaisen','Black Clover'];
 function sortMedia(items:MediaItem[],mode:string){
  return [...items].sort((a,b)=>{
+  const aRoot=a.medium==='anime'&&!a.parentId,bRoot=b.medium==='anime'&&!b.parentId;
+  if(aRoot&&bRoot){
+   const ai=animeCatalogueOrder.indexOf(a.title.trim()),bi=animeCatalogueOrder.indexOf(b.title.trim());
+   if(ai>=0||bi>=0){
+    if(ai<0)return 1;
+    if(bi<0)return -1;
+    if(ai!==bi)return ai-bi;
+   }
+  }
   if(mode==='personal')return(b.personalRating??-1)-(a.personalRating??-1);
   if(mode==='recent')return(b.year??0)-(a.year??0);
   if(mode==='progress')return b.progress/(b.total||1)-a.progress/(a.total||1);
