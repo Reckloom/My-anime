@@ -68,6 +68,29 @@ function progressPercent(item:MediaItem){
  if(total>0)return Math.max(0,Math.min(100,(item.progress/total)*100));
  return item.status==='completed'?100:0;
 }
+function samePersistedMedia(a:MediaItem,b:MediaItem){
+ const fields:(keyof MediaItem)[]=[
+  'id','parentId','metadataId','anilistId','title','description','poster','backdrop','medium','status','progress','total',
+  'year','score','studio','source','favorite','notes','nextRelease','nextReleaseNumber','personalRating','progressUnit',
+  'customTotal','popularity','season','duration','airStart','airEnd','sourceProvider','externalId','notificationsEnabled'
+ ];
+ for(const field of fields)if(!Object.is(a[field],b[field]))return false;
+ const arrays:[unknown,unknown][]=[[a.genres,b.genres],[a.themes,b.themes]];
+ for(const [left,right] of arrays){
+  if(left===right)continue;
+  if(!Array.isArray(left)||!Array.isArray(right)||left.length!==right.length)return false;
+  for(let i=0;i<left.length;i++)if(left[i]!==right[i])return false;
+ }
+ const nested:[unknown,unknown][]=[
+  [a.availability,b.availability],[a.externalLinks,b.externalLinks],[a.game,b.game],
+  [a.releaseRadarState,b.releaseRadarState],[a.episode,b.episode],[a.characters,b.characters]
+ ];
+ for(const [left,right] of nested){
+  if(Object.is(left,right))continue;
+  try{if(JSON.stringify(left)!==JSON.stringify(right))return false}catch{return false}
+ }
+ return true;
+}
 const animeCatalogueOrder=['One Piece','Naruto','Bleach','Dragon Ball','Attack on Titan','Jujutsu Kaisen','Black Clover'];
 function sortMedia(items:MediaItem[],mode:string){
  return [...items].sort((a,b)=>{
@@ -321,7 +344,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     const changed=next.filter(item=>{
      const old=previousById.get(item.id);
      if(!old)return true;
-     return JSON.stringify(toRow(old,user.id))!==JSON.stringify(toRow(item,user.id));
+     return !samePersistedMedia(old,item);
     });
     const removed=previous.filter(item=>!nextById.has(item.id)).map(item=>item.id);
     // Most edits touch one row. Only send changed rows instead of rewriting the
