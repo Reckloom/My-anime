@@ -67,11 +67,27 @@ async function verifyCron(req:Request,admin:any){
   const {data,error}=await admin.rpc('frame_get_release_radar_cron_secret');
   return !error&&typeof data==='string'&&data.length>0&&supplied===data;
 }
+async function verifyUser(req:Request){
+  const auth=req.headers.get('authorization')||'';
+  const token=auth.replace(/^Bearer\s+/i,'').trim();
+  if(!token)return null;
+  const url=Deno.env.get('SUPABASE_URL')||'';
+  const publishable=(()=>{try{
+    const keys=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}');
+    return String(keys.default||Object.values(keys)[0]||Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||'');
+  }catch{return Deno.env.get('SUPABASE_PUBLISHABLE_KEY')||''}})();
+  if(!url||!publishable)return null;
+  const client=createClient(url,publishable,{auth:{autoRefreshToken:false,persistSession:false}});
+  const {data,error}=await client.auth.getUser(token);
+  return error||!data?.user?.id?null:String(data.user.id);
+}
 
-async function runRadar(admin:any){
-  const {data:rows,error}=await admin.from('media_items')
+async function runRadar(admin:any,onlyUserId?:string){
+  let rowsQuery=admin.from('media_items')
     .select('id,user_id,title,medium,status,progress,total,anilist_id,next_release,next_release_number,data,poster,backdrop,description,genres,themes,studio,source,year,score')
     .not('anilist_id','is',null);
+  if(onlyUserId)rowsQuery=rowsQuery.eq('user_id',onlyUserId);
+  const {data:rows,error}=await rowsQuery;
   if(error)throw error;
 
   const tracked=(rows||[]).map((r:any)=>({
@@ -341,6 +357,13 @@ export default {
     if(req.method!=='POST')return json({error:'POST required'},405);
     try{
       const admin=await adminClient();
+      let body:any={};
+      try{body=await req.clone().json()}catch{}
+      if(body?.action==='refresh-user'){
+        const userId=await verifyUser(req);
+        if(!userId)return json({error:'Authenticated user required'},401);
+        return json({ok:true,...await runRadar(admin,userId)});
+      }
       if(!await verifyCron(req,admin))return json({error:'Unauthorized'},401);
       return json({ok:true,...await runRadar(admin)});
     }catch(error){
