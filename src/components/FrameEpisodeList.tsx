@@ -58,7 +58,7 @@ async function fetchJikan(url:string,signal:AbortSignal):Promise<Response>{
       if(error||data?.error)throw error||new Error(String(data.error));
       return new Response(JSON.stringify({data:Array.isArray(data?.results)?data.results:[]}),{status:200,headers:{'Content-Type':'application/json'}});
     }
-    const match=url.match(/anime\\/(\\d+)\\/episodes\\?page=(\\d+)/);
+    const match=url.match(/anime\/(\d+)\/episodes\?page=(\d+)/);
     if(!match)throw new Error('Unsupported episode lookup request.');
     const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'episode-page',malId:Number(match[1]),page:Number(match[2])}});
     if(error||data?.error)throw error||new Error(String(data.error));
