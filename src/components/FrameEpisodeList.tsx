@@ -35,24 +35,24 @@ function cacheEpisodePage(key:string,value:CachedEpisodePage){
 }
 async function fetchJikan(url:string,signal:AbortSignal):Promise<Response>{
   if(signal.aborted)throw new DOMException('Aborted','AbortError');
-  if(!supabase)throw new Error('The episode service is not configured.');
-  let body:Record<string,unknown>;
-  if(url.includes('/anime?q=')){
-    const query=decodeURIComponent((url.split('q=')[1]||'').split('&')[0]);
-    const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'search',query}});
-    if(error)throw error;
-    if(data?.error)throw new Error(String(data.error));
-    body={data:Array.isArray(data?.results)?data.results:[]};
-  }else{
-    const match=url.match(/anime\/(\d+)\/episodes\?page=(\d+)/);
+  const direct=()=>fetch(url,{signal});
+  if(!supabase)return direct();
+  try{
+    if(url.includes('/anime?q=')){
+      const query=decodeURIComponent((url.split('q=')[1]||'').split('&')[0]);
+      const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'search',query}});
+      if(error||data?.error)throw error||new Error(String(data.error));
+      return new Response(JSON.stringify({data:Array.isArray(data?.results)?data.results:[]}),{status:200,headers:{'Content-Type':'application/json'}});
+    }
+    const match=url.match(/anime\\/(\\d+)\\/episodes\\?page=(\\d+)/);
     if(!match)throw new Error('Unsupported episode lookup request.');
     const {data,error}=await supabase.functions.invoke('anime-catalogue',{body:{action:'episode-page',malId:Number(match[1]),page:Number(match[2])}});
-    if(error)throw error;
-    if(data?.error)throw new Error(String(data.error));
-    body={data:Array.isArray(data?.data)?data.data:[],pagination:data?.pagination||{}};
+    if(error||data?.error)throw error||new Error(String(data.error));
+    return new Response(JSON.stringify({data:Array.isArray(data?.data)?data.data:[],pagination:data?.pagination||{}}),{status:200,headers:{'Content-Type':'application/json'}});
+  }catch(primaryError){
+    if(signal.aborted)throw new DOMException('Aborted','AbortError');
+    try{return await direct()}catch{throw primaryError}
   }
-  if(signal.aborted)throw new DOMException('Aborted','AbortError');
-  return new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json'}});
 }
 export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{malId?:string;title:string;currentProgress:number;onMarkThrough:(episode:number)=>Promise<void>}){
   const [resolvedMalId,setResolvedMalId]=useState(malId||'');
