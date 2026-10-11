@@ -370,6 +370,55 @@ test.describe('FRAME anime hierarchy and character archive', () => {
   });
 });
 
+test.describe('FRAME AOT archive regression', () => {
+  test('keeps Attack on Titan seasons, arcs, progress and rich characters intact', async ({ page }) => {
+    await page.route('**/functions/v1/anime-catalogue', async route => {
+      const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Content-Type': 'application/json'
+      };
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({ status: 204, headers, body: '' });
+        return;
+      }
+      const body = route.request().postDataJSON() as { action?: string };
+      if (body.action === 'anime-characters') {
+        await route.fulfill({
+          status: 200, headers,
+          body: JSON.stringify({
+            characters: [
+              { id: 1, name: 'Eren Yeager', role: 'MAIN', image: 'https://example.com/eren.jpg', birthday: 'March 30', age: '15', gender: 'Male', bloodType: 'B' }
+            ],
+            matched: 1, requested: 1, source: 'AniList'
+          })
+        });
+        return;
+      }
+      await route.fulfill({ status: 200, headers, body: JSON.stringify({ results: [] }) });
+    });
+    await page.addInitScript(() => {
+      localStorage.setItem('frame-guest', '1');
+      localStorage.setItem('frame-library:guest', JSON.stringify([
+        { id: 'aot-root', anilistId: 16498, sourceProvider: 'anilist', externalId: '16498', title: 'Attack on Titan', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 89, total: 89, genres: [], themes: [], favorite: false },
+        { id: 'aot-s1', parentId: 'aot-root', sourceProvider: 'frame-aot-season', externalId: 'aot-s1', title: 'Attack on Titan — Season 1 (Episodes 1–25)', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 25, total: 25, genres: [], themes: [], favorite: false },
+        { id: 'aot-arc-1', parentId: 'aot-s1', sourceProvider: 'frame-aot-arc', externalId: 'aot-arc-1', title: 'Fall of Shiganshina Arc (Episodes 1–2)', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 2, total: 2, genres: [], themes: [], favorite: false }
+      ]));
+    });
+    await page.goto('/');
+    await navigatePrimary(page, 'Library');
+    await page.locator('.media-card').filter({ hasText: 'Attack on Titan' }).first().click();
+    await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
+    await expect(page.getByText('89 / 89 episodes', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible();
+    await expect(page.getByText('Attack on Titan — Season 1 (Episodes 1–25)', { exact: true })).toBeVisible();
+    await expect(page.getByText('Fall of Shiganshina Arc (Episodes 1–2)', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Top 20 Characters', exact: true })).toBeVisible();
+    await expect(page.getByAltText('Eren Yeager portrait')).toBeVisible();
+  });
+});
+
 test.describe('FRAME detail navigation and scroll', () => {
   test('opens a sub-part at the top and Back restores the previous item and scroll position', async ({ page }) => {
     const arcs = Array.from({ length: 18 }, (_, index) => ({
