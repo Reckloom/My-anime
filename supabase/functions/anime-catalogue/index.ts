@@ -58,7 +58,7 @@ async function characters(names: unknown) {
 async function animeCharacters(anilistIdValue: unknown, expectedTitleValue: unknown) {
   const anilistId = Number(anilistIdValue);
   if (!Number.isInteger(anilistId) || anilistId < 1 || anilistId > 2147483647) throw new Error('A valid AniList anime ID is required.');
-  const query = `query ($id: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: 1, perPage: 24, sort: [ROLE]) { edges { role voiceActors { name { full } languageV2 image { large } siteUrl } node { id name { full native } image { large } description(asHtml: false) siteUrl dateOfBirth { year month day } age bloodType gender } } } } }`;
+  const query = `query ($id: Int!) { Media(id: $id, type: ANIME) { id title { romaji english native userPreferred } characters(page: 1, perPage: 50, sort: [ROLE]) { edges { role voiceActors { name { full } languageV2 image { large } siteUrl } node { id name { full native } image { large } description(asHtml: false) siteUrl dateOfBirth { year month day } age bloodType gender } } } } }`;
   const result = await fetchJson('https://graphql.anilist.co', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
