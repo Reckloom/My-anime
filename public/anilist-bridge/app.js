@@ -367,6 +367,8 @@
     }
   }
   async function init() {
+    $('redirect-url').value = appBase();
+    $('copy-redirect').addEventListener('click', function () { copyText(appBase(), 'copy-message', 'Redirect URL copied. Paste it into your AniList API client settings.'); });
     consumeOAuthFragment();
     tokenInfo = readToken();
     $('chatgpt-prompt').textContent = promptText();
