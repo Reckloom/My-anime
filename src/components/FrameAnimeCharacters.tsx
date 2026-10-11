@@ -115,7 +115,8 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   const isBlackCloverTitle = /\bblack\s+clover\b/i.test(title);
   const isAttackOnTitanTitle = /\battack\s+on\s+titan\b/i.test(title);
   const isVinlandSagaTitle = /\bvinland\s+saga\b/i.test(title);
-  const isRichArchive = isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle;
+  const isDragonBallTitle = /\bdragon\s+ball\b/i.test(title);
+  const isRichArchive = isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle;
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
@@ -141,7 +142,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
     // bio fields are absent; don't block every detail-page opening on re-fetch.
     const needsRemote = isOnePieceTitle
       ? (profilesWithImages < 60 || stableCharacters.length < 60)
-      : isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle
+      : isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle
         ? (stableCharacters.length < 20 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.gender || !character.bloodType || !character.voiceActors?.length))
         : (stableCharacters.length === 0 || stableCharacters.some(character => !character.image));
     if (!needsRemote || !anilistId) {
