@@ -41,7 +41,19 @@ const svgFallback=(title:string,medium:Medium)=>{
  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="640" height="900" viewBox="0 0 640 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl('+hue+',54%,22%)"/><stop offset="1" stop-color="hsl('+second+',65%,8%)"/></linearGradient><pattern id="p" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M0 44L44 0" stroke="white" stroke-opacity=".06" stroke-width="2"/></pattern></defs><rect width="640" height="900" fill="url(#g)"/><rect width="640" height="900" fill="url(#p)"/><circle cx="510" cy="160" r="150" fill="white" fill-opacity=".045"/><circle cx="80" cy="730" r="210" fill="white" fill-opacity=".035"/><text x="48" y="710" fill="white" fill-opacity=".65" font-family="Arial,sans-serif" font-size="20" letter-spacing="5">'+medium.toUpperCase()+'</text><text x="48" y="770" fill="white" font-family="Arial,sans-serif" font-size="42" font-weight="700">'+escapeXml(short)+'</text><path d="M48 800H220" stroke="hsl('+hue+',80%,70%)" stroke-width="5" stroke-linecap="round"/></svg>';
  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 };
-const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');\nconst dedicatedHierarchyArtwork=(title:string)=>{
+ const t=normal(title);
+ if(t.includes('dragon ball daima')&&t.includes('season 1'))return 'https://www.toei-animation-usa.com/newsAdmin/uploads/posts/617121621.jpg';
+ if(t==='daima arc'||t.includes('daima arc'))return 'https://ogre.natalie.mu/media/news/comic/2024/0719/DBDAIMA_KV.jpg';
+ if(t.includes('dragon ball gt')&&t.includes('season 1'))return 'https://metrunui.github.io/images/dbgts1.jpg';
+ if(t.includes('dragon ball gt')&&t.includes('season 2'))return 'https://cdn.moviepilot.de/files/ca5e65dedfc253e92a08f59d1db4b8b45093fb2306d91994ec851009d4eb/limit/1600/900/dragon-ball-gt-season-2-poster-01.jpg';
+ if(t.includes('black star dragon ball'))return 'https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak%3D/v3/t/assets/p11929145_b_v8_aa.jpg';
+ if(t.includes('baby'))return 'https://cdn.moviepilot.de/files/ca5e65dedfc253e92a08f59d1db4b8b45093fb2306d91994ec851009d4eb/limit/1600/900/dragon-ball-gt-season-2-poster-01.jpg';
+ if(t.includes('super 17'))return 'https://artworks.thetvdb.com/banners/v4/season/16240/posters/632e1442e3cff.jpg';
+ if(t.includes('shadow dragon'))return 'https://artworks.thetvdb.com/banners/v4/season/16240/posters/632e1442e3cff.jpg';
+ return undefined;
+};
+
 async function resolve(p:Props):Promise<string>{
  const sharedOnePiecePoster='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const isOnePiece=/^one piece$/i.test(p.title.trim());
@@ -54,7 +66,7 @@ async function resolve(p:Props):Promise<string>{
  const shouldValidateSaved=hasSavedPoster&&isSeriesMedia&&String(p.sourceProvider||'').toLowerCase()==='anilist'&&Boolean(p.anilistId);
  if(hasSavedPoster&&!shouldValidateSaved)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
+ if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);\n const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
   if(isNarutoHierarchy(p)){
   if(hasSavedPoster)return p.poster!;
   if(p.parentAnilistId){
@@ -126,7 +138,7 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
 }
 function safeInitialArtwork(p:Props){
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
- if(isNarutoHierarchy(p)||isHierarchyNode(p))return p.parentPoster||svgFallback(p.title,p.medium);
+ if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||svgFallback(p.title,p.medium);
  if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
  return p.parentPoster||svgFallback(p.title,p.medium);
 }
