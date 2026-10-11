@@ -243,6 +243,13 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   const vinlandSagaTop20 = [
     'Thorfinn Karlsefni','Askeladd','Canute Svensson','Thors Snorresson','Einar','Thorkell','Leif Erikson','Bjorn','Snake','Arnheid','Floki','Ketil','Hild','Gudrid','Ylva','Thorgil','Olmar','Sverkel','Helga','Halfdan'
   ];
+  const dragonBallTop20: Record<string,string[]> = {
+    'Dragon Ball':['Gokuu Son','Bulma','Vegeta','Piccolo','Kuririn','Gohan Son','Yamcha','Muten Roushi','Tien Shinhan','Chi-Chi','King Piccolo','Oolong','Puar','Launch','Kami','Chaozu','Ox-King','Master Shen','Tao Pai-Pai','Android 8'],
+    'Dragon Ball Z':['Gokuu Son','Vegeta','Gohan Son','Piccolo','Trunks','Kuririn','Bulma','Frieza','Majin Boo','Cell','Android 18','Android 17','Goten','Videl','Mr. Satan','Tien Shinhan','Yamcha','Muten Roushi','Raditz','Nappa'],
+    'Dragon Ball Super':['Gokuu Son','Vegeta','Gohan Son','Piccolo','Bulma','Beerus','Whis','Future Trunks','Jiren','Frieza','Broly','Goku Black','Zamasu','Android 17','Android 18','Hit','Goten','Trunks','Champa','Vados'],
+    'Dragon Ball GT':['Gokuu Son','Vegeta','Pan','Trunks','Bulma','Uub','Baby','Gogeta','Omega Shenron','Super 17','Piccolo','Gohan Son','Goten','Android 18','Mr. Satan','Chi-Chi','Muten Roushi','Dende','Shenron','Giru'],
+    'Dragon Ball DAIMA':['Gokuu Son','Vegeta','Higashi no Kaioushin','Glorio','Panzy','Bulma','Gomah','Degesu','Dr. Arinsu','Piccolo','Majin Kuu','Majin Duu','Neva','Hybis','Marba','Tamigami Number One','Tamigami Number Two','Tamigami Number Three','Goku','Vegeta']
+  };
   const profiles = isOnePiece ? (() => {
     const used=new Set<string>();
     const ordered: (AnimeCharacterProfile & {popularityRank?:number})[]=[];
@@ -346,6 +353,15 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
       if(ordered.length>=20)break;
     }
     return ordered.slice(0,20);
+  })() : isDragonBallTitle ? (() => {
+    const used=new Set<string>(); const ordered: AnimeCharacterProfile[]=[];
+    const wanted=dragonBallTop20[title] || [];
+    for(const wantedName of wanted){
+      const match=rankedProfiles.find(c=>!used.has(String(c.id||c.name))&&sameCharacterName(c.name,wantedName));
+      if(match){used.add(String(match.id||match.name));ordered.push(match);}
+    }
+    for(const c of rankedProfiles){const key=String(c.id||c.name);if(!used.has(key)){used.add(key);ordered.push(c);}if(ordered.length>=20)break;}
+    return ordered.slice(0,20);
   })() : isVinlandSaga ? (() => {
     const used=new Set<string>();
     const ordered: AnimeCharacterProfile[]=[];
@@ -362,7 +378,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   if (!profiles.length && !loading && !failed) return null;
   return <section className={'frame-anime-characters detail-section' + (isRichArchive ? ' frame-one-piece-character-archive' : '')} aria-label={title + ' character profiles'}><style>{characterFactStyles + onePieceStyles}</style>
     <div className="detail-section-head">
-      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : isNaruto ? 'NINJA CHARACTER ARCHIVE' : isBleach ? 'SOUL REAPER CHARACTER ARCHIVE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER ARCHIVE' : isAttackOnTitan ? 'SCOUT REGIMENT CHARACTER ARCHIVE' : isVinlandSaga ? 'VIKING CHARACTER ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isRichArchive ? 'Top 20 Characters' : 'Characters'}</h3></div>
+      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : isNaruto ? 'NINJA CHARACTER ARCHIVE' : isBleach ? 'SOUL REAPER CHARACTER ARCHIVE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER ARCHIVE' : isAttackOnTitan ? 'SCOUT REGIMENT CHARACTER ARCHIVE' : isVinlandSaga ? 'VIKING CHARACTER ARCHIVE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isRichArchive ? 'Top 20 Characters' : 'Characters'}</h3></div>
       <span>{loading ? 'Loading…' : profiles.length ? profiles.length + (isRichArchive ? ' detailed profiles' : ' profiles') : 'Unavailable'}</span>
     </div>
     {profiles.length > 0 ? <div className="frame-anime-character-grid" role="list">
@@ -375,6 +391,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
           {isBlackClover && <span className="frame-one-piece-poster-label">MAGIC KNIGHT</span>}
           {isAttackOnTitan && <span className="frame-one-piece-poster-label">SCOUT</span>}
           {isVinlandSaga && <span className="frame-one-piece-poster-label">VIKING</span>}
+          {isDragonBallTitle && <span className="frame-one-piece-poster-label">DRAGON BALL</span>}
           {isRichArchive && <span className="frame-one-piece-rank">#{index + 1}</span>}
           <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
           <div className="frame-anime-character-copy">
@@ -391,7 +408,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
       <div className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selectedCharacter.name + ' character details'} onClick={event => event.stopPropagation()}>
         <button type="button" className="frame-character-modal-close" onClick={() => setSelectedCharacter(null)} aria-label="Close character details">×</button>
         <div className="frame-character-modal-copy">
-          <small>{isOnePiece ? 'WANTED / MARINE FILE' : isNaruto ? 'NINJA CHARACTER FILE' : isBleach ? 'SOUL REAPER CHARACTER FILE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER FILE' : isAttackOnTitan ? 'SCOUT CHARACTER FILE' : isVinlandSaga ? 'VIKING CHARACTER FILE' : 'CHARACTER PROFILE'}</small>
+          <small>{isOnePiece ? 'WANTED / MARINE FILE' : isNaruto ? 'NINJA CHARACTER FILE' : isBleach ? 'SOUL REAPER CHARACTER FILE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER FILE' : isAttackOnTitan ? 'SCOUT CHARACTER FILE' : isVinlandSaga ? 'VIKING CHARACTER FILE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER FILE' : 'CHARACTER PROFILE'}</small>
           <h4>{selectedCharacter.name}</h4>
           <b>{isOnePiece && [...marineNames].some(name => name.toLowerCase() === selectedCharacter.name.toLowerCase()) ? 'Marine' : selectedCharacter.role ? selectedCharacter.role.charAt(0).toUpperCase() + selectedCharacter.role.slice(1).toLowerCase() : 'Character'}</b>
           {isOnePiece && selectedCharacter.bounty && <div className="frame-character-bounty"><span>WANTED BOUNTY</span><strong>{selectedCharacter.bounty}</strong></div>}
