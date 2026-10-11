@@ -243,12 +243,12 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   const vinlandSagaTop20 = [
     'Thorfinn Karlsefni','Askeladd','Canute Svensson','Thors Snorresson','Einar','Thorkell','Leif Erikson','Bjorn','Snake','Arnheid','Floki','Ketil','Hild','Gudrid','Ylva','Thorgil','Olmar','Sverkel','Helga','Halfdan'
   ];
-  const dragonBallTop20: Record<string,string[]> = {
-    'Dragon Ball':['Gokuu Son','Bulma','Vegeta','Piccolo','Kuririn','Gohan Son','Yamcha','Muten Roushi','Tien Shinhan','Chi-Chi','King Piccolo','Oolong','Puar','Launch','Kami','Chaozu','Ox-King','Master Shen','Tao Pai-Pai','Android 8'],
-    'Dragon Ball Z':['Gokuu Son','Vegeta','Gohan Son','Piccolo','Trunks','Kuririn','Bulma','Frieza','Majin Boo','Cell','Android 18','Android 17','Goten','Videl','Mr. Satan','Tien Shinhan','Yamcha','Muten Roushi','Raditz','Nappa'],
-    'Dragon Ball Super':['Gokuu Son','Vegeta','Gohan Son','Piccolo','Bulma','Beerus','Whis','Future Trunks','Jiren','Frieza','Broly','Goku Black','Zamasu','Android 17','Android 18','Hit','Goten','Trunks','Champa','Vados'],
+  const dragonBallTopRanks: Record<string,string[]> = {
+    'Dragon Ball':['Gokuu Son','Vegeta','Gohan Son','Piccolo','Kuririn','Bulma','Yamcha','Muten Roushi','Tien Shinhan','Chi-Chi','Trunks','Krillin','Videl','Android 18','Android 17','Majin Boo','Cell','Frieza','King Piccolo','Kami','Launch','Oolong','Puar','Chaozu','Ox-King','Tao Pai-Pai','Raditz','Nappa','Master Shen','Android 8','Yajirobe','Mr. Popo','Bora','Uranai Baba','General Blue','Commander Red','Mercenary Tao','King Furry','Pilaf','Mai','Shu','Giran','Nam','Jackie Chun','Chiaotzu','Tien','Piccolo Jr.','Tambourine','Drum','Cymbal'],
+    'Dragon Ball Z':['Gokuu Son','Vegeta','Gohan Son','Piccolo','Trunks','Kuririn','Bulma','Frieza','Majin Boo','Cell','Android 18','Android 17','Goten','Videl','Mr. Satan','Tien Shinhan','Yamcha','Muten Roushi','Raditz','Nappa','Bardock','Future Gohan','Goku Black','Zamasu','Android 16','Android 19','Dr. Gero','King Cold','Cooler','Broly','Paragus','Dabura','Supreme Kai','Kibito','Yajirobe','Dende','Nail','Guru','Captain Ginyu','Recoome','Jeice','Burter','Dodoria','Zarbon','Guldo','Appule','Raditz','Nappa','Oolong','Puar'],
+    'Dragon Ball Super':['Gokuu Son','Vegeta','Gohan Son','Piccolo','Bulma','Beerus','Whis','Future Trunks','Jiren','Frieza','Broly','Goku Black','Zamasu','Android 17','Android 18','Hit','Goten','Trunks','Champa','Vados','Grand Zeno','Future Mai','Kale','Caulifla','Cabba','Toppo','Dyspo','Ribrianne','Android 17','Master Roshi','Krillin','Tien Shinhan','Yamcha','Majin Boo','Frieza','Goku Black','Zamasu','Frost','Champa','Vados','Beerus','Whis','Jaco','Monaka','Bulma','Shenron','Shin','Gowasu','Sidra','Belmod'],
     'Dragon Ball GT':['Gokuu Son','Vegeta','Pan','Trunks','Bulma','Uub','Baby','Gogeta','Omega Shenron','Super 17','Piccolo','Gohan Son','Goten','Android 18','Mr. Satan','Chi-Chi','Muten Roushi','Dende','Shenron','Giru'],
-    'Dragon Ball DAIMA':['Gokuu Son','Vegeta','Higashi no Kaioushin','Glorio','Panzy','Bulma','Gomah','Degesu','Dr. Arinsu','Piccolo','Majin Kuu','Majin Duu','Neva','Hybis','Marba','Tamigami Number One','Tamigami Number Two','Tamigami Number Three','Goku','Vegeta']
+    'Dragon Ball DAIMA':['Gokuu Son','Vegeta','Higashi no Kaioushin','Glorio','Panzy','Bulma','Gomah','Degesu','Dr. Arinsu','Piccolo','Majin Kuu','Majin Duu','Neva','Hybis','Marba','Tamagami Number One','Tamagami Number Two','Tamagami Number Three','Chi-Chi','Goten']
   };
   const profiles = isOnePiece ? (() => {
     const used=new Set<string>();
@@ -355,7 +355,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
     return ordered.slice(0,20);
   })() : isDragonBallTitle ? (() => {
     const used=new Set<string>(); const ordered: AnimeCharacterProfile[]=[];
-    const wanted=dragonBallTop20[title] || [];
+    const wanted=dragonBallTopRanks[title] || [];
     for(const wantedName of wanted){
       const match=rankedProfiles.find(c=>!used.has(String(c.id||c.name))&&sameCharacterName(c.name,wantedName));
       if(match){used.add(String(match.id||match.name));ordered.push(match);}
@@ -378,7 +378,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   if (!profiles.length && !loading && !failed) return null;
   return <section className={'frame-anime-characters detail-section' + (isRichArchive ? ' frame-one-piece-character-archive' : '')} aria-label={title + ' character profiles'}><style>{characterFactStyles + onePieceStyles}</style>
     <div className="detail-section-head">
-      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : isNaruto ? 'NINJA CHARACTER ARCHIVE' : isBleach ? 'SOUL REAPER CHARACTER ARCHIVE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER ARCHIVE' : isAttackOnTitan ? 'SCOUT REGIMENT CHARACTER ARCHIVE' : isVinlandSaga ? 'VIKING CHARACTER ARCHIVE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isRichArchive ? 'Top 20 Characters' : 'Characters'}</h3></div>
+      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : isNaruto ? 'NINJA CHARACTER ARCHIVE' : isBleach ? 'SOUL REAPER CHARACTER ARCHIVE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER ARCHIVE' : isAttackOnTitan ? 'SCOUT REGIMENT CHARACTER ARCHIVE' : isVinlandSaga ? 'VIKING CHARACTER ARCHIVE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isRichArchive ? (isDragonBallTitle && (title === 'Dragon Ball' || title === 'Dragon Ball Super') ? 'Top 50 Characters' : 'Top 20 Characters') : 'Characters'}</h3></div>
       <span>{loading ? 'Loading…' : profiles.length ? profiles.length + (isRichArchive ? ' detailed profiles' : ' profiles') : 'Unavailable'}</span>
     </div>
     {profiles.length > 0 ? <div className="frame-anime-character-grid" role="list">
