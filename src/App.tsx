@@ -91,12 +91,14 @@ function samePersistedMedia(a:MediaItem,b:MediaItem){
  }
  return true;
 }
-const animeCatalogueOrder=['One Piece','Naruto','Bleach','Dragon Ball','Attack on Titan','Jujutsu Kaisen','Black Clover'];
+const animeCatalogueOrder=['One Piece','Naruto','Naruto: Shippuden','Bleach','Dragon Ball','Dragon Ball Z','Dragon Ball Super','Attack on Titan','Jujutsu Kaisen','Black Clover'];
+const catalogueOrderKey=(title:string)=>title.trim().toLowerCase().replace(/[’']/g,"'").replace(/\s+/g,' ');
+const animeCatalogueOrderIndex=new Map(animeCatalogueOrder.map((title,index)=>[catalogueOrderKey(title),index]));
 function sortMedia(items:MediaItem[],mode:string){
  return [...items].sort((a,b)=>{
   const aRoot=a.medium==='anime'&&!a.parentId,bRoot=b.medium==='anime'&&!b.parentId;
   if(aRoot&&bRoot){
-   const ai=animeCatalogueOrder.indexOf(a.title.trim()),bi=animeCatalogueOrder.indexOf(b.title.trim());
+   const ai=animeCatalogueOrderIndex.get(catalogueOrderKey(a.title))??-1,bi=animeCatalogueOrderIndex.get(catalogueOrderKey(b.title))??-1;
    if(ai>=0||bi>=0){
     if(ai<0)return 1;
     if(bi<0)return -1;
@@ -285,8 +287,9 @@ export default function App(){
     // Authenticated cloud data is authoritative. Keep local values only when they
     // already correspond to a cloud record; never resurrect stale browser-only titles.
     const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
-    const localOverrides=guestItems.length?mergeMediaLists(syncedLocal,guestItems):syncedLocal;
-    const merged=localOverrides.length?mergeMediaLists(cloudItems,localOverrides):cloudItems;
+    // Authenticated libraries must never silently import stale guest-only records.
+    // Guest data remains isolated until the user explicitly imports it.
+    const merged=syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems;
     setItems(merged);setCloudLibraryReady(true);
     try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
     // Do not auto-import the guest cache after authentication; it can contain
