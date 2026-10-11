@@ -64,6 +64,12 @@ export interface AnimeCharacterProfile {
  image?: string;
  description?: string;
  sourceUrl?: string;
+ birthday?: string;
+ age?: string;
+ bloodType?: string;
+ gender?: string;
+ voiceActors?: Array<{ name: string; language?: string; image?: string; sourceUrl?: string }>;
+ bounty?: string;
 }
 
 export interface MediaItem{
