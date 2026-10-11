@@ -22,7 +22,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:18px;ma
 @media(max-width:800px){.hero,.layout{grid-template-columns:1fr}.hero h2{font-size:34px}.hero-side{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.stat-line{gap:6px}.head-actions{flex-direction:column;align-items:flex-end}.shell{padding:16px 12px 36px}.panel{padding:15px}.hero-main{padding:22px}.hero-side{padding:15px}}
 @media(max-width:460px){header{align-items:flex-start}.brand{gap:9px}.brand h1{font-size:14px}.brand p{max-width:150px;line-height:1.35}.logo{width:39px;height:39px}.head-actions .pill{font-size:10px;padding:7px 9px}.btn{padding:10px 11px}.results{grid-template-columns:1fr}.searchrow{flex-wrap:wrap}.searchrow .field{flex:1 1 100%}.searchrow .btn{flex:1}.hero-side{grid-template-columns:1fr}.stat-line{padding:7px 0}.two-fields{grid-template-columns:1fr 1fr}}
 </style>
-<script src="./app.js?v=bridge-fix-4" defer></script>
+<script src="./app.js?v=auth-pin-1" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -36,8 +36,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:18px;ma
 </section>
 <section class="panel" id="first-connect" style="margin-bottom:16px">
   <div class="panel-head"><div><h3>One-time connection</h3><p class="sub">Use your existing AniList API client. No secret or terminal commands are needed for this browser-based connection.</p></div><span class="eyebrow">SETUP / ONCE</span></div>
-  <p class="sub" style="margin-bottom:12px">Open AniList Developer Settings, edit your existing API client, change its <b>Redirect URL</b> to the exact address below, and save. Then press <b>Connect AniList</b> at the top and approve once.</p>
-  <div class="searchrow"><input id="redirect-url" class="field" readonly aria-label="AniList redirect URL"><button id="copy-redirect" class="btn">Copy redirect URL</button><a class="btn quiet" href="https://anilist.co/settings/developer" target="_blank" rel="noreferrer">Open AniList settings ↗</a></div>
+  <p class="sub" style="margin-bottom:12px">The earlier callback method was unreliable. Use AniList's official Auth PIN method instead: set your existing API client's <b>Redirect URL</b> to the address below, save, then press <b>Connect AniList</b>. AniList will show you an access token to copy back into this page. Never send that token in ChatGPT or to anyone else.</p>
+  <div class="searchrow"><input id="redirect-url" class="field" readonly aria-label="AniList Auth PIN URL"><button id="copy-redirect" class="btn">Copy PIN URL</button><a class="btn quiet" href="https://anilist.co/settings/developer" target="_blank" rel="noreferrer">Open AniList settings ↗</a></div>
+  <div style="margin-top:14px"><label for="access-token-input" class="sub" style="display:block;margin-bottom:8px">Paste the access token shown on AniList's PIN page</label><textarea id="access-token-input" class="field" rows="3" placeholder="Paste token here — never paste it into ChatGPT"></textarea><div class="searchrow" style="margin-top:8px"><button id="token-connect-button" class="btn primary">Connect with token</button></div><div id="token-message" class="message" role="status"></div></div>
 </section>
 <div id="bridge-request" class="bridgebox" aria-live="polite"><h3>ChatGPT prepared a list change</h3><div id="bridge-copy"></div><p>This is only a draft. Review the title and status below, then choose <b>Save to AniList</b> to apply it.</p></div>
 <div class="layout">
