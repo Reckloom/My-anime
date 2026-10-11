@@ -28,7 +28,7 @@ type Radar={mediaId:string;anilistId:number;title:string;poster:string;episode:n
 function normalise(item:MediaItem):MediaItem{
  const total=item.total&&item.total>0?item.total:(item.medium==='game'||item.medium==='visual-novel'?100:item.medium==='movie'?1:undefined);
  const cleanBackdrop=item.backdrop&&item.backdrop.trim()!==item.poster.trim()?item.backdrop:'';
- return {...item,poster:item.poster||poster,backdrop:cleanBackdrop,total,progress:Math.max(0,Math.min(item.progress||0,total)),progressUnit:item.progressUnit||unitFor(item.medium)};
+ return {...item,poster:item.poster||poster,backdrop:cleanBackdrop,total,progress:total==null?Math.max(0,item.progress||0):Math.max(0,Math.min(item.progress||0,total)),progressUnit:item.progressUnit||unitFor(item.medium)};
 }
 function dbToMedia(raw:unknown):MediaItem{
  const r=raw as any;
@@ -396,8 +396,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    );
    if(found<0){merged.push(item);changed.set(item.id,item);continue}
    const current=merged[found];
-   // Source refreshes may update catalogue metadata and totals, but the user's   // progress/status are authoritative. Never mark episodes watched or rewind
-   // progress just because an import batch contains different defaults.
+   // Source refreshes may update catalogue metadata and totals, but the user's   // progress/status are authoritative. Never mark episodes watched or rewind   // progress just because an import batch contains different defaults.
    const customTotal=current.customTotal??item.customTotal;
    const total=customTotal!=null?customTotal:(item.total!=null?item.total:current.total);
    const progress=Math.max(0,Number(current.progress)||0);
@@ -796,8 +795,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const ok=await save([...created,...remaining]);
    if(ok){setAppMessage(seriesTitle+': '+sourceRows.length+' episodes loaded with arc grouping.');window.setTimeout(()=>setAppMessage(''),7000);openDetail(root)}
    return ok;  }catch(error){
-   const message=error instanceof Error?error.message:'Please retry the catalogue request.';
-   setAppMessage('Could not fetch '+seriesTitle+' episodes: '+message);
+   const message=error instanceof Error?error.message:'Please retry the catalogue request.';   setAppMessage('Could not fetch '+seriesTitle+' episodes: '+message);
    window.setTimeout(()=>setAppMessage(''),9000);
    return false;
   }
