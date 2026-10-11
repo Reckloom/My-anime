@@ -302,8 +302,20 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const operation=saveQueue.current.then(async()=>{
   try{
    if(next.length===0){const {error}=await client.from('media_items').delete().eq('user_id',user.id);if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}return true}
-   const {error}=await client.from('media_items').upsert(next.map(item=>toRow(item,user.id)),{onConflict:'id'});
-   if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
+   // Upsert in small batches so a large anime library cannot fail because one
+   // request becomes too large. Each batch is still atomic at the row level and
+   // uses the primary-key conflict target, so edits remain idempotent.
+   const rows=next.map(item=>toRow(item,user.id));
+   const batchSize=50;
+   for(let offset=0;offset<rows.length;offset+=batchSize){
+    const {error}=await client.from('media_items').upsert(rows.slice(offset,offset+batchSize),{onConflict:'id'});
+    if(error){
+     const detail=error.message||error.details||error.hint||'Unknown database error';
+     setAppMessage('Cloud save failed: '+detail);
+     window.setTimeout(()=>setAppMessage(''),7000);
+     return false;
+    }
+   }
    // Verify all rows before cleanup; one select() would only see the first 1,000.
    const cloudRows:any[]=[];
    const verifyPageSize=500;
