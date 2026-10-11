@@ -59,10 +59,15 @@ function compareHierarchyParts(a:MediaItem,b:MediaItem){
  if(aArc!==null&&bArc!==null&&aArc!==bArc)return aArc-bArc;
  const aEpisode=String(a.externalId||'').match(/^one-piece-episode-(\d+)$/),bEpisode=String(b.externalId||'').match(/^one-piece-episode-(\d+)$/);
  if(aEpisode&&bEpisode)return Number(aEpisode[1])-Number(bEpisode[1]);
- const ao=hierarchyPartOrder(a),bo=hierarchyPartOrder(b);
- if(ao!==bo)return ao-bo;
+ // Release order is the default for every anime hierarchy.
+ const ad=a.airStart||'',bd=b.airStart||'';
+ if(ad&&bd&&ad!==bd)return ad.localeCompare(bd);
+ if(ad&&!bd)return -1;
+ if(bd&&!ad)return 1;
  const ay=a.year??9999,by=b.year??9999;
  if(ay!==by)return ay-by;
+ const ao=hierarchyPartOrder(a),bo=hierarchyPartOrder(b);
+ if(ao!==bo)return ao-bo;
  return a.title.localeCompare(b.title,undefined,{numeric:true,sensitivity:'base'});
 }
 
