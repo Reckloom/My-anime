@@ -274,8 +274,8 @@ test.describe('FRAME quick actions', () => {
 });
 
 
-test.describe('FRAME anime episode catalogue', () => {
-  test('shows episodes on an existing AniList anime entry and saves watched progress', async ({ page }) => {
+test.describe('FRAME anime hierarchy and character archive', () => {
+  test('shows season/arc hierarchy and the rich character archive without an episode tracker', async ({ page }) => {
     await page.route('https://example.com/luffy.png', route => route.fulfill({
       status: 200,
       contentType: 'image/svg+xml',
@@ -297,19 +297,14 @@ test.describe('FRAME anime episode catalogue', () => {
         await route.fulfill({
           status: 200, headers,
           body: JSON.stringify({
-            characters: [{ id: 1, name: 'Monkey D. Luffy', role: 'MAIN', image: 'https://example.com/luffy.png', sourceUrl: 'https://anilist.co/character/1' }],
+            characters: [{
+              id: 1,
+              name: 'Monkey D. Luffy',
+              role: 'MAIN',
+              image: 'https://example.com/luffy.png',
+              sourceUrl: 'https://anilist.co/character/1'
+            }],
             matched: 1, requested: 1, source: 'AniList'
-          })
-        });
-        return;
-      }
-      if (body.action === 'episode-page') {
-        await route.fulfill({
-          status: 200, headers,
-          body: JSON.stringify({
-            data: [{ mal_id: 1, title: 'Romance Dawn', aired: '1999-10-20', filler: false, recap: false }],
-            pagination: { last_visible_page: 1, has_next_page: false },
-            source: 'Jikan / MyAnimeList'
           })
         });
         return;
@@ -322,24 +317,56 @@ test.describe('FRAME anime episode catalogue', () => {
 
     await page.addInitScript(() => {
       localStorage.setItem('frame-guest', '1');
-      localStorage.setItem('frame-library:guest', JSON.stringify([{
-        id: 'qa-one-piece', anilistId: 21, sourceProvider: 'anilist', externalId: '21',
-        title: 'One Piece', description: 'QA fixture', poster: '/frame-logo.svg', backdrop: '',
-        medium: 'anime', status: 'watching', progress: 0, total: 1180,
-        genres: [], themes: [], favorite: false, externalLinks: { malId: '21' }
-      }]));
+      localStorage.setItem('frame-library:guest', JSON.stringify([
+        {
+          id: 'qa-one-piece',
+          anilistId: 21,
+          sourceProvider: 'anilist',
+          externalId: '21',
+          title: 'One Piece',
+          description: 'QA fixture',
+          poster: '/frame-logo.svg',
+          backdrop: '',
+          medium: 'anime',
+          status: 'watching',
+          progress: 0,
+          total: 1180,
+          genres: [],
+          themes: [],
+          favorite: false
+        },
+        {
+          id: 'qa-one-piece-arc-1',
+          parentId: 'qa-one-piece',
+          sourceProvider: 'frame-story-arc',
+          externalId: 'one-piece-arc-1',
+          title: 'Romance Dawn',
+          description: 'First story arc.',
+          poster: '/frame-logo.svg',
+          backdrop: '',
+          medium: 'anime',
+          status: 'watching',
+          progress: 0,
+          total: 3,
+          genres: [],
+          themes: [],
+          favorite: false
+        }
+      ]));
     });
+
     await page.goto('/');
     await navigatePrimary(page, 'Library');
     const onePieceCard=page.locator('.media-card').filter({hasText:'One Piece'}).first();
     await expect(onePieceCard).toBeVisible({timeout:5000});
     await onePieceCard.click();
 
-    await expect(page.getByRole('heading', { name: 'Episodes', exact: true })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByAltText('Monkey D. Luffy portrait')).toBeVisible({timeout:5000});
+    await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
-    await page.getByRole('button', { name: 'Mark through' }).evaluate(el => (el as HTMLButtonElement).click());
-    await expect(page.getByText('Watched', { exact: true })).toBeVisible({timeout:5000});
+    await expect(page.getByRole('heading', { name: 'Top 20 Characters', exact: true })).toBeVisible({timeout:5000});
+    await expect(page.getByAltText('Monkey D. Luffy portrait')).toBeVisible({timeout:5000});
+    await expect(page.getByText('Episodes', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Mark through' })).toHaveCount(0);
   });
 });
 
