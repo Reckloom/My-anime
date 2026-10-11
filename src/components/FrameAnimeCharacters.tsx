@@ -258,8 +258,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
   ];
   const onePieceAliases: Record<string,string> = {
     'Trafalgar Law':'Trafalgar D. Water Law',
-    'Donquixote Rosinante':'Donquixote Rosinante','Donquixote Doflamingo':'Donquixote Doflamingo','Eustass Kid':'Eustass Kid','Charlotte Cracker':'Charlotte Cracker','Rocks D. Xebec':'Rocks D. Xebec','Nefertari Vivi':'Nefertari Vivi','Charlotte Katakuri':'Charlotte Katakuri','Bartholomew Kuma':'Bartholomew Kuma','Rob Lucci':'Rob Lucci','Cavendish':'Cavendish','Silvers Rayleigh':'Silvers Rayleigh','Jewelry Bonney':'Jewelry Bonney','Charlotte Perospero':'Charlotte Perospero','Gol D. Roger':'Gol D. Roger','Namule':'Namur','Vegapunk Punk-02 Lilith':'Lilith','Marshall D. Teach':'Marshall D. Teach',
-,'Marshall D. Teach':'Marshall D. Teach','Blackbeard':'Marshall D. Teach',
+    'Donquixote Rosinante':'Donquixote Rosinante','Donquixote Doflamingo':'Donquixote Doflamingo','Eustass Kid':'Eustass Kid','Charlotte Cracker':'Charlotte Cracker','Rocks D. Xebec':'Rocks D. Xebec','Nefertari Vivi':'Nefertari Vivi','Charlotte Katakuri':'Charlotte Katakuri','Bartholomew Kuma':'Bartholomew Kuma','Rob Lucci':'Rob Lucci','Cavendish':'Cavendish','Silvers Rayleigh':'Silvers Rayleigh','Jewelry Bonney':'Jewelry Bonney','Charlotte Perospero':'Charlotte Perospero','Gol D. Roger':'Gol D. Roger','Namule':'Namur','Vegapunk Punk-02 Lilith':'Lilith','Marshall D. Teach':'Marshall D. Teach','Blackbeard':'Marshall D. Teach',
     'Whitebeard':'Edward Newgate','Charlotte Linlin':'Charlotte Linlin','Big Mom':'Charlotte Linlin','Coby':'Koby',
     'Vegapunk Punk-02 Lilith':'Lilith','Dracule Mihawk':'Dracule Mihawk','Bentham (Mr. 2 / Bon Clay)':'Bentham',
     'Joyboy':'Joy Boy','Alber':'Alber','Kaku':'Kaku','Kuzan':'Kuzan','Borsalino':'Borsalino','Sakazuki':'Sakazuki'
