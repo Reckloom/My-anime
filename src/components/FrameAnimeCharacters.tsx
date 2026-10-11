@@ -115,11 +115,11 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
   const isBlackCloverTitle = /\bblack\s+clover\b/i.test(title);
   const isAttackOnTitanTitle = /\battack\s+on\s+titan\b/i.test(title);
   const isVinlandSagaTitle = /\bvinland\s+saga\b/i.test(title);
-  const isDragonBallTitle = /\bdragon\s+ball\b/i.test(title);
+  const isDragonBallTitle = /\bdragon\s+ball\b/i.test(title);\n  const isLinkClickTitle = /\blink\s*click\b/i.test(title);\n  const isToBeHeroXTitle = /\bto\s*be\s*hero\s*x\b/i.test(title);
   // Dragon Ball roots must always have a stable AniList source even if the
   // parent card did not carry an anilist_id through the local library state.
-  const effectiveAniListId = anilistId || (/^Dragon Ball$/i.test(title) ? 223 : /^Dragon Ball Z$/i.test(title) ? 813 : /^Dragon Ball Super$/i.test(title) ? 21175 : /^Dragon Ball GT$/i.test(title) ? 225 : /^Dragon Ball DAIMA$/i.test(title) ? 170083 : undefined);
-  const isAnimeArchive = medium === 'anime';\n  const isRichArchive = isAnimeArchive || isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle;
+  const effectiveAniListId = anilistId || (/^Dragon Ball$/i.test(title) ? 223 : /^Dragon Ball Z$/i.test(title) ? 813 : /^Dragon Ball Super$/i.test(title) ? 21175 : /^Dragon Ball GT$/i.test(title) ? 225 : /^Dragon Ball DAIMA$/i.test(title) ? 170083 : isLinkClickTitle ? 126403 : isToBeHeroXTitle ? 156092 : undefined);
+  const isAnimeArchive = medium === 'anime';\n  const isRichArchive = isAnimeArchive || isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle || isLinkClickTitle || isToBeHeroXTitle;
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
@@ -143,7 +143,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
     const profilesWithImages = stableCharacters.filter(character => Boolean(character.image)).length;
     // A saved archive of 40+ illustrated profiles is useful even when optional
     // bio fields are absent; don't block every detail-page opening on re-fetch.
-    const needsRemote = isOnePieceTitle
+    const needsRemote = (isLinkClickTitle || isToBeHeroXTitle) ? true : isOnePieceTitle
       ? (profilesWithImages < 60 || stableCharacters.length < 60)
       : isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle
         ? (stableCharacters.length < 20 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.gender || !character.bloodType || !character.voiceActors?.length))
@@ -198,7 +198,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
     return () => { active = false; };
   // Saving fetched profiles changes the parent prop; keep the original fetch alive.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveAniListId, title, isOnePieceTitle, isNarutoTitle, isBleachTitle, isBlackCloverTitle, isAttackOnTitanTitle, isVinlandSagaTitle, isDragonBallTitle]);
+  }, [effectiveAniListId, title, isOnePieceTitle, isNarutoTitle, isBleachTitle, isBlackCloverTitle, isAttackOnTitanTitle, isVinlandSagaTitle, isDragonBallTitle, isLinkClickTitle, isToBeHeroXTitle]);
 
   const rawProfiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
   const isOnePiece = /\bone piece\b/i.test(title);
@@ -381,7 +381,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
   if (!profiles.length && !loading && !failed) return null;
   return <section className={'frame-anime-characters detail-section' + (isRichArchive ? ' frame-one-piece-character-archive' : '')} aria-label={title + ' character profiles'}><style>{characterFactStyles + onePieceStyles}</style>
     <div className="detail-section-head">
-      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : isNaruto ? 'NINJA CHARACTER ARCHIVE' : isBleach ? 'SOUL REAPER CHARACTER ARCHIVE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER ARCHIVE' : isAttackOnTitan ? 'SCOUT REGIMENT CHARACTER ARCHIVE' : isVinlandSaga ? 'VIKING CHARACTER ARCHIVE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isRichArchive ? (isDragonBallTitle && (title === 'Dragon Ball' || title === 'Dragon Ball Z' || title === 'Dragon Ball Super') ? 'Top 50 Characters' : 'Top 20 Characters') : 'Characters'}</h3></div>
+      <div><small>{isOnePiece ? 'WANTED • MARINE ARCHIVE' : isNaruto ? 'NINJA CHARACTER ARCHIVE' : isBleach ? 'SOUL REAPER CHARACTER ARCHIVE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER ARCHIVE' : isAttackOnTitan ? 'SCOUT REGIMENT CHARACTER ARCHIVE' : isVinlandSaga ? 'VIKING CHARACTER ARCHIVE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER ARCHIVE' : isLinkClickTitle ? 'TIME PHOTO STUDIO CHARACTER ARCHIVE' : isToBeHeroXTitle ? 'HERO CHARACTER ARCHIVE' : 'CHARACTER ARCHIVE'}</small><h3>{isRichArchive ? (isDragonBallTitle && (title === 'Dragon Ball' || title === 'Dragon Ball Z' || title === 'Dragon Ball Super') ? 'Top 50 Characters' : 'Top 20 Characters') : 'Characters'}</h3></div>
       <span>{loading ? 'Loading…' : profiles.length ? profiles.length + (isRichArchive ? ' detailed profiles' : ' profiles') : 'Unavailable'}</span>
     </div>
     {profiles.length > 0 ? <div className="frame-anime-character-grid" role="list">
@@ -394,7 +394,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
           {isBlackClover && <span className="frame-one-piece-poster-label">MAGIC KNIGHT</span>}
           {isAttackOnTitan && <span className="frame-one-piece-poster-label">SCOUT</span>}
           {isVinlandSaga && <span className="frame-one-piece-poster-label">VIKING</span>}
-          {isDragonBallTitle && <span className="frame-one-piece-poster-label">DRAGON BALL</span>}
+          {isDragonBallTitle && <span className="frame-one-piece-poster-label">DRAGON BALL</span>}\n          {isLinkClickTitle && <span className="frame-one-piece-poster-label">TIME PHOTO STUDIO</span>}\n          {isToBeHeroXTitle && <span className="frame-one-piece-poster-label">HERO</span>}
           {isRichArchive && <span className="frame-one-piece-rank">#{index + 1}</span>}
           <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
           <div className="frame-anime-character-copy">
@@ -411,7 +411,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
       <div className="frame-character-modal" role="dialog" aria-modal="true" aria-label={selectedCharacter.name + ' character details'} onClick={event => event.stopPropagation()}>
         <button type="button" className="frame-character-modal-close" onClick={() => setSelectedCharacter(null)} aria-label="Close character details">×</button>
         <div className="frame-character-modal-copy">
-          <small>{isOnePiece ? 'WANTED / MARINE FILE' : isNaruto ? 'NINJA CHARACTER FILE' : isBleach ? 'SOUL REAPER CHARACTER FILE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER FILE' : isAttackOnTitan ? 'SCOUT CHARACTER FILE' : isVinlandSaga ? 'VIKING CHARACTER FILE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER FILE' : 'CHARACTER PROFILE'}</small>
+          <small>{isOnePiece ? 'WANTED / MARINE FILE' : isNaruto ? 'NINJA CHARACTER FILE' : isBleach ? 'SOUL REAPER CHARACTER FILE' : isBlackClover ? 'MAGIC KNIGHT CHARACTER FILE' : isAttackOnTitan ? 'SCOUT CHARACTER FILE' : isVinlandSaga ? 'VIKING CHARACTER FILE' : isDragonBallTitle ? 'DRAGON BALL CHARACTER FILE' : isLinkClickTitle ? 'TIME PHOTO STUDIO CHARACTER FILE' : isToBeHeroXTitle ? 'HERO CHARACTER FILE' : 'CHARACTER PROFILE'}</small>
           <h4>{selectedCharacter.name}</h4>
           <b>{isOnePiece && [...marineNames].some(name => name.toLowerCase() === selectedCharacter.name.toLowerCase()) ? 'Marine' : selectedCharacter.role ? selectedCharacter.role.charAt(0).toUpperCase() + selectedCharacter.role.slice(1).toLowerCase() : 'Character'}</b>
           {isOnePiece && selectedCharacter.bounty && <div className="frame-character-bounty"><span>WANTED BOUNTY</span><strong>{selectedCharacter.bounty}</strong></div>}
