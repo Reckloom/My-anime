@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {CalendarDays,ChevronRight,CirclePlus,Compass,Gamepad2,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Radio,RefreshCw,Search,Star,Users,X} from 'lucide-react';
 import {useAuth} from './auth/Auth';
-import type {MediaItem,Medium} from './types';
+import type {AnimeCharacterProfile,MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
 import {FrameGlobalChat} from './components/FrameGlobalChat';
 import {FrameDetail} from './components/FrameDetail';
@@ -14,6 +14,7 @@ import {FrameCommandPalette} from './components/FrameCommandPalette';
 import {FrameDataTools} from './components/FrameDataTools';
 import {FrameLibraryImport} from './components/FrameLibraryImport';
 import {FrameAnimeCatalogueImport} from './components/FrameAnimeCatalogueImport';
+import {FrameAnimeCharacters} from './components/FrameAnimeCharacters';
 import {aniList,DETAIL_QUERY,SEARCH_QUERY,cleanDescription,titleOf} from './anilist';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
@@ -379,6 +380,14 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   });
   saveQueue.current=operation.catch(()=>true);
   return operation;
+ };
+ const persistCharacterProfiles=async(itemId:string,profiles:AnimeCharacterProfile[])=>{
+  const current=itemsRef.current.find(item=>item.id===itemId);
+  if(!current)return false;
+  const signature=(rows:AnimeCharacterProfile[])=>rows.map(character=>[character.id||'',character.name,character.image||''].join(':')).join('|');
+  if(signature(current.characters||[])===signature(profiles))return true;
+  const next={...current,characters:profiles};
+  return await save(itemsRef.current.map(item=>item.id===itemId?next:item));
  };
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
@@ -927,6 +936,15 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
 
  return <div className="frame-app">
+  {/* Automatically repair an empty One Piece character archive in the background.
+      It uses the same validated AniList profile loader as the visible character page. */}
+  {cloudLibraryReady && !guest && items.filter(item =>
+    item.medium==='anime' && !item.parentId && /^one piece$/i.test(item.title.trim()) &&
+    Boolean(item.anilistId) && (item.characters?.length||0)<45
+   ).map(item=><div key={'character-prefetch-'+item.id} hidden aria-hidden="true">
+    <FrameAnimeCharacters title={item.title} characters={item.characters||[]} anilistId={item.anilistId}
+      onCharactersLoaded={profiles=>persistCharacterProfiles(item.id,profiles)}/>
+   </div>)}
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
   <header className="frame-topbar" role="banner">
    <button className="frame-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
