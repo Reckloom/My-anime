@@ -57,11 +57,31 @@ async function resolve(p:Props):Promise<string>{
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
   if(isNarutoHierarchy(p)){
   if(hasSavedPoster)return p.poster!;
-  return svgFallback(p.title,p.medium);
+  if(p.parentAnilistId){
+   try{
+    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.parentAnilistId}})});
+    if(response.ok){
+     const json=await response.json() as {data?:{Media?:AniListMedia}};
+     const image=json.data?.Media?.coverImage?.extraLarge;
+     if(image)return image;
+    }
+   }catch{/* parent artwork can be unavailable */}
+  }
+  return p.parentPoster||svgFallback(p.title,p.medium);
  }
  if(isHierarchyNode(p)){
   if(hasSavedPoster)return p.poster as string;
-  return svgFallback(p.title,p.medium);
+  if(p.parentAnilistId){
+   try{
+    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.parentAnilistId}})});
+    if(response.ok){
+     const json=await response.json() as {data?:{Media?:AniListMedia}};
+     const image=json.data?.Media?.coverImage?.extraLarge;
+     if(image)return image;
+    }
+   }catch{/* parent artwork can be unavailable */}
+  }
+  return p.parentPoster||svgFallback(p.title,p.medium);
  }
  if(!isSeriesMedia)return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  const type=p.medium==='anime'?'ANIME':'MANGA';
