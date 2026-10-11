@@ -887,48 +887,53 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  });
 },[items,sortMode,query,filters]);
  const openDetail=(item:MediaItem)=>{
-  const state={framePage:page,frameDetailId:item.id};
-  if(selected)history.replaceState(state,'',window.location.href);
-  else history.pushState(state,'',window.location.href);
+  const state={frameRoute:true,framePage:page,frameDetailId:item.id};
+  history.pushState(state,'',window.location.href);
   setSelected(item);
  };
  const navigateDetail=(item:MediaItem)=>{
-  const state={framePage:page,frameDetailId:item.id};
+  const state={frameRoute:true,framePage:page,frameDetailId:item.id};
   if(history.state?.frameDetailId)history.replaceState(state,'',window.location.href);
   else history.pushState(state,'',window.location.href);
   setSelected(item);
  };
  const closeDetail=()=>{
-  setSelected(null);
-  if(history.state?.frameDetailId)history.replaceState({framePage:history.state.framePage},'',window.location.href);
- };
- const pageHistoryReady=useRef(false);
- useEffect(()=>{
-  if(!pageHistoryReady.current){
-   if(history.state?.framePage!==page)history.replaceState({framePage:page},'',window.location.href);
-   pageHistoryReady.current=true;
+  if(history.state?.frameDetailId){
+   history.back();
    return;
   }
-  if(history.state?.framePage!==page)history.pushState({framePage:page},'',window.location.href);
- },[page]);
+  setSelected(null);
+ };
+ useEffect(()=>{
+  if(!history.state?.frameRoute){
+   history.replaceState({frameRoute:true,framePage:page},'',window.location.href);
+  }
+ },[]);
  useEffect(()=>{
   const onPopState=()=>{
    setFinder(false);setManualEntry(false);setMenu(false);setCommandOpen(false);
    const state=history.state;
-   const next=typeof state?.framePage==='string'?state.framePage:null;
-   // A detail drawer has its own history entry. Going back from it should
-   // close the drawer and stay on the same page instead of jumping home.
-   if(!next){setSelected(null);return}
-   setPage(next);
+   const next=typeof state?.framePage==='string'?state.framePage:'home';
    const detailId=typeof state?.frameDetailId==='string'?state.frameDetailId:null;
+   setPage(next);
    setSelected(detailId?itemsRef.current.find(x=>x.id===detailId)||null:null);
   };
   window.addEventListener('popstate',onPopState);
   return()=>window.removeEventListener('popstate',onPopState);
  },[]);
  const go=(next:string)=>{
-  if(next===page){setMenu(false);closeDetail();return}
-  closeDetail();setPage(next);setMenu(false);if(next!=='friend-library')setFriendLibrary(null);
+  if(next===page){
+   setMenu(false);
+   if(selected)closeDetail();
+   return;
+  }
+  const state={frameRoute:true,framePage:next};
+  if(selected)history.replaceState(state,'',window.location.href);
+  else history.pushState(state,'',window.location.href);
+  setSelected(null);
+  setPage(next);
+  setMenu(false);
+  if(next!=='friend-library')setFriendLibrary(null);
  };
 
  return <div className="frame-app">
