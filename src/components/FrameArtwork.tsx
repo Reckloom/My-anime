@@ -7,7 +7,22 @@ type Props={
  title:string; medium:Medium; poster?:string; anilistId?:number; parentPoster?:string; parentTitle?:string; parentMedium?:Medium; parentAnilistId?:number;
  sourceProvider?:string; externalId?:string; posterSource?:string; className?:string; alt?:string; loading?:'eager'|'lazy';
 };
+const ARTWORK_CACHE_LIMIT=256;
 const cache=new Map<string,Promise<string>>();
+function getArtworkCache(key:string){
+ const cached=cache.get(key);
+ if(cached){cache.delete(key);cache.set(key,cached);}
+ return cached;
+}
+function setArtworkCache(key:string,value:Promise<string>){
+ cache.delete(key);
+ cache.set(key,value);
+ while(cache.size>ARTWORK_CACHE_LIMIT){
+  const oldest=cache.keys().next().value as string|undefined;
+  if(oldest===undefined)break;
+  cache.delete(oldest);
+ }
+}
 let activeArtworkRequests=0;
 const artworkRequestQueue:Array<()=>void>=[];
 async function withArtworkLimit<T>(job:()=>Promise<T>):Promise<T>{
@@ -51,7 +66,7 @@ async function resolve(p:Props):Promise<string>{
  if(!isSeriesMedia)return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  const type=p.medium==='anime'?'ANIME':'MANGA';
  const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':parent:'+(p.parentPoster||'')+':source:'+(p.posterSource||'');
- const existing=cache.get(key);if(existing)return existing;
+ const existing=getArtworkCache(key);if(existing)return existing;
  const request=withArtworkLimit(async()=>{
   try{
    let media:AniListMedia|undefined;
@@ -75,8 +90,8 @@ async function resolve(p:Props):Promise<string>{
   if(isSeriesMedia){if(hasSavedPoster&&p.poster)return p.poster as string;return p.parentPoster||svgFallback(p.title,p.medium);}
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  });
- cache.set(key,request);
- void request.then(value=>{if(value.startsWith('data:image/svg+xml')&&cache.get(key)===request)cache.delete(key)}).catch(()=>{if(cache.get(key)===request)cache.delete(key)});
+ setArtworkCache(key,request);
+ void request.then(value=>{if(value.startsWith('data:image/svg+xml')&&getArtworkCache(key)===request)cache.delete(key)}).catch(()=>{if(cache.get(key)===request)cache.delete(key)});
  return request;
 }
 export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):MediaItem{
