@@ -181,7 +181,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  };
  const libraryById=useMemo(()=>new Map(library.map(x=>[x.id,x] as const)),[library]);
  const game=d.medium==='game',movie=d.medium==='movie';
- const max=game?100:movie?1:(d.total||500);
+ const max=game?100:movie?1:(d.total||2000);
  const pct=game||movie?d.progress:(d.progress/(d.total||1)*100);
  const canUseAsParent=(candidate:MediaItem)=>{
   if(candidate.id===d.id)return false;
@@ -322,7 +322,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     
    <FrameAnimeCharacters title={d.title} characters={d.characters||[]} anilistId={d.anilistId}/>
 
-    <section className="detail-section"><div className="detail-section-head"><h3>Progress</h3><span>{Math.round(pct)}%</span></div><input className="progress-slider" type="range" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value))}/><div className="progress-edit"><input type="number" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value)||0)}/><span>{d.progressUnit||units[d.medium]}</span><span>/</span><input type="number" min="1" max="2000" value={d.total|| (movie?1:500)} onChange={e=>setTotal(Number(e.target.value))}/><span>{movie?'watched state':'total'}</span></div><small className="hint">Change the total when an edition or source count is different.</small></section>
+    <section className="detail-section"><div className="detail-section-head"><h3>Progress</h3><span>{Math.round(pct)}%</span></div><input className="progress-slider" type="range" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value))}/><div className="progress-edit"><input type="number" min="0" max={max} value={d.progress} onChange={e=>progress(Number(e.target.value)||0)}/><span>{d.progressUnit||units[d.medium]}</span><span>/</span><input type="number" min="1" max="2000" value={d.total??(movie?1:'')} onChange={e=>setTotal(Number(e.target.value))}/><span>{movie?'watched state':'total'}</span></div><small className="hint">Change the total when an edition or source count is different.</small></section>
 
    <section className="detail-section two-col"><label>Status<select value={d.status} onChange={e=>update('status',e.target.value as Status)}>{statuses.map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={d.personalRating??''} onChange={e=>update('personalRating',numberOrUndefined(e.target.value))}/></label><label>Parent entry<select value={d.parentId||''} onChange={e=>update('parentId',e.target.value||undefined)}><option value="">None</option>{parentCandidates.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></label><label>Favorite<select value={d.favorite?'yes':'no'} onChange={e=>update('favorite',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label></section>
 
@@ -396,8 +396,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
        <label>Exploration complexity<input type="number" min="0" max="10" step=".1" value={complexity.exploration??''} onChange={e=>setD({...d,game:{...gameData,complexity:{...complexity,exploration:e.target.value===''?undefined:Number(e.target.value)}}})}/></label>
       </div>
     </div>}
-    <div className="detail-editor-save"><button className="primary" type="button" disabled={saving||!d.title.trim()} onClick={()=>void saveEdits()}>{saving?<RefreshCw className="spin"/>:<Check/>}{saving?'Saving…':'Save all details'}</button>{saveMessage&&<small>{saveMessage}</small>}</div>
-   </section>}
+    <div className="detail-editor-save"><button className="primary" type="button" disabled={saving||!d.title.trim()} onClick={()=>void saveEdits()}>{saving?<RefreshCw className="spin"/>:<Check/>}{saving?'Saving…':'Save all details'}</button>{saveMessage&&<small>{saveMessage}</small>}</div>   </section>}
 
    {d.game&&<section className="detail-section game-box"><h3>Game information</h3><div><span>Developer</span><b>{d.game.developer||'—'}</b></div><div><span>Publisher</span><b>{d.game.publisher||'—'}</b></div><div><span>Platforms</span><b>{d.game.platforms?.join(', ')||'—'}</b></div><div><span>Availability</span><b>{d.game.isFree?'Free':d.game.priceText||'Check store'}</b></div></section>}
 
