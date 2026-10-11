@@ -31,7 +31,10 @@ async function resolve(p:Props):Promise<string>{
  const sharedOnePiecePoster='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const isOnePiece=/^one piece$/i.test(p.title.trim());
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
- if(hasSavedPoster&&(!['anime','manga','manhwa','light-novel'].includes(p.medium)||isHierarchyNode(p)))return p.poster as string;
+ // A saved poster is already part of the user's library data. Do not re-query
+ // AniList for every card that already has valid artwork; that made large
+ // libraries painfully slow and could also replace correct custom artwork.
+ if(hasSavedPoster)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
   const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
