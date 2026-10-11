@@ -3,6 +3,7 @@
 (function () {
   const API = 'https://graphql.anilist.co';
   const CLIENT_ID = '53479';
+  const AUTH_PIN_URL = 'https://anilist.co/api/v2/oauth/pin';
   const TOKEN_KEY = 'frame-anilist-bridge-token-v1';
   const STATUSES = ['PLANNING', 'CURRENT', 'COMPLETED', 'PAUSED', 'DROPPED', 'REPEATING'];
   const STATUS_NAMES = {
@@ -132,13 +133,58 @@
     }
   }
   function connect() {
-    const stateBytes = new Uint8Array(20);
-    crypto.getRandomValues(stateBytes);
-    const state = Array.from(stateBytes).map(x => x.toString(16).padStart(2, '0')).join('');
-    sessionStorage.setItem('frameAniListOAuthState', state);
-    if (window.location.search) sessionStorage.setItem('frameAniListPendingSearch', window.location.search);
-    const url = 'https://anilist.co/api/v2/oauth/authorize?client_id=' + encodeURIComponent(CLIENT_ID) + '&response_type=token&redirect_uri=' + encodeURIComponent(appBase()) + '&state=' + encodeURIComponent(state);
+    // AniList's Auth PIN flow avoids fragile localhost/redirect URI callbacks.
+    // The registered Redirect URL must be AUTH_PIN_URL; the user pastes the token back here.
+    const url = 'https://anilist.co/api/v2/oauth/authorize?client_id=' + encodeURIComponent(CLIENT_ID) + '&response_type=token';
     window.location.assign(url);
+  }
+
+  function tokenFromInput(raw) {
+    let value = String(raw || '').trim();
+    if (!value) return '';
+    if (/access_token=/i.test(value)) {
+      const fragment = value.includes('#') ? value.slice(value.lastIndexOf('#') + 1) : value;
+      const params = new URLSearchParams(fragment);
+      const token = params.get('access_token');
+      if (token) return token.trim();
+    }
+    if (/^Bearer\\s+/i.test(value)) value = value.replace(/^Bearer\\s+/i, '').trim();
+    return value;
+  }
+
+  async function connectWithPastedToken() {
+    const raw = $('access-token-input').value;
+    const accessToken = tokenFromInput(raw);
+    if (!accessToken) {
+      showMessage('token-message', 'Paste the access token from AniList’s PIN page first.', 'error');
+      return;
+    }
+    const previousToken = tokenInfo;
+    const previousViewer = viewer;
+    tokenInfo = { accessToken: accessToken, expiresAt: Date.now() + 31536000 * 1000 };
+    const button = $('token-connect-button');
+    button.disabled = true;
+    button.textContent = 'Checking token…';
+    showMessage('token-message', 'Checking the token with AniList…');
+    try {
+      const data = await api(VIEWER_QUERY, {});
+      if (!data.Viewer) throw new Error('AniList did not return a signed-in account.');
+      viewer = data.Viewer;
+      localStorage.setItem(TOKEN_KEY, JSON.stringify(tokenInfo));
+      $('access-token-input').value = '';
+      setConnectedUI();
+      showMessage('token-message', 'Connected as ' + viewer.name + '. Your token stays in this browser.', 'success');
+      await loadLists();
+      showMessage('list-message', 'Loaded ' + lists.ANIME.length + ' anime and ' + lists.MANGA.length + ' manga entries.', 'success');
+    } catch (e) {
+      tokenInfo = previousToken;
+      viewer = previousViewer;
+      setConnectedUI();
+      showMessage('token-message', 'AniList rejected that token. Return to the PIN page, copy only the access token, and try again. ' + (e instanceof Error ? e.message : String(e)), 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Connect with token';
+    }
   }
   function disconnect() {
     if (!window.confirm('Disconnect AniList on this browser? The token will be removed from this device.')) return;
@@ -367,8 +413,8 @@
     }
   }
   async function init() {
-    $('redirect-url').value = appBase();
-    $('copy-redirect').addEventListener('click', function () { copyText(appBase(), 'copy-message', 'Redirect URL copied. Paste it into your AniList API client settings.'); });
+    $('redirect-url').value = AUTH_PIN_URL;
+    $('copy-redirect').addEventListener('click', function () { copyText(AUTH_PIN_URL, 'copy-message', 'Auth PIN URL copied. Paste it into your AniList API client Redirect URL settings.'); });
     consumeOAuthFragment();
     tokenInfo = readToken();
     $('chatgpt-prompt').textContent = promptText();
@@ -396,6 +442,7 @@
     setConnectedUI();
   }
   $('connect-button').addEventListener('click', connect);
+  $('token-connect-button').addEventListener('click', connectWithPastedToken);
   $('disconnect-button').addEventListener('click', disconnect);
   $('search-button').addEventListener('click', search);
   $('search-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
