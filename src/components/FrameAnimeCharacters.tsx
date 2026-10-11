@@ -48,14 +48,18 @@ async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Pr
       // Use the public AniList endpoint as a fallback if the server proxy is unavailable.
     }
   }
-  const result = await aniList<AniListCharacterResponse>(CHARACTERS_QUERY, { id: anilistId });
-  const media = result.Media;
+  const [first, second] = await Promise.all([
+    aniList<AniListCharacterResponse>(CHARACTERS_QUERY, { id: anilistId, page: 1 }),
+    aniList<AniListCharacterResponse>(CHARACTERS_QUERY, { id: anilistId, page: 2 }),
+  ]);
+  const media = first.Media;
+  const secondEdges = second.Media?.characters?.edges || [];
   const normalizeTitle = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const expected = normalizeTitle(expectedTitle);
   const allowSubtitlePrefix = /[:—–-]/.test(expectedTitle);
   const actual = [media?.title?.english, media?.title?.romaji, media?.title?.native, media?.title?.userPreferred].filter(Boolean).map(value => normalizeTitle(String(value)));
   if (!actual.some((value: string) => value === expected || (allowSubtitlePrefix && expected.length >= 5 && value.startsWith(expected)))) return [];
-  const edges = media?.characters?.edges || [];
+  const edges = [...(media?.characters?.edges || []), ...secondEdges];
   return edges.filter(edge => edge.node?.name?.full).map(edge => ({
     id: edge.node!.id,
     name: String(edge.node!.name!.full),
@@ -135,6 +139,11 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
               description: existing.description || match.description,
               sourceUrl: existing.sourceUrl || match.sourceUrl,
               role: existing.role || match.role,
+              birthday: existing.birthday || match.birthday,
+              age: existing.age || match.age,
+              bloodType: existing.bloodType || match.bloodType,
+              gender: existing.gender || match.gender,
+              voiceActors: existing.voiceActors?.length ? existing.voiceActors : match.voiceActors,
             } : existing;
           });
           const names = new Set(merged.map(character => normalizeName(character.name)));
