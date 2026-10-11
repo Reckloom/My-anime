@@ -37,6 +37,11 @@ async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Pr
           image: character.image ? String(character.image) : undefined,
           description: character.description ? String(character.description) : undefined,
           sourceUrl: character.sourceUrl ? String(character.sourceUrl) : undefined,
+          birthday: character.birthday ? String(character.birthday) : undefined,
+          age: character.age ? String(character.age) : undefined,
+          bloodType: character.bloodType ? String(character.bloodType) : undefined,
+          gender: character.gender ? String(character.gender) : undefined,
+          voiceActors: Array.isArray(character.voiceActors) ? character.voiceActors.filter((voice: any) => voice?.name).map((voice: any) => ({ name: String(voice.name), language: voice.language ? String(voice.language) : undefined })) : undefined,
         }));
       }
     } catch {
@@ -59,6 +64,11 @@ async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Pr
     image: edge.node!.image?.large || undefined,
     description: edge.node!.description || undefined,
     sourceUrl: edge.node!.siteUrl || undefined,
+    birthday: edge.node!.dateOfBirth?.year && edge.node!.dateOfBirth?.month && edge.node!.dateOfBirth?.day ? `${edge.node!.dateOfBirth.year}-${String(edge.node!.dateOfBirth.month).padStart(2,'0')}-${String(edge.node!.dateOfBirth.day).padStart(2,'0')}` : undefined,
+    age: edge.node!.age || undefined,
+    bloodType: edge.node!.bloodType || undefined,
+    gender: edge.node!.gender || undefined,
+    voiceActors: edge.node!.voiceActors?.filter(voice => voice.name).map(voice => ({ name: String(voice.name), language: voice.language || undefined })),
   }));
 }
 
