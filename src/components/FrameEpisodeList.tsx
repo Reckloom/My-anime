@@ -18,7 +18,21 @@ type EpisodeResponse={
 type CachedEpisodePage={data:JikanEpisode[];lastPage:number};
 const EPISODE_PAGE_CACHE_LIMIT=120;
 const episodePageCache=new Map<string,CachedEpisodePage>();
+const ANIME_SEARCH_CACHE_LIMIT=256;
 const animeSearchCache=new Map<string,string>();
+function getCachedAnimeId(key:string){
+ const value=animeSearchCache.get(key);
+ if(value){animeSearchCache.delete(key);animeSearchCache.set(key,value);}
+ return value;
+}
+function cacheAnimeId(key:string,value:string){
+ animeSearchCache.delete(key);animeSearchCache.set(key,value);
+ while(animeSearchCache.size>ANIME_SEARCH_CACHE_LIMIT){
+  const oldest=animeSearchCache.keys().next().value as string|undefined;
+  if(oldest===undefined)break;
+  animeSearchCache.delete(oldest);
+ }
+}
 function getCachedEpisodePage(key:string){
  const cached=episodePageCache.get(key);
  if(cached){episodePageCache.delete(key);episodePageCache.set(key,cached);}
@@ -72,7 +86,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
     const query=title.trim();
     if(!query){setResolving(false);setError('Add a title or MyAnimeList ID to load episodes.');return()=>{alive=false;controller.abort()};}
     const norm=(v:string)=>v.toLocaleLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-    const cachedId=animeSearchCache.get(norm(query));
+    const cachedId=getCachedAnimeId(norm(query));
     if(cachedId){setResolvedMalId(cachedId);setResolving(false);return()=>{alive=false;controller.abort()};}
     fetchJikan('https://api.jikan.moe/v4/anime?q='+encodeURIComponent(query)+'&limit=8',controller.signal)
       .then(async response=>{
@@ -82,7 +96,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
         const results=Array.isArray(data.data)?data.data:[];
         const picked=results.find(x=>[x.title,x.title_english,x.title_japanese].some(v=>v&&norm(v)===norm(query)));
         if(!picked?.mal_id)throw new Error('No matching anime was found. Add a MyAnimeList ID in Edit all details and retry.');
-        animeSearchCache.set(norm(query),String(picked.mal_id));
+        cacheAnimeId(norm(query),String(picked.mal_id));
         if(alive)setResolvedMalId(String(picked.mal_id));
       })
       .catch(e=>{if(alive&&!(e instanceof DOMException&&e.name==='AbortError'))setError(e instanceof Error?e.message:'Anime lookup failed.')})
