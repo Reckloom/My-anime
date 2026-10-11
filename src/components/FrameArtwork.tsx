@@ -43,8 +43,10 @@ const svgFallback=(title:string,medium:Medium)=>{
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');\nconst dedicatedHierarchyArtwork=(title:string)=>{
  const t=normal(title);
- // Explicit poster map for the Dragon Ball hierarchy. These are resolved
- // before AniList/parent fallback so child cards never collapse to gradients.
+ // Explicit poster map for Link Click and To Be Hero X, plus Dragon Ball hierarchy.
+ if(t.includes('link click')&&t.includes('season 1'))return 'https://i0.wp.com/anitrendz.net/news/wp-content/uploads/2023/06/Link-Click-Season-2-key-visual.jpg';
+ if(t.includes('link click')&&t.includes('season 2'))return 'https://i0.wp.com/anitrendz.net/news/wp-content/uploads/2023/06/Link-Click-Season-2-key-visual.jpg';
+ if(t.includes('to be hero x')&&t.includes('season 1'))return 'https://tbhx.net/wp-content/uploads/2025/03/keyvisual.jpg';
  if(t.includes('daima')&&t.includes('season 1'))return 'https://www.toei-animation-usa.com/newsAdmin/uploads/posts/617121621.jpg';
  if(t==='daima arc'||t.includes('daima arc'))return 'https://ogre.natalie.mu/media/news/comic/2024/0719/DBDAIMA_KV.jpg';
  if(t.includes('season 1')&&t.includes('black star dragon balls'))return 'https://metrunui.github.io/images/dbgts1.jpg';
