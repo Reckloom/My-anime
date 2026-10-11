@@ -22,8 +22,8 @@ type AniListCharacterEdge = {
 };
 type AniListCharacterResponse = { Media?: { title?: { english?: string | null; romaji?: string | null; native?: string | null; userPreferred?: string | null }; characters?: { edges?: AniListCharacterEdge[] } } };
 
-async function loadAnimeCharacters(anilistId: number | undefined, expectedTitle: string): Promise<AnimeCharacterProfile[]> {
-  if (supabase) {
+async function loadAnimeCharacters(anilistId: number | undefined, expectedTitle: string, preferPublic = false): Promise<AnimeCharacterProfile[]> {
+  if (supabase && !preferPublic) {
     try {
       const { data, error } = await supabase.functions.invoke('anime-catalogue', {
         body: { action: 'anime-characters', anilistId, title: expectedTitle },
@@ -77,13 +77,13 @@ async function loadAnimeCharacters(anilistId: number | undefined, expectedTitle:
 const characterCache = new Map<string, { expiresAt: number; profiles: AnimeCharacterProfile[] }>();
 const characterRequests = new Map<string, Promise<AnimeCharacterProfile[]>>();
 
-async function fetchAnimeCharacters(anilistId: number, expectedTitle: string): Promise<AnimeCharacterProfile[]> {
+async function fetchAnimeCharacters(anilistId: number, expectedTitle: string, preferPublic = false): Promise<AnimeCharacterProfile[]> {
   const key = (anilistId || 0) + ':' + expectedTitle.toLocaleLowerCase();
   const cached = characterCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.profiles;
   const pending = characterRequests.get(key);
   if (pending) return pending;
-  const request = loadAnimeCharacters(anilistId, expectedTitle);
+  const request = loadAnimeCharacters(anilistId, expectedTitle, preferPublic);
   characterRequests.set(key, request);
   try {
     const profiles = await request;
@@ -156,7 +156,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
       return () => { active = false; };
     }
     setLoading(true);
-    fetchAnimeCharacters(effectiveAniListId, title)
+    fetchAnimeCharacters(effectiveAniListId, title, isLinkClickTitle || isToBeHeroXTitle)
       .then(async mapped => {
         if (active) {
           const normalizeName = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
