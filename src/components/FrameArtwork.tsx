@@ -43,10 +43,10 @@ const svgFallback=(title:string,medium:Medium)=>{
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');\nconst dedicatedHierarchyArtwork=(title:string)=>{
  const t=normal(title);
- if(t.includes('dragon ball daima')&&t.includes('season 1'))return 'https://www.toei-animation-usa.com/newsAdmin/uploads/posts/617121621.jpg';
+ if(t.includes('daima')&&t.includes('season 1'))return 'https://www.toei-animation-usa.com/newsAdmin/uploads/posts/617121621.jpg';
  if(t==='daima arc'||t.includes('daima arc'))return 'https://ogre.natalie.mu/media/news/comic/2024/0719/DBDAIMA_KV.jpg';
- if(t.includes('dragon ball gt')&&t.includes('season 1'))return 'https://metrunui.github.io/images/dbgts1.jpg';
- if(t.includes('dragon ball gt')&&t.includes('season 2'))return 'https://cdn.moviepilot.de/files/ca5e65dedfc253e92a08f59d1db4b8b45093fb2306d91994ec851009d4eb/limit/1600/900/dragon-ball-gt-season-2-poster-01.jpg';
+ if(t.includes('season 1')&&t.includes('black star dragon balls'))return 'https://metrunui.github.io/images/dbgts1.jpg';
+ if(t.includes('season 2')&&t.includes('baby')&&t.includes('super 17')&&t.includes('shadow dragons'))return 'https://cdn.moviepilot.de/files/ca5e65dedfc253e92a08f59d1db4b8b45093fb2306d91994ec851009d4eb/limit/1600/900/dragon-ball-gt-season-2-poster-01.jpg';
  if(t.includes('black star dragon ball'))return 'https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak%3D/v3/t/assets/p11929145_b_v8_aa.jpg';
  if(t.includes('baby'))return 'https://cdn.moviepilot.de/files/ca5e65dedfc253e92a08f59d1db4b8b45093fb2306d91994ec851009d4eb/limit/1600/900/dragon-ball-gt-season-2-poster-01.jpg';
  if(t.includes('super 17'))return 'https://artworks.thetvdb.com/banners/v4/season/16240/posters/632e1442e3cff.jpg';
@@ -67,6 +67,7 @@ async function resolve(p:Props):Promise<string>{
  if(hasSavedPoster&&!shouldValidateSaved)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);\n const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
+ if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
   if(hasSavedPoster)return p.poster!;
   if(p.parentAnilistId){
