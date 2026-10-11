@@ -16,8 +16,23 @@ type EpisodeResponse={
 };
 
 type CachedEpisodePage={data:JikanEpisode[];lastPage:number};
+const EPISODE_PAGE_CACHE_LIMIT=120;
 const episodePageCache=new Map<string,CachedEpisodePage>();
 const animeSearchCache=new Map<string,string>();
+function getCachedEpisodePage(key:string){
+ const cached=episodePageCache.get(key);
+ if(cached){episodePageCache.delete(key);episodePageCache.set(key,cached);}
+ return cached;
+}
+function cacheEpisodePage(key:string,value:CachedEpisodePage){
+ episodePageCache.delete(key);
+ episodePageCache.set(key,value);
+ while(episodePageCache.size>EPISODE_PAGE_CACHE_LIMIT){
+  const oldest=episodePageCache.keys().next().value as string|undefined;
+  if(oldest===undefined)break;
+  episodePageCache.delete(oldest);
+ }
+}
 async function fetchJikan(url:string,signal:AbortSignal):Promise<Response>{
   if(signal.aborted)throw new DOMException('Aborted','AbortError');
   if(!supabase)throw new Error('The episode service is not configured.');
@@ -79,7 +94,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
     if(!resolvedMalId)return;
     const controller=new AbortController();let alive=true;
     const cacheKey=resolvedMalId+':'+page;
-    const cached=episodePageCache.get(cacheKey);
+    const cached=getCachedEpisodePage(cacheKey);
     if(cached){setEpisodes(cached.data);setLastPage(cached.lastPage);setLoading(false);return()=>{alive=false;controller.abort()};}
     setLoading(true);setError('');
     fetchJikan('https://api.jikan.moe/v4/anime/'+encodeURIComponent(resolvedMalId)+'/episodes?page='+page,controller.signal)
@@ -89,7 +104,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
         if(!response.ok)throw new Error(response.status===429?'Episode source is rate-limiting requests. Wait a moment and retry.':'Episode list could not be loaded (HTTP '+response.status+').');
         if(!Array.isArray(data.data))throw new Error('No episode list was returned.');
         const lastPage=Math.max(1,Number(data.pagination?.last_visible_page||1));
-        episodePageCache.set(cacheKey,{data:data.data,lastPage});
+        cacheEpisodePage(cacheKey,{data:data.data,lastPage});
         if(alive){setEpisodes(data.data);setLastPage(lastPage);}
       })
       .catch(e=>{if(alive&&!(e instanceof DOMException&&e.name==='AbortError'))setError(e instanceof Error?e.message:'Episode list could not be loaded.')})
