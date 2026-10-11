@@ -198,11 +198,13 @@ async function runRadar(admin:any){
             if(e)throw e;
             hierarchy.push(group);directChildren.push(group);
           }
-          const existingKeys=new Set(hierarchy.filter((x:any)=>x.parent_id===group.id&&isEpisode(x)).map((x:any)=>String(x.data?.externalId||'')));
+          const existingEpisodes=hierarchy.filter((x:any)=>x.parent_id===group.id&&isEpisode(x));
+          const existingKeys=new Set(existingEpisodes.map((x:any)=>String(x.data?.externalId||'')));
+          const existingNumbers=new Set(existingEpisodes.map((x:any)=>Number(x.data?.episode?.episodeNumber||0)).filter((n:any)=>n>0));
           let groupProgress=0;
           for(const s of aired.sort((a:any,b:any)=>Number(a.episode)-Number(b.episode))){
             const ep=Number(s.episode),key='anilist-airing:'+relatedId+':'+ep;
-            if(existingKeys.has(key))continue;
+            if(existingKeys.has(key)||existingNumbers.has(ep))continue;
             const epId='frame-auto-episode-'+row.id+'-'+relatedId+'-'+ep;
             const airedAt=new Date(Number(s.airingAt)*1000).toISOString();
             const episodeRow={
@@ -214,7 +216,7 @@ async function runRadar(admin:any){
             };
             const {error:e}=await admin.from('media_items').insert(episodeRow);
             if(e){ if(String(e.message||'').includes('duplicate')||String(e.code||'')==='23505')continue; throw e; }
-            hierarchy.push(episodeRow);existingKeys.add(key);
+            hierarchy.push(episodeRow);existingKeys.add(key);existingNumbers.add(ep);
           }
           const groupEpisodes=hierarchy.filter((x:any)=>x.parent_id===group.id&&isEpisode(x));
           groupProgress=groupEpisodes.filter((x:any)=>x.status==='completed').length;
