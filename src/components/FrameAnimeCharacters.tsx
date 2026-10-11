@@ -293,8 +293,8 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
             <b>{character.name}</b>
             <span>{marine ? 'Marine' : character.role ? character.role.charAt(0).toUpperCase() + character.role.slice(1).toLowerCase() : 'Character'}</span>
             {isOnePiece && <small className="frame-one-piece-bounty">{character.bounty ? 'BOUNTY ' + character.bounty : 'WANTED FILE'}</small>}
-            <p>{shortDescription(character.description)}</p>
-            <small className="frame-anime-character-open">Tap for details</small>
+            {!isOnePiece && <p>{shortDescription(character.description)}</p>}
+            <small className="frame-anime-character-open">{isOnePiece ? 'Open character file' : 'Tap for details'}</small>
           </div>
         </button>;
       })}
