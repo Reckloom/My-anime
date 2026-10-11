@@ -13,6 +13,11 @@ type AniListCharacterEdge = {
     image?: { large?: string | null };
     description?: string | null;
     siteUrl?: string | null;
+    dateOfBirth?: { year?: number | null; month?: number | null; day?: number | null } | null;
+    age?: string | null;
+    bloodType?: string | null;
+    gender?: string | null;
+    voiceActors?: Array<{ name?: string | null; language?: string | null; image?: { large?: string | null } | null; siteUrl?: string | null }>;
   };
 };
 type AniListCharacterResponse = { Media?: { title?: { english?: string | null; romaji?: string | null; native?: string | null; userPreferred?: string | null }; characters?: { edges?: AniListCharacterEdge[] } } };
