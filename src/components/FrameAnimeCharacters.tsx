@@ -116,6 +116,9 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   const isAttackOnTitanTitle = /\battack\s+on\s+titan\b/i.test(title);
   const isVinlandSagaTitle = /\bvinland\s+saga\b/i.test(title);
   const isDragonBallTitle = /\bdragon\s+ball\b/i.test(title);
+  // Dragon Ball roots must always have a stable AniList source even if the
+  // parent card did not carry an anilist_id through the local library state.
+  const effectiveAniListId = anilistId || (/^Dragon Ball$/i.test(title) ? 223 : /^Dragon Ball Super$/i.test(title) ? 21175 : /^Dragon Ball DAIMA$/i.test(title) ? 170083 : undefined);
   const isRichArchive = isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle;
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
@@ -145,12 +148,12 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
       : isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle
         ? (stableCharacters.length < 20 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.gender || !character.bloodType || !character.voiceActors?.length))
         : (stableCharacters.length === 0 || stableCharacters.some(character => !character.image));
-    if (!needsRemote || !anilistId) {
+    if (!needsRemote || !effectiveAniListId) {
       setLoading(false);
       return () => { active = false; };
     }
     setLoading(true);
-    fetchAnimeCharacters(anilistId, title)
+    fetchAnimeCharacters(effectiveAniListId, title)
       .then(async mapped => {
         if (active) {
           const normalizeName = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
@@ -195,7 +198,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
     return () => { active = false; };
   // Saving fetched profiles changes the parent prop; keep the original fetch alive.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anilistId, title, isOnePieceTitle, isNarutoTitle, isBleachTitle, isBlackCloverTitle, isAttackOnTitanTitle, isVinlandSagaTitle]);
+  }, [effectiveAniListId, title, isOnePieceTitle, isNarutoTitle, isBleachTitle, isBlackCloverTitle, isAttackOnTitanTitle, isVinlandSagaTitle, isDragonBallTitle]);
 
   const rawProfiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
   const isOnePiece = /\bone piece\b/i.test(title);
