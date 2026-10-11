@@ -223,7 +223,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, onCharacter
   };
   const normalizeCharacterName = (value:string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g,'');
   const characterNameKeys = (value:string) => {
-    const words=value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,' ').trim().split(/\\s+/).filter(word=>word.length>1&&word!=='the');
+    const words=value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,' ').trim().split(/\s+/).filter(word=>word.length>1&&word!=='the');
     return new Set([normalizeCharacterName(value),words.join(''),[...words].reverse().join('')]);
   };
   const sameCharacterName = (left:string,right:string) => {
