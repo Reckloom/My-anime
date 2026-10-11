@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090b12">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="description" content="A private, one-tap command bridge for updating your AniList account.">
+<title>AniList Bridge · FRAME</title>
+<style>
+:root{color-scheme:dark;--bg:#090b12;--panel:#111520;--panel2:#151b2a;--stroke:#252d3f;--text:#f1f4fc;--muted:#9ba7bd;--purple:#a78bfa;--cyan:#65d9e8;--green:#7de0b1;--red:#ff8e9d}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top left,#1d2040 0,transparent 46%),radial-gradient(ellipse at top right,#102c3a 0,transparent 36%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+button,input,select{font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}a{color:var(--cyan)}.shell{max-width:1160px;margin:auto;padding:24px 18px 54px}
+header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:30px}.brand{display:flex;gap:12px;align-items:center}.logo{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#b49bff,#5de1e4);color:#091017;font-size:22px;font-weight:950;box-shadow:0 8px 32px #9e83f955}.brand h1{font-size:16px;letter-spacing:.04em;margin:0}.brand p{font-size:12px;color:var(--muted);margin:4px 0 0}.head-actions{display:flex;align-items:center;gap:10px}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--stroke);background:#111722c9;color:var(--muted);padding:8px 11px;border-radius:99px;font-size:12px}.dot{width:7px;height:7px;border-radius:100%;background:#8992a5}.dot.good{background:var(--green);box-shadow:0 0 0 4px #7de0b11a}
+.btn{border:1px solid var(--stroke);border-radius:13px;padding:10px 14px;background:var(--panel2);color:var(--text);font-weight:750;transition:transform .14s,border .14s}.btn:hover{transform:translateY(-1px);border-color:#667391}.btn.primary{background:linear-gradient(120deg,#b29aff,#72e1e5);border:0;color:#111421}.btn.quiet{background:transparent}.btn.danger{color:var(--red)}.btn.small{font-size:12px;padding:7px 10px;border-radius:10px}
+.hero{display:grid;grid-template-columns:1.45fr .8fr;gap:16px;margin-bottom:18px}.hero-main,.hero-side,.panel{border:1px solid var(--stroke);border-radius:24px;background:linear-gradient(145deg,#151a29f5,#0f131ddf);box-shadow:0 16px 50px #0002}
+.hero-main{padding:27px}.eyebrow{font-size:10px;font-weight:900;letter-spacing:.17em;text-transform:uppercase;color:var(--cyan)}.hero h2{font-size:clamp(28px,4.5vw,48px);line-height:1.04;letter-spacing:-.045em;margin:12px 0}.hero p{color:var(--muted);line-height:1.6;max-width:650px;margin:0}.hero-side{padding:23px;display:flex;flex-direction:column;justify-content:center;gap:11px}.stat-line{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--stroke);font-size:13px}.stat-line:last-child{border:0}.stat-line span{color:var(--muted)}.stat-line b{font-weight:850}
+.layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(310px,.9fr);gap:16px;align-items:start}.panel{padding:20px;margin-bottom:16px}.panel-head{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:16px}.panel h3{font-size:18px;margin:0;letter-spacing:-.02em}.panel .sub{color:var(--muted);font-size:12px;line-height:1.5;margin:5px 0 0}.searchrow{display:flex;gap:9px}.field{width:100%;background:#090d16;border:1px solid var(--stroke);color:var(--text);border-radius:12px;padding:12px 13px;outline:0;min-width:0}.field:focus{border-color:#a78bfa;box-shadow:0 0 0 3px #a78bfa18}select.field{appearance:auto}.two-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.label{display:block;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.04em;margin-bottom:6px}.fieldgroup{min-width:0;margin-top:12px}.results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.result{display:flex;gap:10px;align-items:stretch;text-align:left;width:100%;background:#0d121c;border:1px solid var(--stroke);border-radius:15px;padding:9px;color:var(--text);min-width:0}.result:hover{border-color:#8f7de4;background:#151a28}.poster{width:68px;height:92px;object-fit:cover;border-radius:9px;background:#20283a;flex:0 0 auto}.resultcopy{display:flex;min-width:0;flex-direction:column;gap:6px}.resultcopy strong{font-size:12px;line-height:1.3}.resultcopy small{color:var(--muted);font-size:10px;line-height:1.4}.tiny-status{color:var(--green)!important;font-weight:750}
+.bridgebox{border:1px solid #5e568d;background:linear-gradient(145deg,#1d1931,#121926);border-radius:17px;padding:17px;margin-bottom:16px;display:none}.bridgebox.show{display:block}.bridgebox h3{font-size:15px;margin:0 0 8px}.bridgebox p{font-size:12px;color:#c1c5d9;line-height:1.55;margin:0 0 12px}.review-line{display:flex;align-items:center;gap:12px}.review-line .poster{width:54px;height:73px}.review-line strong{display:block;margin-bottom:5px}.review-line small{color:var(--muted)}
+.editor{display:none;border:1px solid #51487b;background:#17172a;border-radius:18px;padding:15px;margin-top:16px}.editor.show{display:block}.selectedtitle{display:flex;gap:12px;align-items:center}.selectedtitle .poster{height:90px;width:66px}.selectedtitle h4{font-size:15px;margin:0 0 5px}.selectedtitle p{font-size:11px;color:var(--muted);margin:0;line-height:1.45}.editor-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.message{padding:10px 12px;border-radius:12px;background:#182234;color:#c8d8f5;font-size:12px;line-height:1.5;margin:12px 0 0;display:none}.message.show{display:block}.message.error{background:#321e2a;color:#ffc3ce}.message.success{background:#142d29;color:#a4f2d0}
+.list-controls{display:flex;gap:8px;align-items:center}.list-controls .field{padding:9px;font-size:12px}.list-entries{display:flex;flex-direction:column;gap:8px;max-height:540px;overflow:auto}.entry{display:flex;gap:10px;align-items:center;padding:9px;border:1px solid var(--stroke);border-radius:14px;background:#0d121c}.entry .poster{width:45px;height:62px}.entry-main{min-width:0;flex:1}.entry-main strong{display:block;font-size:12px;line-height:1.4;overflow-wrap:anywhere}.entry-main small{color:var(--muted);font-size:10px;display:block;margin-top:4px}.muted{color:var(--muted)}.empty{border:1px dashed #374157;border-radius:14px;padding:21px;text-align:center;color:var(--muted);font-size:12px;line-height:1.6}.prompt{font-size:11px;line-height:1.6;background:#090d16;border:1px solid var(--stroke);padding:12px;border-radius:12px;color:#ced5e5;overflow-wrap:anywhere;white-space:pre-wrap}.footer-note{font-size:11px;color:#8894aa;line-height:1.6;margin-top:20px}.footer-note strong{color:#bdc7d9}.hidden{display:none!important}
+@media(max-width:800px){.hero,.layout{grid-template-columns:1fr}.hero h2{font-size:34px}.hero-side{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.stat-line{gap:6px}.head-actions{flex-direction:column;align-items:flex-end}.shell{padding:16px 12px 36px}.panel{padding:15px}.hero-main{padding:22px}.hero-side{padding:15px}}
+@media(max-width:460px){header{align-items:flex-start}.brand{gap:9px}.brand h1{font-size:14px}.brand p{max-width:150px;line-height:1.35}.logo{width:39px;height:39px}.head-actions .pill{font-size:10px;padding:7px 9px}.btn{padding:10px 11px}.results{grid-template-columns:1fr}.searchrow{flex-wrap:wrap}.searchrow .field{flex:1 1 100%}.searchrow .btn{flex:1}.hero-side{grid-template-columns:1fr}.stat-line{padding:7px 0}.two-fields{grid-template-columns:1fr 1fr}}
+</style>
+<script src="./app.js" defer></script>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div class="brand"><div class="logo">A</div><div><h1>ANILIST BRIDGE</h1><p>A lightweight command panel for FRAME</p></div></div>
+  <div class="head-actions"><div class="pill"><span id="connection-dot" class="dot"></span><span id="connection-label">Not connected</span></div><button class="btn primary" id="connect-button">Connect AniList</button><button class="btn quiet small hidden" id="disconnect-button">Disconnect</button></div>
+</header>
+<section class="hero">
+  <div class="hero-main"><div class="eyebrow">Your list, without the setup maze</div><h2>One tap from an idea<br>to your AniList.</h2><p>Search a title, choose its status, and save it to AniList. You can also open a prepared command link from ChatGPT. Nothing changes until you review and press the save button.</p></div>
+  <div class="hero-side"><div class="stat-line"><span>Connected account</span><b id="viewer-name">Not connected</b></div><div class="stat-line"><span>Anime entries loaded</span><b id="anime-count">—</b></div><div class="stat-line"><span>Manga entries loaded</span><b id="manga-count">—</b></div><div class="stat-line"><span>Security</span><b>Local token only</b></div></div>
+</section>
+<div id="bridge-request" class="bridgebox" aria-live="polite"><h3>ChatGPT prepared a list change</h3><div id="bridge-copy"></div><p>This is only a draft. Review the title and status below, then choose <b>Save to AniList</b> to apply it.</p></div>
+<div class="layout">
+  <section>
+    <div class="panel">
+      <div class="panel-head"><div><h3>Find a title</h3><p class="sub">Search AniList's catalogue and pick the exact anime or manga.</p></div><span class="eyebrow">01 / SEARCH</span></div>
+      <div class="searchrow"><input id="search-input" class="field" placeholder="Search anime or manga…" autocomplete="off"><select id="search-type" class="field" style="max-width:128px"><option value="ANIME">Anime</option><option value="MANGA">Manga</option></select><button id="search-button" class="btn">Search</button></div>
+      <div id="search-message" class="message" role="status"></div><div id="results" class="results"></div>
+      <div id="editor" class="editor">
+        <div class="selectedtitle"><img id="selected-poster" class="poster" alt=""><div><h4 id="selected-name"></h4><p id="selected-meta"></p><p id="selected-existing"></p></div></div>
+        <div class="two-fields">
+          <div class="fieldgroup"><label class="label" for="status-input">LIST STATUS</label><select id="status-input" class="field"><option value="PLANNING">Plan to watch / read</option><option value="CURRENT">Watching / reading</option><option value="COMPLETED">Completed</option><option value="PAUSED">Paused</option><option value="DROPPED">Dropped</option><option value="REPEATING">Rewatching / rereading</option></select></div>
+          <div class="fieldgroup"><label class="label" id="progress-label" for="progress-input">EPISODES WATCHED</label><input id="progress-input" class="field" type="number" min="0" step="1" value="0"></div>
+        </div>
+        <div class="fieldgroup"><label class="label" for="score-input">ANILIST RAW SCORE (0–100; 0 = unset)</label><input id="score-input" class="field" type="number" min="0" max="100" step="1" value="0"></div>
+        <div class="editor-actions"><button id="save-button" class="btn primary">Save to AniList</button><button id="cancel-button" class="btn quiet">Cancel</button></div>
+        <div id="save-message" class="message" role="status"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h3>ChatGPT hand-off</h3><p class="sub">A reusable instruction that lets ChatGPT create a safe, one-tap update link.</p></div><span class="eyebrow">02 / BRIDGE</span></div>
+      <div class="prompt" id="chatgpt-prompt">Loading bridge instructions…</div>
+      <div class="editor-actions"><button id="copy-prompt" class="btn">Copy instructions for ChatGPT</button><button id="copy-base" class="btn quiet">Copy app link</button></div>
+      <div id="copy-message" class="message" role="status"></div>
+    </div>
+  </section>
+  <section>
+    <div class="panel">
+      <div class="panel-head"><div><h3>Your AniList</h3><p class="sub">Read-only preview until you select an entry to edit.</p></div><span class="eyebrow">03 / LIBRARY</span></div>
+      <div class="list-controls"><select id="list-type" class="field"><option value="ANIME">Anime list</option><option value="MANGA">Manga list</option></select><select id="list-status" class="field"><option value="ALL">All statuses</option><option value="CURRENT">Current</option><option value="PLANNING">Planning</option><option value="COMPLETED">Completed</option><option value="PAUSED">Paused</option><option value="DROPPED">Dropped</option><option value="REPEATING">Repeating</option></select></div>
+      <div class="fieldgroup"><input id="list-search" class="field" placeholder="Filter your list…" autocomplete="off"></div>
+      <div id="list-message" class="message" role="status"></div><div id="list-entries" class="list-entries" style="margin-top:12px"><div class="empty">Connect AniList to load your library here.</div></div>
+      <div class="editor-actions"><button id="refresh-list" class="btn quiet">Refresh list</button></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h3>Privacy, plainly</h3><p class="sub">This page talks directly to AniList from your browser.</p></div></div>
+      <p class="sub">Your AniList token is stored in this browser only. It is not sent to FRAME, ChatGPT, or another server. The permission is powerful because AniList does not offer narrower list-edit scopes. Disconnect removes the saved token from this browser.</p>
+      <p class="sub">The ChatGPT link only carries a media ID, media type, status, and optional progress/score — never your token.</p>
+    </div>
+  </section>
+</div>
+<p class="footer-note"><strong>Important:</strong> this is a companion bridge, not a native ChatGPT plugin. ChatGPT can prepare a link, and this page applies the change after you review it. The browser must be connected to AniList first.</p>
+</div>
+</body>
+</html>
