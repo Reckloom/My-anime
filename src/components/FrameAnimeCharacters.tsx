@@ -76,7 +76,7 @@ async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Pr
 
 async function fetchMissingOnePieceCharacters(names: string[]): Promise<AnimeCharacterProfile[]> {
   if (!names.length) return [];
-  const normalize = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  const normalize = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const found: AnimeCharacterProfile[] = [];
   for (let start = 0; start < names.length; start += 5) {
     const batch = names.slice(start, start + 5);
