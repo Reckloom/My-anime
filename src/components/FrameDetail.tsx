@@ -4,7 +4,6 @@ import type {MediaAvailability,MediaItem,Status} from '../types';
 import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
 import {supabase} from '../lib/supabase';
 import {FrameArtwork,artworkFallbackAncestor} from './FrameArtwork';
-import {FrameAnimeCharacters} from './FrameAnimeCharacters';
 import {FrameEpisodeList} from './FrameEpisodeList';
 
 const labels:Record<Status,string>={watching:'Watching',reading:'Reading',playing:'Playing',completed:'Completed',planned:'Planned',paused:'Paused',dropped:'Dropped'};
@@ -291,9 +290,6 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
     </div>
    </div>
-
-
-     <FrameAnimeCharacters title={d.title} characters={d.characters||[]} anilistId={d.anilistId}/>
       {d.medium==='anime'&&!d.episode&&!(/^one piece( \(tv\))?$/i.test(d.title.trim())&&library.some(x=>x.parentId===d.id&&String(x.sourceProvider)==='jikan'&&String(x.externalId||'').startsWith('one-piece-arc-')))&&!(/^naruto$/i.test(d.title.trim())&&library.some(x=>x.parentId===d.id&&String(x.sourceProvider)==='frame-naruto-part'))&&!(d.sourceProvider==='frame-naruto-part')&&d.sourceProvider!=='frame-anime-catalogue'&&(d.anilistId||d.sourceProvider==='anilist'||d.sourceProvider==='anilist-episode-subpart'||externalLinks.malId)&&<FrameEpisodeList malId={externalLinks.malId} title={d.title} currentProgress={d.progress} onMarkThrough={async episodeNumber=>{
       const nextTotal=Math.max(d.total||0,episodeNumber);
       const next={...d,total:nextTotal,progress:Math.min(nextTotal,episodeNumber)};
