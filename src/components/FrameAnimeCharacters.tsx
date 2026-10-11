@@ -79,7 +79,21 @@ async function fetchMissingOnePieceCharacters(names: string[]): Promise<AnimeCha
   const normalize = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const found: AnimeCharacterProfile[] = [];
   const searchAliases: Record<string, string[]> = {
-    Namule: ['Namule', 'Namur'],
+    'Trafalgar D. Water Law': ['Trafalgar D. Water Law', 'Trafalgar Law'],
+    'Donquixote Rosinante': ['Donquixote Rosinante', 'Rosinante', 'Corazon'],
+    'Tony Tony Chopper': ['Tony Tony Chopper', 'Chopper'],
+    'Nefertari Vivi': ['Nefertari Vivi', 'Vivi'],
+    'Charlotte Katakuri': ['Charlotte Katakuri', 'Katakuri'],
+    'Bartholomew Kuma': ['Bartholomew Kuma', 'Kuma'],
+    'Edward Newgate': ['Edward Newgate', 'Whitebeard'],
+    'Monkey D. Garp': ['Monkey D. Garp', 'Monkey D Garp', 'Garp'],
+    'Benn Beckman': ['Benn Beckman', 'Benn Beckman'],
+    'Jewelry Bonney': ['Jewelry Bonney', 'Jewelry Bonney'],
+    'Vegapunk Punk-02 Lilith': ['Vegapunk Punk-02 Lilith', 'Lilith'],
+    'Charlotte Perospero': ['Charlotte Perospero', 'Perospero'],
+    'Marshall D. Teach': ['Marshall D. Teach', 'Blackbeard'],
+    'Joy Boy': ['Joy Boy', 'Joyboy'],
+    'Namule': ['Namule', 'Namur'],
   };
   for (let start = 0; start < names.length; start += 5) {
     const batch = names.slice(start, start + 5);
