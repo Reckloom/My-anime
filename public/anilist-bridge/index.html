@@ -34,6 +34,11 @@ header{display:flex;align-items:center;justify-content:space-between;gap:18px;ma
   <div class="hero-main"><div class="eyebrow">Your list, without the setup maze</div><h2>One tap from an idea<br>to your AniList.</h2><p>Search a title, choose its status, and save it to AniList. You can also open a prepared command link from ChatGPT. Nothing changes until you review and press the save button.</p></div>
   <div class="hero-side"><div class="stat-line"><span>Connected account</span><b id="viewer-name">Not connected</b></div><div class="stat-line"><span>Anime entries loaded</span><b id="anime-count">—</b></div><div class="stat-line"><span>Manga entries loaded</span><b id="manga-count">—</b></div><div class="stat-line"><span>Security</span><b>Local token only</b></div></div>
 </section>
+<section class="panel" id="first-connect" style="margin-bottom:16px">
+  <div class="panel-head"><div><h3>One-time connection</h3><p class="sub">Use your existing AniList API client. No secret or terminal commands are needed for this browser-based connection.</p></div><span class="eyebrow">SETUP / ONCE</span></div>
+  <p class="sub" style="margin-bottom:12px">Open AniList Developer Settings, edit your existing API client, change its <b>Redirect URL</b> to the exact address below, and save. Then press <b>Connect AniList</b> at the top and approve once.</p>
+  <div class="searchrow"><input id="redirect-url" class="field" readonly aria-label="AniList redirect URL"><button id="copy-redirect" class="btn">Copy redirect URL</button><a class="btn quiet" href="https://anilist.co/settings/developer" target="_blank" rel="noreferrer">Open AniList settings ↗</a></div>
+</section>
 <div id="bridge-request" class="bridgebox" aria-live="polite"><h3>ChatGPT prepared a list change</h3><div id="bridge-copy"></div><p>This is only a draft. Review the title and status below, then choose <b>Save to AniList</b> to apply it.</p></div>
 <div class="layout">
   <section>
