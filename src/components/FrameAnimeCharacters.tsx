@@ -178,7 +178,15 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
             } : existing;
           });
           const names = new Set(merged.map(character => normalizeName(character.name)));
-          const combined = [...merged, ...mapped.filter(character => !names.has(normalizeName(character.name)))];
+          // Link Click and To Be Hero X use AniList favourites ordering as the
+          // authoritative popularity order. Keep saved profiles only for
+          // metadata enrichment; never let stale local ordering move a rank.
+          const combined = (isLinkClickTitle || isToBeHeroXTitle)
+            ? mapped.map(remote => {
+                const existing = stableCharacters.find(item => normalizeName(item.name) === normalizeName(remote.name));
+                return existing ? { ...remote, ...existing, image: existing.image || remote.image, description: existing.description || remote.description, sourceUrl: existing.sourceUrl || remote.sourceUrl, role: existing.role || remote.role, birthday: existing.birthday || remote.birthday, age: existing.age || remote.age, bloodType: existing.bloodType || remote.bloodType, gender: existing.gender || remote.gender, voiceActors: existing.voiceActors?.length ? existing.voiceActors : remote.voiceActors } : remote;
+              })
+            : [...merged, ...mapped.filter(character => !names.has(normalizeName(character.name)))];
           if (/\bone piece\b/i.test(title)) {
             if (!combined.some(character => normalizeName(character.name) === 'goingmerry')) {
               combined.push({
