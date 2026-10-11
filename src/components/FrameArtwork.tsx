@@ -88,6 +88,22 @@ async function resolve(p:Props):Promise<string>{
  }
  if(isHierarchyNode(p)){
   if(hasSavedPoster)return p.poster as string;
+  // First try to find artwork for the exact season/arc title. This keeps
+  // every anime consistent instead of making special-case poster rules.
+  if(isSeriesMedia){
+   try{
+    const type=p.medium==='anime'?'ANIME':'MANGA';
+    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:SEARCH_QUERY,variables:{search:p.title,page:1,perPage:8,type}})});
+    if(response.ok){
+     const json=await response.json() as {data?:{Page?:{media?:AniListMedia[]}}};
+     const results=json.data?.Page?.media||[];
+     const target=normal(p.title);
+     const exact=results.find(m=>[m.title.english,m.title.romaji,m.title.native,m.title.userPreferred,...(m.synonyms||[])].some(v=>v&&normal(v)===target));
+     const image=exact?.coverImage?.extraLarge;
+     if(image)return image;
+    }
+   }catch{/* exact season/arc artwork can be unavailable */}
+  }
   if(p.parentAnilistId){
    try{
     const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.parentAnilistId}})});
