@@ -78,15 +78,29 @@ async function fetchMissingOnePieceCharacters(names: string[]): Promise<AnimeCha
   if (!names.length) return [];
   const normalize = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const found: AnimeCharacterProfile[] = [];
+  const searchAliases: Record<string, string[]> = {
+    Namule: ['Namule', 'Namur'],
+  };
   for (let start = 0; start < names.length; start += 5) {
     const batch = names.slice(start, start + 5);
-    const results = await Promise.allSettled(batch.map(name => aniList<any>(CHARACTER_SEARCH_QUERY, { search: name })));
+    const results = await Promise.allSettled(batch.map(async name => {
+      const candidates = searchAliases[name] || [name];
+      for (const candidate of candidates) {
+        try {
+          const result = await aniList<any>(CHARACTER_SEARCH_QUERY, { search: candidate });
+          const rows = result?.Page?.characters || [];
+          const exact = rows.find((row: any) => row?.name?.full && normalize(String(row.name.full)) === normalize(candidate));
+          if (exact) return exact;
+        } catch {
+          // Try the next known alias.
+        }
+      }
+      return null;
+    }));
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
       if (result.status !== 'fulfilled') continue;
-      const rows = result.value?.Page?.characters || [];
-      const exact = rows.find((row: any) => row?.name?.full && normalize(String(row.name.full)) === normalize(batch[i]));
-      const row = exact;
+      const row = result.value;
       if (!row?.name?.full) continue;
       found.push({
         id: Number(row.id) || undefined,
@@ -184,6 +198,17 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
             const recovered = await fetchMissingOnePieceCharacters(missing);
             const recoveredNames = new Set(combined.map(character => normalizeName(character.name)));
             combined.push(...recovered.filter(character => !recoveredNames.has(normalizeName(character.name))));
+            if (!combined.some(character => normalizeName(character.name) === 'goingmerry')) {
+              combined.push({
+                id: 9000001,
+                name: 'Going Merry',
+                role: 'Straw Hat Pirates',
+                image: 'https://one-piece.com/o/assets/uploads/a9d6b72240fd8ee5b856fa7a56e38ab7.jpg',
+                birthday: 'January 22',
+                description: 'The Straw Hat Pirates’ first ship and a beloved member of their crew.',
+                sourceUrl: 'https://one-piece.com/character/Going_Merry/index.html',
+              });
+            }
           }
           setRemoteCharacters(combined);
           setFailed(!combined.some(character => Boolean(character.image)));
