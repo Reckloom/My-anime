@@ -293,125 +293,58 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    window.setTimeout(()=>setAppMessage(''),4000);
    return false;
   }
-  const next=dedupeMediaItems(list.map(normalise));itemsRef.current=next;setItems(next);
-  // Persist immediately as well as through the debounced effect. A quick reload
-  // must not lose a guest edit made within the debounce window.
-  try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
+  const previous=itemsRef.current;
+  const next=dedupeMediaItems(list.map(normalise));
+  itemsRef.current=next;setItems(next);
+  // Keep the browser cache as a safety net, but let the browser schedule the
+  // expensive JSON serialization instead of blocking every interaction.
+  const persistLocal=()=>{
+   try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}
+  };
+  if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(persistLocal,{timeout:1200});
+  else window.setTimeout(persistLocal,500);
   const client=supabase;
   if(!client||!user?.id)return true;
   const operation=saveQueue.current.then(async()=>{
-  try{
-   if(next.length===0){const {error}=await client.from('media_items').delete().eq('user_id',user.id);if(error){setAppMessage('Cloud save failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return false}return true}
-   // Upsert in small batches so a large anime library cannot fail because one
-   // request becomes too large. Each batch is still atomic at the row level and
-   // uses the primary-key conflict target, so edits remain idempotent.
-   const rows=next.map(item=>toRow(item,user.id));
-   const batchSize=50;
-   for(let offset=0;offset<rows.length;offset+=batchSize){
-    const {error}=await client.from('media_items').upsert(rows.slice(offset,offset+batchSize),{onConflict:'id'});
-    if(error){
-     const detail=error.message||error.details||error.hint||'Unknown database error';
-     setAppMessage('Cloud save failed: '+detail);
-     window.setTimeout(()=>setAppMessage(''),7000);
-     return false;
+   try{
+    const previousById=new Map(previous.map(item=>[item.id,item]));
+    const nextById=new Map(next.map(item=>[item.id,item]));
+    const changed=next.filter(item=>{
+     const old=previousById.get(item.id);
+     if(!old)return true;
+     return JSON.stringify(toRow(old,user.id))!==JSON.stringify(toRow(item,user.id));
+    });
+    const removed=previous.filter(item=>!nextById.has(item.id)).map(item=>item.id);
+    // Most edits touch one row. Only send changed rows instead of rewriting the
+    // entire library (which is especially expensive for large episode catalogues).
+    const batchSize=50;
+    for(let offset=0;offset<changed.length;offset+=batchSize){
+     const {error}=await client.from('media_items').upsert(changed.slice(offset,offset+batchSize).map(item=>toRow(item,user.id)),{onConflict:'id'});
+     if(error){
+      const detail=error.message||error.details||error.hint||'Unknown database error';
+      setAppMessage('Cloud save failed: '+detail);
+      window.setTimeout(()=>setAppMessage(''),7000);
+      return false;
+     }
     }
+    for(let offset=0;offset<removed.length;offset+=batchSize){
+     const {error}=await client.from('media_items').delete().eq('user_id',user.id).in('id',removed.slice(offset,offset+batchSize));
+     if(error){
+      setAppMessage('Cloud cleanup failed: '+error.message);
+      window.setTimeout(()=>setAppMessage(''),7000);
+      return false;
+     }
+    }
+    return true;
+   }catch(e){
+    setAppMessage('Cloud save failed: '+(e instanceof Error?e.message:'Please try again.'));
+    window.setTimeout(()=>setAppMessage(''),5000);
+    return false;
    }
-   // Verify all rows before cleanup; one select() would only see the first 1,000.
-   const cloudRows:any[]=[];
-   const verifyPageSize=500;
-   let verifyOffset=0;
-   while(true){
-    const {data:pageData,error:cloudReadError}=await client.from('media_items').select('id')
-     .eq('user_id',user.id).order('id',{ascending:true}).range(verifyOffset,verifyOffset+verifyPageSize-1);
-    if(cloudReadError){setAppMessage('Cloud sync check failed: '+cloudReadError.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
-    cloudRows.push(...(pageData||[]));
-    if(!pageData||pageData.length<verifyPageSize)break;
-    verifyOffset+=verifyPageSize;
-   }
-   const keep=new Set(next.map(item=>item.id));
-   const stale=cloudRows.map(row=>String(row.id)).filter(id=>!keep.has(id));
-   if(stale.length){
-    const {error:deleteError}=await client.from('media_items').delete().eq('user_id',user.id).in('id',stale);
-    if(deleteError){setAppMessage('Cloud cleanup failed: '+deleteError.message);window.setTimeout(()=>setAppMessage(''),5000);return false}
-   }
-   return true;
-  }catch(e){setAppMessage('Cloud save failed: '+(e instanceof Error?e.message:'Please try again.'));window.setTimeout(()=>setAppMessage(''),5000);return false}
   });
   saveQueue.current=operation.catch(()=>true);
   return operation;
  };
-
-
- useEffect(()=>{
-  if(!items.length||(supabase&&user?.id&&!cloudLibraryReady))return;
-  // Backfill AniList IDs for every root anime, not just titles missing popularity.
-  // Release Radar reads anilist_id from Supabase, so this also connects legacy/manual
-  // entries to episode schedules. New AniList-search additions already carry their ID.
-  type AnimeMetadata={anilistId?:number;popularity?:number;score?:number;titles?:string[]};
-  const missing=items.filter(item=>item.medium==='anime'&&!item.parentId);
-  const syncKey=uid+':'+missing.map(item=>item.id+':'+item.title+':'+(item.anilistId??'')+':'+(item.popularity??'')).sort().join('|');
-  if(popularitySyncRef.current===syncKey)return;
-  if(!missing.length){popularitySyncRef.current=syncKey;return}
-  popularitySyncRef.current=syncKey;
-  let cancelled=false;
-  const normalizeTitle=(value:string)=>value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
-  const popularityQuery='query ($ids:[Int]){Page(perPage:50){media(id_in:$ids,type:ANIME){id popularity averageScore title{romaji english native userPreferred} synonyms}}}';
-  const titleQuery='query ($search:String){Page(page:1,perPage:10){media(search:$search,type:ANIME,sort:[SEARCH_MATCH]){id popularity averageScore title{romaji english native userPreferred} synonyms}}}';
-  void(async()=>{
-   const updatesByAniListId=new Map<number,AnimeMetadata>();
-   const updatesByItemId=new Map<string,AnimeMetadata>();
-   try{
-    const withIds=missing.filter(item=>Number.isInteger(item.anilistId)&&!Number.isFinite(item.popularity));
-    for(let offset=0;offset<withIds.length;offset+=40){
-     if(cancelled)return;
-     const ids=withIds.slice(offset,offset+40).map(item=>Number(item.anilistId)).filter(Number.isInteger);
-     if(!ids.length)continue;
-     const response=await aniList<any>(popularityQuery,{ids});
-     for(const row of Array.isArray(response?.Page?.media)?response.Page.media:[]){
-      const id=Number(row?.id);if(!Number.isInteger(id))continue;
-      updatesByAniListId.set(id,{anilistId:id,popularity:row.popularity==null?undefined:Number(row.popularity),score:row.averageScore==null?undefined:Number(row.averageScore)/10,titles:[row.title?.romaji,row.title?.english,row.title?.native,row.title?.userPreferred,...(Array.isArray(row.synonyms)?row.synonyms:[])].filter(Boolean).map(String)});
-     }
-    }
-    const unresolved=missing.filter(item=>{const data=Number.isInteger(item.anilistId)?updatesByAniListId.get(Number(item.anilistId)):undefined;const names=[item.title,...(item.alternativeTitles||[])].map(normalizeTitle).filter(Boolean);return !data||!Number.isFinite(data.popularity)||!data.titles?.some(title=>names.includes(normalizeTitle(title)));});
-    for(let offset=0;offset<unresolved.length;offset+=4){
-     if(cancelled)return;
-     const batch=unresolved.slice(offset,offset+4);
-     await Promise.all(batch.map(async item=>{
-      try{
-       const response=await aniList<any>(titleQuery,{search:item.title});
-       const candidates=Array.isArray(response?.Page?.media)?response.Page.media:[];
-       const names=[item.title,...(item.alternativeTitles||[])].map(normalizeTitle).filter(Boolean);
-       const match=candidates.find((candidate:any)=>{
-        const candidateNames=[candidate?.title?.romaji,candidate?.title?.english,candidate?.title?.native,candidate?.title?.userPreferred,...(Array.isArray(candidate?.synonyms)?candidate.synonyms:[])].map((name:any)=>normalizeTitle(String(name||''))).filter(Boolean);
-        return candidateNames.some((name:string)=>names.includes(name));
-       });
-       if(match&&Number.isInteger(Number(match.id))){
-        const id=Number(match.id);
-        const data:AnimeMetadata={anilistId:id,popularity:match.popularity==null?undefined:Number(match.popularity),score:match.averageScore==null?undefined:Number(match.averageScore)/10,titles:[match.title?.romaji,match.title?.english,match.title?.native,match.title?.userPreferred,...(Array.isArray(match.synonyms)?match.synonyms:[])].filter(Boolean).map(String)};
-        updatesByAniListId.set(id,data);
-        updatesByItemId.set(item.id,data);
-       }
-      }catch(error){console.warn('[FRAME AniList ID backfill]',item.title,error)}
-     }));
-    }
-    if(cancelled)return;
-    const current=itemsRef.current;
-    const enriched=current.map(item=>{
-     if(item.medium!=='anime'||item.parentId)return item;
-     const byId=Number.isInteger(item.anilistId)?updatesByAniListId.get(Number(item.anilistId)):undefined;const names=[item.title,...(item.alternativeTitles||[])].map(normalizeTitle).filter(Boolean);const data=updatesByItemId.get(item.id)||(byId?.titles?.some(title=>names.includes(normalizeTitle(title)))?byId:undefined);
-     if(!data)return item;
-     const resolvedId=data.anilistId??item.anilistId;
-     return {...item,anilistId:resolvedId,sourceProvider:item.sourceProvider||'anilist',externalId:item.externalId||(resolvedId?String(resolvedId):undefined),popularity:data.popularity??item.popularity,score:data.score??item.score};
-    });
-    if(enriched.some((item,index)=>item!==current[index]))await save(enriched);
-   }catch(error){
-    popularitySyncRef.current='';
-    console.warn('[FRAME AniList ID/popularity backfill]',error);
-   }
-  })();
-  return()=>{cancelled=true};
- },[items,uid,cloudLibraryReady,user?.id]);
-
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
   if(!client||!user?.id){setAppMessage('Sign in to import anime catalogue data.');return false}
