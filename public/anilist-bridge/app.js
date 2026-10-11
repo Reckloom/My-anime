@@ -17,8 +17,8 @@
   const SEARCH_QUERY = 'query ($search:String!,$type:MediaType!){Page(page:1,perPage:12){media(search:$search,type:$type,sort:[SEARCH_MATCH]){id type format title{userPreferred english romaji native} coverImage{large extraLarge} episodes chapters averageScore seasonYear status siteUrl}}}';
   const DETAIL_QUERY = 'query ($id:Int!,$type:MediaType!){Media(id:$id,type:$type){id type format title{userPreferred english romaji native} coverImage{large extraLarge} episodes chapters averageScore seasonYear status siteUrl}}';
   const VIEWER_QUERY = 'query { Viewer { id name avatar { large } } }';
-  const LIST_QUERY = 'query ($userId:Int!,$type:MediaType!){MediaListCollection(userId:$userId,type:$type,sort:[UPDATED_TIME_DESC]){lists{name entries{id status progress score scoreRaw updatedAt media{id type format title{userPreferred english romaji native} coverImage{large} episodes chapters averageScore seasonYear siteUrl}}}}}';
-  const SAVE_MUTATION = 'mutation ($mediaId:Int!,$status:MediaListStatus!,$progress:Int,$scoreRaw:Int){SaveMediaListEntry(mediaId:$mediaId,status:$status,progress:$progress,scoreRaw:$scoreRaw){id status progress scoreRaw media{id title{userPreferred}}}}';
+  const LIST_QUERY = 'query ($userId:Int!,$type:MediaType!){MediaListCollection(userId:$userId,type:$type,sort:[UPDATED_TIME_DESC]){lists{name entries{id status progress score updatedAt media{id type format title{userPreferred english romaji native} coverImage{large} episodes chapters averageScore seasonYear siteUrl}}}}}';
+  const SAVE_MUTATION = 'mutation ($mediaId:Int!,$status:MediaListStatus!,$progress:Int,$scoreRaw:Int){SaveMediaListEntry(mediaId:$mediaId,status:$status,progress:$progress,scoreRaw:$scoreRaw){id status progress media{id title{userPreferred}}}}';
 
   const $ = (id) => document.getElementById(id);
   let tokenInfo = null;
@@ -259,7 +259,7 @@
       edit.className = 'btn small';
       edit.textContent = 'Edit';
       button.append(img, copy, edit);
-      button.addEventListener('click', function () { selectMedia(entry.media, { type: type, status: entry.status, progress: entry.progress || 0, scoreRaw: entry.scoreRaw || 0 }); });
+      button.addEventListener('click', function () { selectMedia(entry.media, { type: type, status: entry.status, progress: entry.progress || 0 }); });
       container.appendChild(button);
     });
   }
@@ -312,9 +312,9 @@
     const progress = overrides && Object.prototype.hasOwnProperty.call(overrides, 'progress')
       ? overrides.progress : (existing ? existing.progress || 0 : 0);
     const scoreRaw = overrides && Object.prototype.hasOwnProperty.call(overrides, 'scoreRaw')
-      ? overrides.scoreRaw : (existing ? existing.scoreRaw || 0 : 0);
+      ? overrides.scoreRaw : '';
     $('progress-input').value = String(Math.max(0, Number(progress) || 0));
-    $('score-input').value = String(Math.min(100, Math.max(0, Number(scoreRaw) || 0)));
+    $('score-input').value = scoreRaw === '' || scoreRaw == null ? '' : String(Math.min(100, Math.max(0, Number(scoreRaw) || 0)));
     $('editor').classList.add('show');
     $('save-button').disabled = !(tokenInfo && viewer);
     showMessage('save-message', tokenInfo && viewer ? '' : 'Connect AniList before saving. You can still prepare this change now.', tokenInfo ? 'error' : '');
@@ -377,13 +377,17 @@
     if (!selected) return;
     const status = $('status-input').value;
     const progress = Math.max(0, Math.floor(Number($('progress-input').value) || 0));
-    const scoreRaw = Math.min(100, Math.max(0, Math.floor(Number($('score-input').value) || 0)));
+    const scoreText = $('score-input').value.trim();
+    const scoreRaw = scoreText === '' ? null : Math.min(100, Math.max(0, Math.floor(Number(scoreText) || 0)));
     const saveButton = $('save-button');
     saveButton.disabled = true;
     saveButton.textContent = 'Saving…';
     showMessage('save-message', 'Sending the update to AniList…');
     try {
-      const data = await api(SAVE_MUTATION, { mediaId: Number(selected.id), status: status, progress: progress, scoreRaw: scoreRaw });
+      const variables = { mediaId: Number(selected.id), status: status, progress: progress };
+      // A blank score means preserve the existing AniList rating; only send scoreRaw when the user explicitly entered one.
+      if (scoreRaw !== null) variables.scoreRaw = scoreRaw;
+      const data = await api(SAVE_MUTATION, variables);
       const saved = data.SaveMediaListEntry;
       if (!saved || !saved.id) throw new Error('AniList did not confirm the save.');
       showMessage('save-message', 'Saved: ' + titleOf(selected) + ' · ' + statusName(saved.status) + '. Your AniList list has been updated.', 'success');
