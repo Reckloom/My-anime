@@ -86,7 +86,7 @@ async function fetchMissingOnePieceCharacters(names: string[]): Promise<AnimeCha
       if (result.status !== 'fulfilled') continue;
       const rows = result.value?.Page?.characters || [];
       const exact = rows.find((row: any) => row?.name?.full && normalize(String(row.name.full)) === normalize(batch[i]));
-      const row = exact || rows[0];
+      const row = exact;
       if (!row?.name?.full) continue;
       found.push({
         id: Number(row.id) || undefined,
