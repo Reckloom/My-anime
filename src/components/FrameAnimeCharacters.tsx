@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Users } from 'lucide-react';
 import type { AnimeCharacterProfile } from '../types';
-import { aniList, CHARACTER_SEARCH_QUERY, CHARACTERS_QUERY } from '../anilist';
+import { aniList, CHARACTER_SEARCH_QUERY, CHARACTERS_QUERY, SEARCH_QUERY } from '../anilist';
 import { supabase } from '../lib/supabase';
 import { posterImageSrc } from '../posterImage';
 
@@ -22,7 +22,7 @@ type AniListCharacterEdge = {
 };
 type AniListCharacterResponse = { Media?: { title?: { english?: string | null; romaji?: string | null; native?: string | null; userPreferred?: string | null }; characters?: { edges?: AniListCharacterEdge[] } } };
 
-async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Promise<AnimeCharacterProfile[]> {
+async function loadAnimeCharacters(anilistId: number | undefined, expectedTitle: string): Promise<AnimeCharacterProfile[]> {
   if (supabase) {
     try {
       const { data, error } = await supabase.functions.invoke('anime-catalogue', {
@@ -78,7 +78,7 @@ const characterCache = new Map<string, { expiresAt: number; profiles: AnimeChara
 const characterRequests = new Map<string, Promise<AnimeCharacterProfile[]>>();
 
 async function fetchAnimeCharacters(anilistId: number, expectedTitle: string): Promise<AnimeCharacterProfile[]> {
-  const key = anilistId + ':' + expectedTitle.toLocaleLowerCase();
+  const key = (anilistId || 0) + ':' + expectedTitle.toLocaleLowerCase();
   const cached = characterCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.profiles;
   const pending = characterRequests.get(key);
@@ -119,7 +119,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
   // Dragon Ball roots must always have a stable AniList source even if the
   // parent card did not carry an anilist_id through the local library state.
   const effectiveAniListId = anilistId || (/^Dragon Ball$/i.test(title) ? 223 : /^Dragon Ball Z$/i.test(title) ? 813 : /^Dragon Ball Super$/i.test(title) ? 21175 : /^Dragon Ball GT$/i.test(title) ? 225 : /^Dragon Ball DAIMA$/i.test(title) ? 170083 : undefined);
-  const isAnimeArchive = medium === 'anime' && Boolean(effectiveAniListId);\n  const isRichArchive = isAnimeArchive || isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle;
+  const isAnimeArchive = medium === 'anime';\n  const isRichArchive = isAnimeArchive || isOnePieceTitle || isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle;
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
