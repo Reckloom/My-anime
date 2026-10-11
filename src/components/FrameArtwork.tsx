@@ -43,14 +43,16 @@ const svgFallback=(title:string,medium:Medium)=>{
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');\nconst dedicatedHierarchyArtwork=(title:string)=>{
  const t=normal(title);
+ // Explicit poster map for the Dragon Ball hierarchy. These are resolved
+ // before AniList/parent fallback so child cards never collapse to gradients.
  if(t.includes('daima')&&t.includes('season 1'))return 'https://www.toei-animation-usa.com/newsAdmin/uploads/posts/617121621.jpg';
  if(t==='daima arc'||t.includes('daima arc'))return 'https://ogre.natalie.mu/media/news/comic/2024/0719/DBDAIMA_KV.jpg';
  if(t.includes('season 1')&&t.includes('black star dragon balls'))return 'https://metrunui.github.io/images/dbgts1.jpg';
  if(t.includes('season 2')&&t.includes('baby')&&t.includes('super 17')&&t.includes('shadow dragons'))return 'https://cdn.moviepilot.de/files/ca5e65dedfc253e92a08f59d1db4b8b45093fb2306d91994ec851009d4eb/limit/1600/900/dragon-ball-gt-season-2-poster-01.jpg';
  if(t.includes('black star dragon ball'))return 'https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak%3D/v3/t/assets/p11929145_b_v8_aa.jpg';
- if(t.includes('baby'))return 'https://cdn.moviepilot.de/files/ca5e65dedfc253e92a08f59d1db4b8b45093fb2306d91994ec851009d4eb/limit/1600/900/dragon-ball-gt-season-2-poster-01.jpg';
- if(t.includes('super 17'))return 'https://artworks.thetvdb.com/banners/v4/season/16240/posters/632e1442e3cff.jpg';
- if(t.includes('shadow dragon'))return 'https://artworks.thetvdb.com/banners/v4/season/16240/posters/632e1442e3cff.jpg';
+ if(t.includes('baby'))return 'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/29e04197-041b-4715-ba54-2d9132ce1b19/dfy9qsc-35e8ff7a-0734-4a64-ae84-0b8dbd061bde.png/v1/fill/w_1280%2Ch_720%2Cq_80%2Cstrp/dragon_ball_gt_baby_saga_poster_1_3_by_rcm2_dfy9qsc-fullview.jpg';
+ if(t.includes('super 17'))return 'https://resizing.flixster.com/-XZAfHZM39UwaGJIFWKAE8fS0ak%3D/v3/t/assets/p11929148_b_v8_aa.jpg';
+ if(t.includes('shadow dragon'))return 'https://i.pinimg.com/originals/94/32/60/943260f0ebd201af8f85161d22b4da9d.jpg';
  return undefined;
 };
 
