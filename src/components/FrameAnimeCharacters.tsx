@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Users } from 'lucide-react';
 import type { AnimeCharacterProfile } from '../types';
 import { aniList, CHARACTER_SEARCH_QUERY, CHARACTERS_QUERY } from '../anilist';
@@ -28,7 +28,7 @@ async function loadAnimeCharacters(anilistId: number, expectedTitle: string): Pr
       const { data, error } = await supabase.functions.invoke('anime-catalogue', {
         body: { action: 'anime-characters', anilistId, title: expectedTitle },
       });
-      if (!error && Array.isArray(data?.characters)) {
+      if (!error && Array.isArray(data?.characters) && data.characters.length > 0) {
         return data.characters.filter((character: any) => character?.name).map((character: any) => ({
           id: Number(character.id) || undefined,
           name: String(character.name),
@@ -165,19 +165,34 @@ function shortDescription(value?: string) {
   return value.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 }
 
-export function FrameAnimeCharacters({ title, characters, anilistId }: { title: string; characters: AnimeCharacterProfile[]; anilistId?: number }) {
+export function FrameAnimeCharacters({ title, characters, anilistId, onCharactersLoaded }: { title: string; characters: AnimeCharacterProfile[]; anilistId?: number; onCharactersLoaded?: (profiles: AnimeCharacterProfile[]) => void | Promise<void> }) {
   const characterSignature = characters.map(character => [character.id || '', character.name, character.image || ''].join(':')).join('|');
   const stableCharacters = useMemo(() => characters, [characterSignature]);
   const isOnePieceTitle = /\bone piece\b/i.test(title);
   const [remoteCharacters,setRemoteCharacters] = useState<AnimeCharacterProfile[]>([]);
   const [loading,setLoading] = useState(false);
   const [failed,setFailed] = useState(false);
+  const onCharactersLoadedRef = useRef(onCharactersLoaded);
+  onCharactersLoadedRef.current = onCharactersLoaded;
+  const lastPublishedSignature = useRef('');
+  const publishCharacters = (profiles: AnimeCharacterProfile[]) => {
+    setRemoteCharacters(profiles);
+    const signature = profiles.map(character => [character.id || '', character.name, character.image || ''].join(':')).join('|');
+    if (!signature || signature === lastPublishedSignature.current || !onCharactersLoadedRef.current) return;
+    lastPublishedSignature.current = signature;
+    void Promise.resolve(onCharactersLoadedRef.current(profiles)).catch(() => {
+      if (lastPublishedSignature.current === signature) lastPublishedSignature.current = '';
+    });
+  };
 
   useEffect(() => {
     let active = true;
     setRemoteCharacters([]);
     setFailed(false);
-    const needsRemote = isOnePieceTitle || stableCharacters.length === 0 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.voiceActors?.length);
+    const profilesWithImages = stableCharacters.filter(character => Boolean(character.image)).length;
+    // A saved archive of 40+ illustrated profiles is useful even when optional
+    // bio fields are absent; don't block every detail-page opening on re-fetch.
+    const needsRemote = isOnePieceTitle ? profilesWithImages < 40 : (stableCharacters.length === 0 || stableCharacters.some(character => !character.image));
     if (!needsRemote || !anilistId) {
       setLoading(false);
       return () => { active = false; };
@@ -206,6 +221,10 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
           });
           const names = new Set(merged.map(character => normalizeName(character.name)));
           const combined = [...merged, ...mapped.filter(character => !names.has(normalizeName(character.name)))];
+          // Publish the verified core cast now. The optional name-by-name
+          // enrichment below is slower and must never keep character cards hidden.
+          publishCharacters(combined);
+          setFailed(!combined.some(character => Boolean(character.image)));
           if (/\bone piece\b/i.test(title)) {
             const rankedNames = ['Monkey D. Luffy','Roronoa Zoro','Vinsmoke Sanji','Nami','Trafalgar D. Water Law','Nico Robin','Portgas D. Ace','Shanks','Dracule Mihawk','Crocodile','Donquixote Rosinante','Boa Hancock','Tony Tony Chopper','Sabo','Uta','Carrot','Rocks D. Xebec','Yamato','Usopp','Loki','Charlotte Cracker','Donquixote Doflamingo','Eustass Kid','Perona','Buggy','Marco','Brook','Nefertari Vivi','Franky','Jinbe','Charlotte Katakuri','Bartholomew Kuma','Smoker','Bentham','Rob Lucci','Edward Newgate','Koby','Kaku','Cavendish','Monkey D. Garp','Kuzan','Izo','Benn Beckman','Silvers Rayleigh','Going Merry','Jewelry Bonney','Alber','Borsalino','Enel','Lilith','Charlotte Perospero','Killer','Imu','Sakazuki','Kuro','Bartolomeo','Namule','Gol D. Roger','Joy Boy','Marshall D. Teach'];
             const aliases: Record<string,string> = { 'Trafalgar D. Water Law':'Trafalgar Law','Bentham':'Bentham (Mr. 2 / Bon Clay)','Koby':'Coby','Lilith':'Vegapunk Punk-02 Lilith','Joy Boy':'Joyboy' };
@@ -225,14 +244,16 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
               });
             }
           }
-          setRemoteCharacters(combined);
+          publishCharacters(combined);
           setFailed(!combined.some(character => Boolean(character.image)));
         }
       })
       .catch(() => { if (active) setFailed(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [anilistId, stableCharacters, title, isOnePieceTitle]);
+  // Saving fetched profiles changes the parent prop; keep the original fetch alive.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anilistId, title, isOnePieceTitle]);
 
   const rawProfiles = remoteCharacters.length ? remoteCharacters : stableCharacters;
   const isOnePiece = /\bone piece\b/i.test(title);
