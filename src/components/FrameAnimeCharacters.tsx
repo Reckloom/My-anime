@@ -268,7 +268,9 @@ export function FrameAnimeCharacters({ title, characters, anilistId }: { title: 
         const target = normalizeCharacterName(rankedName);
         const character = rankedProfiles.find(item => {
           const name = normalizeCharacterName(item.name);
-          return name === target || normalizeCharacterName(onePieceAliases[item.name] || '') === target;
+          const alias = onePieceAliases[item.name];
+          const aliasName = normalizeCharacterName(alias || '');
+          return name === target || aliasName === target;
         });
         return character ? {...character, bounty: character.bounty || bounties[character.name], popularityRank: index + 1} : null;
       }).filter(Boolean).map(character => character as AnimeCharacterProfile & {popularityRank:number})
