@@ -175,16 +175,17 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    restoreTimer=window.setInterval(restoreScroll,40);
    return;
   }
-  if(item.parentId){const parent=library.find(x=>x.id===item.parentId);if(parent&&navigate){navigate(parent);return}}
+  if(item.parentId){const parent=libraryById.get(item.parentId);if(parent&&navigate){navigate(parent);return}}
   close();
  };
+ const libraryById=useMemo(()=>new Map(library.map(x=>[x.id,x] as const)),[library]);
  const game=d.medium==='game',movie=d.medium==='movie';
  const max=game?100:movie?1:(d.total||500);
  const pct=game||movie?d.progress:(d.progress/(d.total||1)*100);
  const canUseAsParent=(candidate:MediaItem)=>{
   if(candidate.id===d.id)return false;
   let cursor:MediaItem|undefined=candidate,hops=0;
-  while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=library.find(x=>x.id===cursor?.parentId);hops++}
+  while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=libraryById.get(cursor.parentId);hops++}
   return true;
  };
  useEffect(()=>{
@@ -254,7 +255,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const altTitles=listValue(d.alternativeTitles);
  const genres=listValue(d.genres);
  const themes=listValue(d.themes);
- const parentCandidates=useMemo(()=>{const byId=new Map(library.map(x=>[x.id,x]));return library.filter(candidate=>{if(candidate.id===d.id)return false;let cursor:MediaItem|undefined=candidate,hops=0;while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=byId.get(cursor.parentId);hops++;}return true;});},[library,d.id]);
+ const parentCandidates=useMemo(()=>library.filter(candidate=>{if(candidate.id===d.id)return false;let cursor:MediaItem|undefined=candidate,hops=0;while(cursor?.parentId&&hops<2000){if(cursor.parentId===d.id)return false;cursor=libraryById.get(cursor.parentId);hops++;}return true;}),[library,d.id,libraryById]);
  const navItems=navigationItems?.length?navigationItems:[item];
  const navIndex=Math.max(0,navItems.findIndex(x=>x.id===item.id));
  const hasPrevious=navItems.length>1;
