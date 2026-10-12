@@ -249,7 +249,7 @@ export default function App(){
   let active=true;
   const load=async()=>{
    setCloudLibraryReady(false);
-   const cleanStartKey=`frame-clean-start-2026-10-08:${cloudUserId}`;
+   const cleanStartKey=`frame-clean-start-2026-10-12:${cloudUserId}`;
    if(!localStorage.getItem(cleanStartKey)){
     localStorage.removeItem('frame-library:guest');
     localStorage.removeItem('frame-library');
