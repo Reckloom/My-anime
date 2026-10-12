@@ -284,7 +284,31 @@ export default function App(){
     offset+=pageSize;
    }
    if(active){
-    const cloudItems=dedupeMediaItems(allCloudRows.map(dbToMedia));
+    const loadedCloudItems=dedupeMediaItems(allCloudRows.map(dbToMedia));
+    // Personal-library policy: every currently released anime in this private
+    // library is considered fully watched. The stored total is the released
+    // count, so this never invents unreleased episodes; release-radar can raise
+    // the total later and the next cloud hydration will mark the new release watched too.
+    const cloudItems=loadedCloudItems.map(item=>
+     item.medium==='anime'&&item.total!=null&&item.total>0
+      ?normalise({...item,progress:item.total,status:'completed'})
+      :item
+    );
+    const completionChanges=cloudItems.filter((item,index)=>{
+     const previousItem=loadedCloudItems[index];
+     return item.medium==='anime'&&item.total!=null&&item.total>0&&(
+      item.progress!==previousItem.progress||item.status!==previousItem.status
+     );
+    });
+    if(completionChanges.length){
+     for(let offset=0;offset<completionChanges.length;offset+=500){
+      const {error:completionError}=await client.from('media_items').upsert(
+       completionChanges.slice(offset,offset+500).map(item=>toRow(item,cloudUserId)),
+       {onConflict:'id'}
+      );
+      if(completionError)console.warn('[FRAME released anime completion sync]',completionError);
+     }
+    }
     // Guest mode is intentionally local-first while still hydrating from the
     // owner's cloud library. Merge the browser cache instead of deleting it;
     // this preserves immediate guest additions and keeps QA/offline fallback sane.
