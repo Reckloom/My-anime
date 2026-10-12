@@ -270,12 +270,10 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
     }
     return ordered.slice(0,limit);
   };
-  // These names intentionally match the character names actually stored by AniList
-  // in this library. Using hero aliases such as "Queen" or "Dragon Boy" here made
-  // the rank matcher miss the saved profiles and fall back to database order.
-  const linkClickTop20 = ['Xiaoshi Cheng','Guang Lu','Ling Qiao','Bin Chen','Shanshan Xu','Emma','Min Liu','Li Xiao','Xiao Chen','Lei Liu','Hongbin Lu','Zhen Lin','Xia Yu','Yi Dong','Xie Zhu','Meng Liu','Doudou','Xiao Chen Ma','Hongbin Lu Ma','Xiaoshi Cheng Ma'];
-  const toBeHeroXTop20 = ['X','Yuwei Liu','Liang Long','Mo Sha','Xiaoqiang','Luo Li','Xingyun Qing','Ahu','Cheng Yang','Nice','Ling Lin','Yueqing Xiao','Juan','Qi Shi','Pohuai Wang','Budao','Gulang','De Shang','Qing Xia','Hun Dian'];
-  const profiles = isLinkClickTitle ? rankedArchive(linkClickTop20,20) : isToBeHeroXTitle ? rankedArchive(toBeHeroXTop20,20) : isOnePiece ? (() => {
+  // AniList's character query is sorted by FAVOURITES_DESC. For Link Click
+  // and To Be Hero X, preserve that source order rather than guessing a curated
+  // order from aliases or insertion order.
+  const profiles = isLinkClickTitle ? rankedProfiles.slice(0,20) : isToBeHeroXTitle ? rankedProfiles.slice(0,20) : isOnePiece ? (() => {
     const used=new Set<string>();
     const ordered: (AnimeCharacterProfile & {popularityRank?:number})[]=[];
     // Match the curated favourites first, including AniList's "family-name first"
