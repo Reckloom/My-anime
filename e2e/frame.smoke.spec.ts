@@ -37,6 +37,9 @@ test.describe('FRAME core smoke flow', () => {
   test('persists guest library changes across reloads', async ({ page }) => {
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('frame-guest', '1'));
+    // Reboot the app so the guest flag is part of the initial React state,
+    // matching a real guest-mode session rather than mutating storage mid-render.
+    await page.reload();
     await page.getByRole('button', { name: 'Search', exact: true }).first().click();
     await page.getByRole('button', { name: /manual/i }).click();
     await page.getByRole('textbox', { name: 'Title', exact: true }).fill('FRAME Guest Persistence Test');
