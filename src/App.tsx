@@ -310,7 +310,9 @@ export default function App(){
    }
    if(active){
     const loadedCloudItems=repairAnimePosters(dedupeMediaItems(allCloudRows.map(dbToMedia)));
-    // Keep saved watch progress unchanged when loading from cloud.\n    const cloudItems=loadedCloudItems;\n    // Guest mode is intentionally local-first while still hydrating from the
+    // Keep saved watch progress unchanged when loading from cloud.
+    const cloudItems=loadedCloudItems;
+    // Guest mode is intentionally local-first while still hydrating from the
     // owner's cloud library. Merge the browser cache instead of deleting it;
     // this preserves immediate guest additions and keeps QA/offline fallback sane.
     // Authenticated mode remains cloud-authoritative.
