@@ -41,7 +41,13 @@ export function posterImageSrc(value?: string | null): string {
     // AniList cover URLs are returned with the exact asset filename by GraphQL.
     // Keep them direct; proxying a guessed/rewritten CDN path can turn valid
     // artwork into the colored fallback placeholder.
-    if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork || anilistArtwork) {
+    if (anilistArtwork) {
+      // AniList's GraphQL response already contains the exact current asset URL.
+      // Do not proxy it again: the proxy is useful for third-party episode art,
+      // but it can turn a valid AniList cover into a fallback if the CDN asset changes.
+      return parsed.href;
+    }
+    if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork) {
       return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
     }
     return url;
