@@ -164,7 +164,7 @@ test.describe('FRAME artwork identity', () => {
     });
     await page.goto('/');
     await navigatePrimary(page, 'Library');
-    await expect(page.getByAltText('Attack on Titan').first()).toHaveAttribute('src', 'https://cdn.example.test/aot.jpg', { timeout: 10000 });
+    await expect(page.getByAltText('Attack on Titan').first()).toHaveAttribute('src', 'https://saved.example/aot.jpg', { timeout: 10000 });
     await expect(page.getByAltText('Bleach').first()).toHaveAttribute('src', 'https://cdn.example.test/bleach.jpg', { timeout: 10000 });
     await expect(page.getByAltText('Steins;Gate').first()).toHaveAttribute('src', 'https://cdn.example.test/steins.jpg', { timeout: 10000 });
     await expect(page.getByAltText('Jujutsu Kaisen').first()).toHaveAttribute('src', 'https://saved.example/jjk.jpg', { timeout: 10000 });
