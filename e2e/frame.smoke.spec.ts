@@ -365,6 +365,11 @@ test.describe('FRAME anime hierarchy and character archive', () => {
 
 test.describe('FRAME AOT archive regression', () => {
   test('keeps Attack on Titan seasons, arcs, progress and rich characters intact', async ({ page }) => {
+    await page.route('https://example.com/eren.jpg', route => route.fulfill({
+      status: 200,
+      contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18"/></svg>'
+    }));
     await page.route('**/functions/v1/anime-catalogue', async route => {
       const headers = {
         'Access-Control-Allow-Origin': '*',
