@@ -998,7 +998,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    return;
   }
   const state={frameRoute:true,framePage:next};
-  if(selected)history.replaceState(state,'',window.location.href);
+  if(selected||history.state?.frameDetailId)history.replaceState(state,'',window.location.href);
   else history.pushState(state,'',window.location.href);
   setSelected(null);
   setPage(next);
