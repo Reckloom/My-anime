@@ -377,8 +377,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  },[user?.id]);
 
  const save=async(list:MediaItem[])=>{
+  const guestMode=guest||localStorage.getItem('frame-guest')==='1';
   // Never run a destructive cloud reconciliation against a partially loaded library.
-  if(supabase&&!cloudLibraryReady&&!guest){
+  if(supabase&&!cloudLibraryReady&&!guestMode){
    // Authenticated cloud reconciliation must wait for a complete library.
    // Guest mode is optimistic/local-first so an add never blocks on a network race.
    const deadline=Date.now()+3000;
@@ -392,7 +393,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const previous=itemsRef.current;
   const next=dedupeMediaItems(list.map(normalise));
   itemsRef.current=next;setItems(next);
-  if(guest){try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}
+  if(guestMode){try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}
   const client=supabase;
   if(!client)return true;
   const operation=saveQueue.current.then(async()=>{
