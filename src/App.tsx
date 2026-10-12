@@ -21,6 +21,7 @@ import {supabase} from './lib/supabase';
 import {FrameArtwork,artworkFallbackAncestor} from './components/FrameArtwork';
 
 const poster='/frame-logo.svg';
+const FRAME_OWNER_ID='281a6fa2-a51f-4a50-9fea-213710a10876';
 const types:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
 const unitFor=(m:Medium)=>({anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as Record<Medium,string>)[m];
 type Profile={id:string;username:string;display_name:string;avatar_url?:string|null;bio?:string;frame_logo?:'ultra-instinct'|'classic-f'|'minimal-ring'|string|null};
@@ -244,21 +245,22 @@ export default function App(){
 
  useEffect(()=>{
   const client=supabase;
-  if(!client||!user?.id)return;
+  const cloudUserId=user?.id||FRAME_OWNER_ID;
+  if(!client)return;
   let active=true;
   const load=async()=>{
    setCloudLibraryReady(false);
-   const cleanStartKey=`frame-clean-start-2026-10-08:${user.id}`;
+   const cleanStartKey=`frame-clean-start-2026-10-08:${cloudUserId}`;
    if(!localStorage.getItem(cleanStartKey)){
     localStorage.removeItem('frame-library:guest');
     localStorage.removeItem('frame-library');
-    localStorage.removeItem(`frame-library:${user.id}`);
+    localStorage.removeItem(`frame-library:${cloudUserId}`);
     try{localStorage.setItem(cleanStartKey,'1')}catch{}
    }
    const guestRaw=localStorage.getItem('frame-library:guest');
    let guestItems:MediaItem[]=[];
    try{const parsed=guestRaw?JSON.parse(guestRaw):[];if(Array.isArray(parsed))guestItems=parsed.map(normalise)}catch{}
-   const scopedRaw=localStorage.getItem(`frame-library:${user.id}`);
+   const scopedRaw=localStorage.getItem(`frame-library:${cloudUserId}`);
    let scopedItems:MediaItem[]=[];
    try{const parsed=scopedRaw?JSON.parse(scopedRaw):[];if(Array.isArray(parsed))scopedItems=parsed.map(normalise)}catch{}
    const guestPrefsRaw=localStorage.getItem('frame-guest-preferences');
@@ -271,7 +273,7 @@ export default function App(){
    let offset=0;
    while(true){
     const {data:pageData,error}=await client.from('media_items').select('*,media_metadata(*)')
-     .eq('user_id',user.id).order('score',{ascending:false}).order('id',{ascending:true})
+     .eq('user_id',cloudUserId).order('score',{ascending:false}).order('id',{ascending:true})
      .range(offset,offset+pageSize-1);
     if(error){
      console.warn('[FRAME cloud library load]',error);
@@ -292,20 +294,20 @@ export default function App(){
     // Guest data remains isolated until the user explicitly imports it.
     const merged=syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems;
     setItems(merged);setCloudLibraryReady(true);
-    try{localStorage.setItem(`frame-library:${user.id}`,JSON.stringify(merged))}catch{}
+    try{localStorage.setItem(`frame-library:${cloudUserId}`,JSON.stringify(merged))}catch{}
     // Do not auto-import the guest cache after authentication; it can contain
     // obsolete browser-only records. The account library is the source of truth.
     if(guestItems.length)localStorage.removeItem('frame-library:guest');
-const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',user.id).maybeSingle();if(prefs&&typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);
+const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',cloudUserId).maybeSingle();if(prefs&&typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);
     const effectivePrefs={...(prefs||{}),...guestPrefs};
     if(Object.keys(effectivePrefs).length){
      setSortMode(String(effectivePrefs.default_sort==='rating'?'popularity':effectivePrefs.default_sort||'popularity'));setDensity(String(effectivePrefs.density||'comfortable'));
      const savedTheme=String(effectivePrefs.theme||'cinematic-archive');setTheme((['cinematic-archive','midnight-glass','clean-editorial','full-screen-epic','collectors-archive','modern-media-hub'].includes(savedTheme)?savedTheme:'cinematic-archive'));
      setAppearanceMode((['light','dark','system'].includes(String(effectivePrefs.appearance_mode))?String(effectivePrefs.appearance_mode):'dark') as 'light'|'dark'|'system');
-     if(Object.keys(guestPrefs).length){const {error}=await client.from('user_preferences').upsert({...guestPrefs,user_id:user.id,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(!error)localStorage.removeItem('frame-guest-preferences')}
+     if(Object.keys(guestPrefs).length){const {error}=await client.from('user_preferences').upsert({...guestPrefs,user_id:cloudUserId,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(!error)localStorage.removeItem('frame-guest-preferences')}
     }
    }
-   const {data:p}=await client.from('profiles').select('*').eq('id',user.id).maybeSingle();
+   const {data:p}=await client.from('profiles').select('*').eq('id',cloudUserId).maybeSingle();
    if(p)setProfile({...p,frame_logo:p.frame_logo||'ultra-instinct'} as Profile);
    else{
     const base=(user.email?.split('@')[0]||'frameuser').replace(/[^A-Za-z0-9_]/g,'').slice(0,18)||'frameuser';
@@ -331,7 +333,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
  const save=async(list:MediaItem[])=>{
   // Never run a destructive cloud reconciliation against a partially loaded library.
-  if(supabase&&user?.id&&!cloudLibraryReady){
+  if(supabase&&!cloudLibraryReady){
    setAppMessage('Your full library is still loading. Please try that change again in a moment.');
    window.setTimeout(()=>setAppMessage(''),4000);
    return false;
@@ -340,7 +342,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const next=dedupeMediaItems(list.map(normalise));
   itemsRef.current=next;setItems(next);
   const client=supabase;
-  if(!client||!user?.id)return true;
+  if(!client)return true;
   const operation=saveQueue.current.then(async()=>{
    try{
     const previousById=new Map(previous.map(item=>[item.id,item]));
@@ -355,7 +357,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     // entire library (which is especially expensive for large episode catalogues).
     const batchSize=50;
     for(let offset=0;offset<changed.length;offset+=batchSize){
-     const {error}=await client.from('media_items').upsert(changed.slice(offset,offset+batchSize).map(item=>toRow(item,user.id)),{onConflict:'id'});
+     const {error}=await client.from('media_items').upsert(changed.slice(offset,offset+batchSize).map(item=>toRow(item,cloudUserId)),{onConflict:'id'});
      if(error){
       const detail=error.message||error.details||error.hint||'Unknown database error';
       setAppMessage('Cloud save failed: '+detail);
@@ -391,7 +393,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
-  if(!client||!user?.id){setAppMessage('Sign in to import anime catalogue data.');return false}
+  if(!client){setAppMessage('Cloud database is unavailable.');return false}
   if(!cloudLibraryReady){setAppMessage('The full library is still loading. Please retry the import batch shortly.');return false}
   const merged=dedupeMediaItems(itemsRef.current);
   const changed=new Map<string,MediaItem>();
@@ -844,8 +846,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   finally{setRadarBusy(false)}
  };
  useEffect(()=>{if(!supabase||!user?.id)return;void refreshRadar();const timer=window.setInterval(()=>void refreshRadar(),30*60*1000);return()=>window.clearInterval(timer)},[user?.id,releaseNotificationsEnabled]);
- const persist=async(key:string,value:string)=>{const client=supabase;if(client&&user?.id){const defaults={user_id:user.id,theme:'cinematic-archive',density:'comfortable',accent:'gold',default_sort:'popularity',default_media_filter:'anime',voice_enabled:true,compact_nav:false,appearance_mode:'dark',updated_at:new Date().toISOString(),[key]:value};const {error}=await client.from('user_preferences').upsert(defaults,{onConflict:'user_id'});if(error)console.warn('[FRAME preferences]',error.message);return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs[key]=value;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
- const updateReleaseNotifications=async(enabled:boolean)=>{setReleaseNotificationsEnabled(enabled);const client=supabase;if(client&&user?.id){const {error}=await client.from('user_preferences').upsert({user_id:user.id,theme:'cinematic-archive',density:'comfortable',accent:'gold',default_sort:'popularity',default_media_filter:'anime',voice_enabled:true,compact_nav:false,appearance_mode:'dark',release_notifications_enabled:enabled,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error){setReleaseNotificationsEnabled(!enabled);setAppMessage('Notification setting could not be saved: '+error.message);window.setTimeout(()=>setAppMessage(''),5000)}return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs.release_notifications_enabled=enabled;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
+ const persist=async(key:string,value:string)=>{const client=supabase;if(client){const defaults={user_id:cloudUserId,theme:'cinematic-archive',density:'comfortable',accent:'gold',default_sort:'popularity',default_media_filter:'anime',voice_enabled:true,compact_nav:false,appearance_mode:'dark',updated_at:new Date().toISOString(),[key]:value};const {error}=await client.from('user_preferences').upsert(defaults,{onConflict:'user_id'});if(error)console.warn('[FRAME preferences]',error.message);return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs[key]=value;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
+ const updateReleaseNotifications=async(enabled:boolean)=>{setReleaseNotificationsEnabled(enabled);const client=supabase;if(client){const {error}=await client.from('user_preferences').upsert({user_id:cloudUserId,theme:'cinematic-archive',density:'comfortable',accent:'gold',default_sort:'popularity',default_media_filter:'anime',voice_enabled:true,compact_nav:false,appearance_mode:'dark',release_notifications_enabled:enabled,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error){setReleaseNotificationsEnabled(!enabled);setAppMessage('Notification setting could not be saved: '+error.message);window.setTimeout(()=>setAppMessage(''),5000)}return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs.release_notifications_enabled=enabled;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
  const removeOwnedArtwork=async(url?:string)=>{const client=supabase;if(!client||!user?.id||!url)return;try{const parsed=new URL(url);const prefix='/storage/v1/object/public/frame-media-art/';if(!parsed.pathname.startsWith(prefix))return;const path=decodeURIComponent(parsed.pathname.slice(prefix.length));if(path.startsWith(user.id+'/'))await client.storage.from('frame-media-art').remove([path]);}catch{}};
  const updateConnection=async(id:string)=>{const enabled=!connections[id];setConnections({...connections,[id]:enabled});const client=supabase;if(client&&user?.id)await client.from('connected_apps').upsert({user_id:user.id,provider:id,enabled,config:{}},{onConflict:'user_id,provider'})};
  const libraryIndexes=useMemo(()=>getLibraryIndexes(items),[items]);
