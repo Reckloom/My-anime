@@ -412,8 +412,13 @@ test.describe('FRAME AOT archive regression', () => {
     await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
     await expect(page.locator('.progress-edit input').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible();
-    await expect(page.getByText('Attack on Titan — Season 1 (Episodes 1–25)', { exact: true })).toBeVisible();
+    const seasonCard=page.locator('.hierarchy-part-card').filter({hasText:'Attack on Titan — Season 1 (Episodes 1–25)'}).first();
+    await expect(seasonCard).toBeVisible();
+    await seasonCard.click();
+    await expect(page.getByRole('heading', { name: 'Attack on Titan — Season 1 (Episodes 1–25)', exact: true })).toBeVisible();
     await expect(page.getByText('Fall of Shiganshina Arc (Episodes 1–2)', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Go back', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Top 20 Characters', exact: true })).toBeVisible();
     await expect(page.getByAltText('Eren Yeager portrait')).toBeVisible();
   });
