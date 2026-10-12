@@ -251,6 +251,9 @@ export default function App(){
  useEffect(()=>{document.documentElement.dataset.density='comfortable';document.documentElement.dataset.frameTheme='ultra-movie';document.documentElement.dataset.frameMode='dark'},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);if(history.state?.frameDetailId)history.back();setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
 
  useEffect(()=>{
+  // Guest saves are written explicitly by save(); do not let the generic
+  // recovery snapshot race async hydration and overwrite the guest cache.
+  if(guest)return;
   // Keep a recovery snapshot, but serialize it only when the browser is idle.
   // This avoids making large episode libraries compete with scrolling/clicks.
   let cancelled=false;
