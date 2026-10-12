@@ -45,7 +45,7 @@ assert.match(characters, /data\.characters\.length > 0/,
 assert.match(app, /dataset\.frameTheme=theme/, 'Selected theme must be applied to the document');
 assert.match(app, /setTheme\(id\);void persistSetting\('theme',id\)/,
   'Theme picker must apply and persist the selected theme');
-assert.equal((app.match(/from\('user_preferences'\)\.select\('\*'\)\.eq\('user_id',user\.id\)\.maybeSingle\(\)/g) || []).length, 1,
+assert.equal((app.match(/from\('user_preferences'\)\.select\('\*'\)\.eq\('user_id',(cloudUserId|user\.id)\)\.maybeSingle\(\)/g) || []).length, 1,
   'User preferences should only be loaded once to avoid stale settings overwriting changes');
 
 for (const theme of themes) {
