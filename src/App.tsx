@@ -369,7 +369,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
       const detail=error.message||error.details||error.hint||'Unknown database error';
       setAppMessage('Cloud save failed: '+detail);
       window.setTimeout(()=>setAppMessage(''),7000);
-      return false;
+      return guest;
      }
     }
     for(let offset=0;offset<removed.length;offset+=batchSize){
