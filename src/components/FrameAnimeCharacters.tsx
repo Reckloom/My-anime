@@ -146,7 +146,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
     const profilesWithImages = stableCharacters.filter(character => Boolean(character.image)).length;
     // A saved archive of 40+ illustrated profiles is useful even when optional
     // bio fields are absent; don't block every detail-page opening on re-fetch.
-    const needsRemote = (isLinkClickTitle || isToBeHeroXTitle) ? true : isOnePieceTitle
+    const needsRemote = isOnePieceTitle
       ? (profilesWithImages < 60 || stableCharacters.length < 60)
       : isNarutoTitle || isBleachTitle || isBlackCloverTitle || isAttackOnTitanTitle || isVinlandSagaTitle || isDragonBallTitle
         ? (stableCharacters.length < 20 || stableCharacters.some(character => !character.image || !character.birthday || !character.age || !character.gender || !character.bloodType || !character.voiceActors?.length))
@@ -156,7 +156,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
       return () => { active = false; };
     }
     setLoading(true);
-    fetchAnimeCharacters(effectiveAniListId, title, isLinkClickTitle || isToBeHeroXTitle)
+    fetchAnimeCharacters(effectiveAniListId, title)
       .then(async mapped => {
         if (active) {
           const normalizeName = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
@@ -178,15 +178,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
             } : existing;
           });
           const names = new Set(merged.map(character => normalizeName(character.name)));
-          // Link Click and To Be Hero X use AniList favourites ordering as the
-          // authoritative popularity order. Keep saved profiles only for
-          // metadata enrichment; never let stale local ordering move a rank.
-          const combined = (isLinkClickTitle || isToBeHeroXTitle)
-            ? mapped.map(remote => {
-                const existing = stableCharacters.find(item => normalizeName(item.name) === normalizeName(remote.name));
-                return existing ? { ...remote, ...existing, image: existing.image || remote.image, description: existing.description || remote.description, sourceUrl: existing.sourceUrl || remote.sourceUrl, role: existing.role || remote.role, birthday: existing.birthday || remote.birthday, age: existing.age || remote.age, bloodType: existing.bloodType || remote.bloodType, gender: existing.gender || remote.gender, voiceActors: existing.voiceActors?.length ? existing.voiceActors : remote.voiceActors } : remote;
-              })
-            : [...merged, ...mapped.filter(character => !names.has(normalizeName(character.name)))];
+          const combined = [...merged, ...mapped.filter(character => !names.has(normalizeName(character.name)))];
           if (/\bone piece\b/i.test(title)) {
             if (!combined.some(character => normalizeName(character.name) === 'goingmerry')) {
               combined.push({
@@ -264,7 +256,23 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
     'Dragon Ball GT':['Gokuu Son','Vegeta','Pan','Trunks','Bulma','Uub','Baby','Gogeta','Omega Shenron','Super 17','Piccolo','Gohan Son','Goten','Android 18','Mr. Satan','Chi-Chi','Muten Roushi','Dende','Shenron','Giru'],
     'Dragon Ball DAIMA':['Gokuu Son','Vegeta','Higashi no Kaioushin','Glorio','Panzy','Bulma','Gomah','Degesu','Dr. Arinsu','Piccolo','Majin Kuu','Majin Duu','Neva','Hybis','Marba','Tamagami Number One','Tamagami Number Two','Tamagami Number Three','Chi-Chi','Goten']
   };
-  const profiles = isOnePiece ? (() => {
+  const rankedArchive = (wanted:string[], limit=20) => {
+    const used=new Set<string>();
+    const ordered: AnimeCharacterProfile[]=[];
+    for(const wantedName of wanted){
+      const match=rankedProfiles.find(c=>!used.has(String(c.id||c.name))&&sameCharacterName(c.name,wantedName));
+      if(match){used.add(String(match.id||match.name));ordered.push(match);}
+    }
+    for(const c of rankedProfiles){
+      const key=String(c.id||c.name);
+      if(!used.has(key)){used.add(key);ordered.push(c);}
+      if(ordered.length>=limit)break;
+    }
+    return ordered.slice(0,limit);
+  };
+  const linkClickTop20 = ['Xiaoshi Cheng','Guang Lu','Ling Qiao','Vein','Xiao Liu','Fei Xia','Shanshan Xu','Bin Chen','Emma','Min Liu','Tianchen Li','Tianxi Li','Jin Qiao','Hongbin Dong','Zheng Liu','Xudong Lin','Xiao Li','Xiao Ma','Xiao Wang','Xiao Zhang'];
+  const toBeHeroXTop20 = ['X','Queen','Dragon Boy','Ghostblade','Little Johnny','Big Johnny','Loli','Lucky Cyan','Ahu','E-Soul','Nice','Ling Lin','Cheng Yang','Xingyun Qing','Yuwei Liu','Luo Li','Shand','Zero','Moon','Smile'];
+  const profiles = isLinkClickTitle ? rankedArchive(linkClickTop20,20) : isToBeHeroXTitle ? rankedArchive(toBeHeroXTop20,20) : isOnePiece ? (() => {
     const used=new Set<string>();
     const ordered: (AnimeCharacterProfile & {popularityRank?:number})[]=[];
     // Match the curated favourites first, including AniList's "family-name first"
