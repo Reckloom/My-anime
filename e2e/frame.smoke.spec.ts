@@ -27,8 +27,8 @@ test.describe('FRAME core smoke flow', () => {
 
     await page.getByLabel('Title').fill('FRAME QA Test Title');
     await page.getByRole('button', { name: 'Add to my library' }).click();
-    // Adding a title opens its detail overlay; close it before navigating to Library.
-    await page.keyboard.press('Escape');
+    // Adding a title opens its detail overlay; close it explicitly before navigating.
+    await page.getByRole('button', { name: 'Close details', exact: true }).click();
 
     await navigatePrimary(page, 'Library');
     await expect(page.getByRole('button', { name: /FRAME QA Test Title Anime —/ })).toBeVisible();
