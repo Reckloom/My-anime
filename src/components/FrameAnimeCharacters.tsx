@@ -273,7 +273,23 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
   // AniList's character query is sorted by FAVOURITES_DESC. For Link Click
   // and To Be Hero X, preserve that source order rather than guessing a curated
   // order from aliases or insertion order.
-  const profiles = isLinkClickTitle ? rankedProfiles.slice(0,20) : isToBeHeroXTitle ? rankedProfiles.slice(0,20) : isOnePiece ? (() => {
+  const toBeHeroXOfficialRanking = ['X','Queen','Dragon Boy','Ghostblade','The Johnnies','Loli','Lucky Cyan','Ahu','E-Soul','Nice','Lin Ling'];
+  const officialToBeHeroXArchive = () => {
+    const used = new Set<string>();
+    const ordered: AnimeCharacterProfile[] = [];
+    for (const wantedName of toBeHeroXOfficialRanking) {
+      const match = rankedProfiles.find(character => !used.has(String(character.id || character.name)) && sameCharacterName(character.name, wantedName));
+      if (match) { used.add(String(match.id || match.name)); ordered.push(match); }
+    }
+    for (const character of rankedProfiles) {
+      const key = String(character.id || character.name);
+      if (used.has(key)) continue;
+      used.add(key); ordered.push(character);
+      if (ordered.length >= 20) break;
+    }
+    return ordered.slice(0,20);
+  };
+  const profiles = isLinkClickTitle ? rankedProfiles.slice(0,20) : isToBeHeroXTitle ? officialToBeHeroXArchive() : isOnePiece ? (() => {
     const used=new Set<string>();
     const ordered: (AnimeCharacterProfile & {popularityRank?:number})[]=[];
     // Match the curated favourites first, including AniList's "family-name first"
