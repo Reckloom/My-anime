@@ -117,7 +117,8 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
   const isVinlandSagaTitle = /\bvinland\s+saga\b/i.test(title);
   const isDragonBallTitle = /\bdragon\s+ball\b/i.test(title);
   const isLinkClickTitle = /\blink\s*click\b/i.test(title);
-  const isToBeHeroXTitle = /\bto\s*be\s*hero\s*x\b/i.test(title);\n  const isFullmetalAlchemistTitle = /\bfullmetal\s+alchemist\b/i.test(title);
+  const isToBeHeroXTitle = /\bto\s*be\s*hero\s*x\b/i.test(title);
+  const isFullmetalAlchemistTitle = /\bfullmetal\s+alchemist\b/i.test(title);
   // Dragon Ball roots must always have a stable AniList source even if the
   // parent card did not carry an anilist_id through the local library state.
   const effectiveAniListId = anilistId || (/^Dragon Ball$/i.test(title) ? 223 : /^Dragon Ball Z$/i.test(title) ? 813 : /^Dragon Ball Super$/i.test(title) ? 21175 : /^Dragon Ball GT$/i.test(title) ? 225 : /^Dragon Ball DAIMA$/i.test(title) ? 170083 : isLinkClickTitle ? 126403 : isToBeHeroXTitle ? 156092 : isFullmetalAlchemistTitle ? 5114 : undefined);
