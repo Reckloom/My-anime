@@ -334,13 +334,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 
  const save=async(list:MediaItem[])=>{
   // Never run a destructive cloud reconciliation against a partially loaded library.
-  if(supabase&&!cloudLibraryReady){
-   // The first render can race the cloud-library bootstrap. Wait briefly instead
-   // of dropping a legitimate add/edit when the user clicks immediately.
-   const deadline=Date.now()+8000;
+  if(supabase&&!cloudLibraryReady&&!guest){
+   // Authenticated cloud reconciliation must wait for a complete library.
+   // Guest mode is optimistic/local-first so an add never blocks on a network race.
+   const deadline=Date.now()+3000;
    while(!cloudLibraryReady&&Date.now()<deadline)await new Promise(resolve=>window.setTimeout(resolve,100));
    if(!cloudLibraryReady){
-    setAppMessage('Your full library is still loading. Please try that change again in a moment.');
+    setAppMessage('Your full library is still loading. Please try that change in a moment.');
     window.setTimeout(()=>setAppMessage(''),4000);
     return false;
    }
