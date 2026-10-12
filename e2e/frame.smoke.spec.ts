@@ -43,11 +43,11 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: 'Add to my library' }).click();
     await page.keyboard.press('Escape');
     await navigatePrimary(page, 'Library');
-    await expect(page.getByText('FRAME Guest Persistence Test', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
 
     await page.reload();
     await navigatePrimary(page,'Library');
-    await expect(page.getByText('FRAME Guest Persistence Test', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
   });
 
   test('keeps the permanent Ultra-Movie appearance and exposes sign-in', async ({ page }) => {
