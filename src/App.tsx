@@ -34,9 +34,8 @@ function normalise(item:MediaItem):MediaItem{
 }
 function dbToMedia(raw:unknown):MediaItem{
  const r=raw as any;
- const meta:Record<string,unknown>={};
  const data=r.data&&typeof r.data==='object'?r.data:{};
- const v=(key:string)=>meta[key]??r[key];
+ const v=(key:string)=>r[key];
  return normalise({
   id:String(r.id),parentId:r.parent_id?String(r.parent_id):undefined,metadataId:r.metadata_id?String(r.metadata_id):undefined,
   anilistId:r.anilist_id==null?undefined:Number(r.anilist_id),sourceProvider:data.provider?String(data.provider):r.anilist_id?'anilist':undefined,
