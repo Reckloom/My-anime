@@ -3681,3 +3681,44 @@ html[data-frame-theme="ultra-movie"] .modalwrap{background:#09090d;border-color:
   html[data-frame-theme="ultra-movie"] .detail-backdrop{height:290px}
   html[data-frame-theme="ultra-movie"] .detail-main h2{font-size:32px}
 }
+
+/* Ultra-Movie polish — final interaction layer */
+html[data-frame-theme="ultra-movie"]{scrollbar-color:#34303f #050507;scrollbar-width:thin}
+html[data-frame-theme="ultra-movie"] ::selection{background:#c4b5fd;color:#09090d}
+html[data-frame-theme="ultra-movie"] button,
+html[data-frame-theme="ultra-movie"] a,
+html[data-frame-theme="ultra-movie"] input,
+html[data-frame-theme="ultra-movie"] select,
+html[data-frame-theme="ultra-movie"] textarea{outline:none}
+html[data-frame-theme="ultra-movie"] button:focus-visible,
+html[data-frame-theme="ultra-movie"] a:focus-visible,
+html[data-frame-theme="ultra-movie"] input:focus-visible,
+html[data-frame-theme="ultra-movie"] select:focus-visible,
+html[data-frame-theme="ultra-movie"] textarea:focus-visible{
+  outline:2px solid #c4b5fd;outline-offset:3px;
+}
+html[data-frame-theme="ultra-movie"] .hero-content,
+html[data-frame-theme="ultra-movie"] .hero>div{
+  animation:ultraMovieReveal .7s ease both;
+}
+html[data-frame-theme="ultra-movie"] .media-card{
+  transition:transform .22s ease,filter .22s ease;
+}
+html[data-frame-theme="ultra-movie"] .media-card:hover{filter:brightness(1.06)}
+html[data-frame-theme="ultra-movie"] .progress i{
+  box-shadow:0 0 12px rgba(168,85,247,.35);
+}
+html[data-frame-theme="ultra-movie"] .section-head small,
+html[data-frame-theme="ultra-movie"] .page-title small,
+html[data-frame-theme="ultra-movie"] .eyebrow{
+  text-shadow:0 0 18px rgba(167,139,250,.35);
+}
+@keyframes ultraMovieReveal{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@media(prefers-reduced-motion:reduce){
+  html[data-frame-theme="ultra-movie"] .hero-content,
+  html[data-frame-theme="ultra-movie"] .hero>div{animation:none}
+  html[data-frame-theme="ultra-movie"] .media-card{transition:none}
+}
