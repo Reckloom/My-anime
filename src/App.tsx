@@ -337,8 +337,17 @@ export default function App(){
     // Authenticated mode remains cloud-authoritative.
     const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
     const guestMode=guest||localStorage.getItem('frame-guest')==='1';
+    // Re-read the guest cache after cloud hydration finishes. Guest mode can be
+    // enabled while this async request is in flight, so the first snapshot may
+    // legitimately predate a just-added local item.
+    let latestGuestItems=guestItems;
+    try{
+     const latestRaw=localStorage.getItem('frame-library:guest');
+     const parsed=latestRaw?JSON.parse(latestRaw):[];
+     if(Array.isArray(parsed))latestGuestItems=parsed.map(normalise);
+    }catch{}
     const merged=guestMode
-      ?mergeMediaLists(mergeMediaLists(cloudItems,guestItems),scopedItems)
+      ?mergeMediaLists(mergeMediaLists(cloudItems,latestGuestItems),scopedItems)
       :(syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems);
     setItems(merged);setCloudLibraryReady(true);
     try{localStorage.setItem(`frame-library:${cloudUserId}`,JSON.stringify(merged))}catch{}
