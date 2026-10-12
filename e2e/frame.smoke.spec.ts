@@ -166,7 +166,7 @@ test.describe('FRAME artwork identity', () => {
     await navigatePrimary(page, 'Library');
     await expect(page.getByAltText('Attack on Titan').first()).toHaveAttribute('src', 'https://saved.example/aot.jpg', { timeout: 10000 });
     await expect(page.getByAltText('Bleach').first()).toHaveAttribute('src', 'https://saved.example/bleach.jpg', { timeout: 10000 });
-    await expect(page.getByAltText('Steins;Gate').first()).toHaveAttribute('src', 'https://cdn.example.test/steins.jpg', { timeout: 10000 });
+    await expect(page.getByAltText('Steins;Gate').first()).toHaveAttribute('src', 'https://saved.example/steins.jpg', { timeout: 10000 });
     await expect(page.getByAltText('Jujutsu Kaisen').first()).toHaveAttribute('src', 'https://saved.example/jjk.jpg', { timeout: 10000 });
     const sources = await Promise.all(['Attack on Titan', 'Bleach', 'Steins;Gate'].map(async title =>
       page.getByAltText(title).first().getAttribute('src')
