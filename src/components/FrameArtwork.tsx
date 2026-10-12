@@ -70,8 +70,11 @@ async function resolve(p:Props):Promise<string>{
  const isOnePiece=/^one piece$/i.test(p.title.trim());
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
  const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
- // AniList-linked anime must resolve the exact current cover asset before any hierarchy fallback.
- // A stored b<ID>.jpg path is only a legacy identifier and may no longer be the current asset filename.
+ // DATABASE ARTWORK IS AUTHORITATIVE.
+ // Existing saved artwork always wins. AniList is only a source for rows that
+ // do not already have a trusted poster, preventing future imports/syncs from
+ // silently replacing established library artwork.
+ if(hasSavedPoster)return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
   const existing=getArtworkCache(key);if(existing)return existing;
@@ -84,17 +87,12 @@ async function resolve(p:Props):Promise<string>{
      if(image)return image;
     }
    }catch{/* retain fallback artwork */}
-   return p.poster&&!isFabricatedAniListPoster(p.poster)?p.poster:(p.parentPoster||svgFallback(p.title,p.medium));
+   return p.parentPoster||svgFallback(p.title,p.medium);
   });
   setArtworkCache(key,request);
   return request;
  }
- // DATABASE ARTWORK IS AUTHORITATIVE.
- // Adding or syncing another title must never make an existing poster disappear.
- // If a saved poster exists, render it immediately and do not replace it with a
- // live AniList result. Live AniList resolution is only for rows without artwork.
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
- if(hasSavedPoster)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
