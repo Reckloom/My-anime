@@ -57,6 +57,19 @@ function compareHierarchyParts(a:MediaItem,b:MediaItem){
  if(aArc!==null&&bArc===null)return -1;
  if(bArc!==null&&aArc===null)return 1;
  if(aArc!==null&&bArc!==null&&aArc!==bArc)return aArc-bArc;
+ // Prefer explicit episode ranges for story arcs/parts. This keeps arcs in
+ // exact chronological order even when the source has no air date.
+ const episodeStart=(item:MediaItem)=>{
+  const text=(item.title+' '+(item.description||'')).replace(/—/g,'-').replace(/–/g,'-');
+  const range=text.match(/Episodes?\s+(\d+)\s*-\s*(\d+)/i);
+  if(range)return Number(range[1]);
+  const single=text.match(/Episode\s+(\d+)/i);
+  return single?Number(single[1]):null;
+ };
+ const aRange=episodeStart(a),bRange=episodeStart(b);
+ if(aRange!==null&&bRange===null)return -1;
+ if(bRange!==null&&aRange===null)return 1;
+ if(aRange!==null&&bRange!==null&&aRange!==bRange)return aRange-bRange;
  const aEpisode=String(a.externalId||'').match(/^one-piece-episode-(\d+)$/),bEpisode=String(b.externalId||'').match(/^one-piece-episode-(\d+)$/);
  if(aEpisode&&bEpisode)return Number(aEpisode[1])-Number(bEpisode[1]);
  // Release order is the default for every anime hierarchy.
