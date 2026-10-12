@@ -208,7 +208,7 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
  return dedupeMediaItems(merged);
 }
 export default function App(){
- const {user,signOut}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest',cloudUserId=user?.id||FRAME_OWNER_ID;
+ const {user,signOut}=useAuth(),guest=localStorage.getItem('frame-guest')==='1'||!user,uid=guest?'guest':user?.id||'guest',cloudUserId=user?.id||FRAME_OWNER_ID;
  const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
  const [cloudLibraryReady,setCloudLibraryReady]=useState(false);
  const [items,setItems]=useState<MediaItem[]>(()=>{
