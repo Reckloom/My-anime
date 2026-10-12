@@ -271,7 +271,8 @@ export default function App(){
   const load=async()=>{
    setCloudLibraryReady(false);
    const cleanStartKey=`frame-clean-start-2026-10-12:${cloudUserId}`;
-   if(!guest&&!localStorage.getItem(cleanStartKey)){
+   const guestMode=guest||localStorage.getItem('frame-guest')==='1';
+   if(!guestMode&&!localStorage.getItem(cleanStartKey)){
     localStorage.removeItem('frame-library');
     localStorage.removeItem(`frame-library:${cloudUserId}`);
     try{localStorage.setItem(cleanStartKey,'1')}catch{}
@@ -335,12 +336,13 @@ export default function App(){
     // this preserves immediate guest additions and keeps QA/offline fallback sane.
     // Authenticated mode remains cloud-authoritative.
     const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
-    const merged=guest
+    const guestMode=guest||localStorage.getItem('frame-guest')==='1';
+    const merged=guestMode
       ?mergeMediaLists(mergeMediaLists(cloudItems,guestItems),scopedItems)
       :(syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems);
     setItems(merged);setCloudLibraryReady(true);
     try{localStorage.setItem(`frame-library:${cloudUserId}`,JSON.stringify(merged))}catch{}
-    if(!guest&&guestItems.length)localStorage.removeItem('frame-library:guest');
+    if(!guestMode&&guestItems.length)localStorage.removeItem('frame-library:guest');
 const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',cloudUserId).maybeSingle();if(prefs&&typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);
     const effectivePrefs={...(prefs||{}),...guestPrefs};
     if(Object.keys(effectivePrefs).length){
