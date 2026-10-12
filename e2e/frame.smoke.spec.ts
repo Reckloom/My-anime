@@ -31,7 +31,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.keyboard.press('Escape');
 
     await navigatePrimary(page, 'Library');
-    await expect(page.getByText('FRAME QA Test Title', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: /FRAME QA Test Title Anime —/ })).toBeVisible();
   });
 
   test('persists guest library changes across reloads', async ({ page }) => {
@@ -45,6 +45,9 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('textbox', { name: 'Title', exact: true }).fill('FRAME Guest Persistence Test');
     await page.getByRole('button', { name: 'Add to my library' }).click();
     await page.keyboard.press('Escape');
+    // Verify the actual persistence path first; this also removes any async
+    // cloud-hydration race before the library assertion.
+    await page.reload();
     await navigatePrimary(page, 'Library');
     await expect(page.getByRole('button', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
 
