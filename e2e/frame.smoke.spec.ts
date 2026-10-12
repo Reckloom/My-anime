@@ -50,18 +50,15 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByText('FRAME Guest Persistence Test', { exact: true })).toBeVisible();
   });
 
-  test('persists guest appearance changes and exposes sign-in', async ({ page }) => {
+  test('keeps the permanent Ultra-Movie appearance and exposes sign-in', async ({ page }) => {
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('frame-guest', '1'));
     await page.reload();
 
     await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
+    await expect(page.locator('html[data-frame-theme="ultra-movie"]')).toHaveCount(1);
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
-    await page.getByRole('button', { name: /6 · Modern Media Hub/ }).click();
-
-    await page.reload();
-    await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
-    await expect(page.getByText('6 · Modern Media Hub is active.', { exact: true })).toBeVisible();
+    await expect(page.locator('.theme-picker')).toHaveCount(0);
   });
 
   test('makes Discover shortcuts useful', async ({ page }) => {
@@ -84,15 +81,11 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.locator('h1').filter({ hasText: /^Settings$/ })).toBeVisible();
   });
 
-  test('opens Settings and switches appearance controls', async ({ page }) => {
+  test('opens Settings without exposing a theme selector', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
-
-    await page.getByRole('button', { name: /6 · Modern Media Hub/ }).click();
-    await expect(page.getByText('6 · Modern Media Hub is active.', { exact: true })).toBeVisible();
-
-    await page.getByRole('combobox').last().selectOption('compact');
+    await expect(page.locator('.theme-picker')).toHaveCount(0);
   });
 
   test('opens every primary page without crashing', async ({ page }) => {
