@@ -970,11 +970,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   setSelected(item);
  };
  const closeDetail=()=>{
-  if(history.state?.frameDetailId){
-   history.back();
-   return;
-  }
+  const hasHistoryDetail=Boolean(history.state?.frameDetailId);
   setSelected(null);
+  if(hasHistoryDetail)history.back();
  };
  useEffect(()=>{
   if(!history.state?.frameRoute){
