@@ -126,7 +126,7 @@ function getLibraryIndexes(library:MediaItem[]){
  const result={byId,childCounts,childrenByParent};libraryIndexCache.set(library,result);return result;
 }
 function sameMedia(a:MediaItem,b:MediaItem){
- const aTitle=a.title.trim().toLowerCase().replace(/\\s+/g,' '),bTitle=b.title.trim().toLowerCase().replace(/\\s+/g,' ');
+ const aTitle=a.title.trim().toLowerCase().replace(/\s+/g,' '),bTitle=b.title.trim().toLowerCase().replace(/\s+/g,' ');
  if(a.anilistId&&b.anilistId)return a.anilistId===b.anilistId;
  if(a.sourceProvider&&a.externalId&&b.sourceProvider&&b.externalId)return a.sourceProvider===b.sourceProvider&&a.externalId===b.externalId;
  return a.medium===b.medium&&a.parentId===b.parentId&&aTitle===bTitle;
@@ -135,7 +135,7 @@ function mediaMatchKeys(item:MediaItem){
  const keys:string[]=[];
  if(item.anilistId)keys.push('anilist:'+item.anilistId);
  if(item.sourceProvider&&item.externalId)keys.push('source:'+item.sourceProvider+':'+item.externalId);
- const title=item.title.trim().toLowerCase().replace(/\\s+/g,' ');
+ const title=item.title.trim().toLowerCase().replace(/\s+/g,' ');
  keys.push('fallback:'+item.medium+':'+(item.parentId||'')+':'+title);
  return keys;
 }
