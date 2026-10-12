@@ -64,12 +64,16 @@ const canonicalAnimePosterIds=new Set<number>([
   20958,99147,104578,110277,131681,146984,162314
 ]);
 function canonicalAniListPoster(item:MediaItem){
+  // Never fabricate an AniList CDN filename from the numeric ID. AniList
+  // cover URLs can contain an asset suffix, so b<ID>.jpg may be invalid and
+  // can fall through to FRAME's colored SVG placeholder. Let FrameArtwork
+  // resolve the exact current coverImage.extraLarge URL from AniList.
   if(item.medium!=='anime'||!item.anilistId)return item.poster;
   const isMain=item.parentId==null;
   const isTarget=canonicalAnimePosterIds.has(item.anilistId);
   const missing=!item.poster||item.poster==='/frame-logo.svg'||item.poster.includes('frame-logo.svg');
   if(!isMain&&!isTarget&&!missing)return item.poster;
-  return `https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/b${item.anilistId}.jpg`;
+  return item.poster;
 }
 function repairAnimePosters(items:MediaItem[]){
   return items.map(item=>{
