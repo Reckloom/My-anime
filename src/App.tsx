@@ -187,7 +187,7 @@ function mergeMediaLists(primary:MediaItem[],secondary:MediaItem[]){
  return dedupeMediaItems(merged);
 }
 export default function App(){
- const {user,signOut}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest';
+ const {user,signOut}=useAuth(),guest=!user&&localStorage.getItem('frame-guest')==='1',uid=user?.id||'guest',cloudUserId=user?.id||FRAME_OWNER_ID;
  const storageKey=guest?'frame-library:guest':`frame-library:${uid}`;
  const [cloudLibraryReady,setCloudLibraryReady]=useState(false);
  const [items,setItems]=useState<MediaItem[]>(()=>{
@@ -245,7 +245,6 @@ export default function App(){
 
  useEffect(()=>{
   const client=supabase;
-  const cloudUserId=user?.id||FRAME_OWNER_ID;
   if(!client)return;
   let active=true;
   const load=async()=>{
@@ -307,13 +306,15 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      if(Object.keys(guestPrefs).length){const {error}=await client.from('user_preferences').upsert({...guestPrefs,user_id:cloudUserId,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(!error)localStorage.removeItem('frame-guest-preferences')}
     }
    }
-   const {data:p}=await client.from('profiles').select('*').eq('id',cloudUserId).maybeSingle();
-   if(p)setProfile({...p,frame_logo:p.frame_logo||'ultra-instinct'} as Profile);
-   else{
-    const base=(user.email?.split('@')[0]||'frameuser').replace(/[^A-Za-z0-9_]/g,'').slice(0,18)||'frameuser';
-    const username=base+'_'+user.id.replace(/-/g,'').slice(0,6);
-    const {data:created}=await client.from('profiles').upsert({id:user.id,username,display_name:user.email?.split('@')[0]||'FRAME User',bio:'',frame_logo:'ultra-instinct'},{onConflict:'id'}).select().maybeSingle();
-    if(created)setProfile({...created,frame_logo:created.frame_logo||'ultra-instinct'} as Profile);
+   if(user){
+    const {data:p}=await client.from('profiles').select('*').eq('id',cloudUserId).maybeSingle();
+    if(p)setProfile({...p,frame_logo:p.frame_logo||'ultra-instinct'} as Profile);
+    else{
+     const base=(user.email?.split('@')[0]||'frameuser').replace(/[^A-Za-z0-9_]/g,'').slice(0,18)||'frameuser';
+     const username=base+'_'+user.id.replace(/-/g,'').slice(0,6);
+     const {data:created}=await client.from('profiles').upsert({id:user.id,username,display_name:user.email?.split('@')[0]||'FRAME User',bio:'',frame_logo:'ultra-instinct'},{onConflict:'id'}).select().maybeSingle();
+     if(created)setProfile({...created,frame_logo:created.frame_logo||'ultra-instinct'} as Profile);
+    }
    }
    
   };
@@ -366,7 +367,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      }
     }
     for(let offset=0;offset<removed.length;offset+=batchSize){
-     const {error}=await client.from('media_items').delete().eq('user_id',user.id).in('id',removed.slice(offset,offset+batchSize));
+     const {error}=await client.from('media_items').delete().eq('user_id',cloudUserId).in('id',removed.slice(offset,offset+batchSize));
      if(error){
       setAppMessage('Cloud cleanup failed: '+error.message);
       window.setTimeout(()=>setAppMessage(''),7000);
@@ -425,7 +426,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    });
    merged[found]=next;changed.set(next.id,next);
   }
-  const rows=[...changed.values()].map(item=>toRow(item,user.id));
+  const rows=[...changed.values()].map(item=>toRow(item,cloudUserId));
   for(let offset=0;offset<rows.length;offset+=100){
    const batch=rows.slice(offset,offset+100);
    const {data,error}=await client.from('media_items').upsert(batch,{onConflict:'id'}).select('id');
