@@ -3835,3 +3835,92 @@ body{overflow-x:hidden}
  .drawer .detail h1{font-size:42px!important}
  .drawer .parts{padding:0 22px 100px!important}
 }
+
+/* FRAME phone pass — same Ultra-Movie identity, optimized for touch */
+@media (max-width:700px){
+  html{scroll-padding-top:64px}
+  body{overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+  .topbar{height:64px;min-height:64px;padding:0 10px;gap:8px;padding-top:env(safe-area-inset-top);box-sizing:content-box}
+  .topbar .brand{font-size:11px;letter-spacing:2.4px;gap:7px}
+  .topbar .brand span{width:28px;height:28px;border-radius:8px}
+  .top-actions{gap:6px}
+  .top-actions .search{display:none}
+  .icon-btn,.avatar{width:38px;height:38px;min-width:38px}
+  .top-find{display:none}
+  .page{padding:28px 12px calc(92px + env(safe-area-inset-bottom))}
+  .page-title{display:block;margin-bottom:20px}
+  .page-title h1{font-size:clamp(34px,10vw,46px);line-height:.96;margin-top:7px}
+  .page-title p{font-size:12px;line-height:1.55}
+  .hero{
+    min-height:calc(78svh - 12px);max-height:680px;margin-inline:-12px;border-radius:0;
+    padding:26px 18px calc(30px + env(safe-area-inset-bottom));
+    background-position:center top;box-shadow:none;
+  }
+  .hero-shade{background:linear-gradient(180deg,#0002 15%,#0007 48%,#09090d 84%,#09090d 100%)}
+  .hero-content{max-width:100%!important}
+  .hero-content h1{font-size:clamp(40px,11vw,58px);line-height:.92;margin:10px 0 12px}
+  .hero-content p{font-size:12px;line-height:1.6;-webkit-line-clamp:3}
+  .hero-meta{gap:8px;margin:13px 0 15px;font-size:10px}
+  .hero .primary,.hero .secondary{min-height:42px;padding:10px 13px}
+  .section{margin-top:24px}
+  .section-head{margin-bottom:11px}
+  .section-head h2{font-size:18px}
+  .cards,.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .media-card .poster{border-radius:10px}
+  .media-card .status,.media-card .score{top:7px;font-size:8px;padding:5px 7px}
+  .card-copy{padding:8px 1px 0}
+  .card-copy b{font-size:12px}
+  .card-copy span{font-size:9px}
+  .progress{height:4px;margin:7px 0 4px}
+  .stats-row{grid-template-columns:repeat(2,1fr);border-radius:14px}
+  .stat{padding:16px 12px;border-bottom:1px solid #ffffff08}
+  .stat:nth-child(2n){border-right:0}
+  .stat b{font-size:23px}
+  .stat span{font-size:9px}
+  .filter-row{overflow-x:auto;flex-wrap:nowrap;margin-bottom:16px;padding-bottom:3px;scrollbar-width:none}
+  .filter-row::-webkit-scrollbar{display:none}
+  .filter-row button{flex:0 0 auto;min-height:38px}
+  .discover-grid{grid-template-columns:1fr;gap:10px}
+  .discover-grid>div{min-height:150px;padding:18px}
+  .release-section{margin-top:22px}
+  .releases{max-width:none}
+  .releases>div{grid-template-columns:44px minmax(0,1fr);gap:10px;padding:8px}
+  .release-poster{width:44px;height:62px}
+  .drawer{width:100%;border-left:0;border-radius:0}
+  .detail-overlay{overscroll-behavior:contain}
+  .detail-backdrop{height:250px}
+  .detail{gap:13px;padding:0 16px 24px;margin-top:-54px}
+  .detail-poster{width:105px;flex-basis:105px}
+  .detail-poster img{width:105px;height:157px;border-radius:9px}
+  .detail-main{padding-top:54px}
+  .detail-main h2{font-size:28px}
+  .detail-main>p{font-size:11px;line-height:1.6}
+  .detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .detail-actions button{min-height:44px}
+  .parts{padding:0 16px 100px}
+  .parts button{min-height:62px;border-radius:11px}
+  .modalwrap{padding:8px}
+  .modal{max-height:calc(100svh - 16px);border-radius:16px;padding:16px}
+  .form input,.form select,.form textarea{min-height:46px}
+  .menu{width:min(320px,calc(100vw - 24px));max-height:calc(100svh - 84px);overflow:auto}
+  .mobilebar{height:64px;min-height:64px;padding-bottom:env(safe-area-inset-bottom);box-sizing:content-box}
+  .mobilebar button{min-height:64px}
+  .frame-popup-system{bottom:calc(76px + env(safe-area-inset-bottom))}
+  .frame-popup-panel{max-height:68svh}
+  .settings-anchor-row{top:0;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .settings-anchor-row button{flex:0 0 auto}
+}
+@media (max-width:380px){
+  .page{padding-inline:10px}
+  .hero{margin-inline:-10px;padding-inline:15px}
+  .cards,.grid{gap:9px}
+  .detail{padding-inline:13px}
+  .detail-poster{width:92px;flex-basis:92px}
+  .detail-poster img{width:92px;height:138px}
+  .detail-main h2{font-size:25px}
+}
+@media (orientation:landscape) and (max-height:520px) and (max-width:900px){
+  .hero{min-height:520px}
+  .page{padding-bottom:80px}
+}
+
