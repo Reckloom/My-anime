@@ -404,7 +404,14 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   const previous=itemsRef.current;
   const next=dedupeMediaItems(list.map(normalise));
   itemsRef.current=next;setItems(next);
-  if(guestMode){try{localStorage.setItem(storageKey,JSON.stringify(next))}catch{}}
+  if(guestMode){
+   try{
+    // Guest persistence has its own durable namespace. Do not depend on a
+    // render-time storageKey, because guest mode may have been enabled after
+    // the component was first mounted.
+    localStorage.setItem('frame-library:guest',JSON.stringify(next));
+   }catch{}
+  }
   const client=supabase;
   if(!client)return true;
   const operation=saveQueue.current.then(async()=>{
