@@ -41,7 +41,8 @@ const svgFallback=(title:string,medium:Medium)=>{
  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="640" height="900" viewBox="0 0 640 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl('+hue+',54%,22%)"/><stop offset="1" stop-color="hsl('+second+',65%,8%)"/></linearGradient><pattern id="p" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M0 44L44 0" stroke="white" stroke-opacity=".06" stroke-width="2"/></pattern></defs><rect width="640" height="900" fill="url(#g)"/><rect width="640" height="900" fill="url(#p)"/><circle cx="510" cy="160" r="150" fill="white" fill-opacity=".045"/><circle cx="80" cy="730" r="210" fill="white" fill-opacity=".035"/><text x="48" y="710" fill="white" fill-opacity=".65" font-family="Arial,sans-serif" font-size="20" letter-spacing="5">'+medium.toUpperCase()+'</text><text x="48" y="770" fill="white" font-family="Arial,sans-serif" font-size="42" font-weight="700">'+escapeXml(short)+'</text><path d="M48 800H220" stroke="hsl('+hue+',80%,70%)" stroke-width="5" stroke-linecap="round"/></svg>';
  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 };
-const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');\nconst dedicatedHierarchyArtwork=(title:string)=>{
+const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+const dedicatedHierarchyArtwork=(title:string)=>{
  const t=normal(title);
  // Explicit poster map for Link Click and To Be Hero X, plus Dragon Ball hierarchy.
  if(t.includes('link click')&&t.includes('season 1'))return 'https://images.justwatch.com/poster/311397638/s718/temporada-1.jpg';
