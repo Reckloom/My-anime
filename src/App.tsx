@@ -59,6 +59,24 @@ function dbToMedia(raw:unknown):MediaItem{
   characters:Array.isArray(data.characters)?data.characters as MediaItem['characters']:undefined
  });
 }
+const canonicalAnimePosterIds=new Set<number>([
+  21355,108632,163134,189046,195604,1735,
+  20958,99147,104578,110277,131681,146984,162314
+]);
+function canonicalAniListPoster(item:MediaItem){
+  if(item.medium!=='anime'||!item.anilistId)return item.poster;
+  const isMain=item.parentId==null;
+  const isTarget=canonicalAnimePosterIds.has(item.anilistId);
+  const missing=!item.poster||item.poster==='/frame-logo.svg'||item.poster.includes('frame-logo.svg');
+  if(!isMain&&!isTarget&&!missing)return item.poster;
+  return `https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/b${item.anilistId}.jpg`;
+}
+function repairAnimePosters(items:MediaItem[]){
+  return items.map(item=>{
+    const poster=canonicalAniListPoster(item);
+    return poster===item.poster?item:normalise({...item,poster});
+  });
+}
 function toRow(item:MediaItem,userId:string){
  return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,popularity:item.popularity??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,externalLinks:item.externalLinks??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false},episode:item.episode??null,characters:item.characters??null}};
 }
@@ -284,7 +302,7 @@ export default function App(){
     offset+=pageSize;
    }
    if(active){
-    const loadedCloudItems=dedupeMediaItems(allCloudRows.map(dbToMedia));
+    const loadedCloudItems=repairAnimePosters(dedupeMediaItems(allCloudRows.map(dbToMedia)));
     // Personal-library policy: every currently released anime in this private
     // library is considered fully watched. The stored total is the released
     // count, so this never invents unreleased episodes; release-radar can raise
