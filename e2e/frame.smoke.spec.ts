@@ -39,7 +39,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.evaluate(() => localStorage.setItem('frame-guest', '1'));
     await page.getByRole('button', { name: 'Search', exact: true }).first().click();
     await page.getByRole('button', { name: /manual/i }).click();
-    await page.getByLabel('Title').fill('FRAME Guest Persistence Test');
+    await page.getByRole('textbox', { name: 'Title', exact: true }).fill('FRAME Guest Persistence Test');
     await page.getByRole('button', { name: 'Add to my library' }).click();
     await page.keyboard.press('Escape');
     await navigatePrimary(page, 'Library');
