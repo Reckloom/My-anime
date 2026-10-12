@@ -270,8 +270,11 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
     }
     return ordered.slice(0,limit);
   };
-  const linkClickTop20 = ['Xiaoshi Cheng','Guang Lu','Ling Qiao','Vein','Xiao Liu','Fei Xia','Shanshan Xu','Bin Chen','Emma','Min Liu','Tianchen Li','Tianxi Li','Jin Qiao','Hongbin Dong','Zheng Liu','Xudong Lin','Xiao Li','Xiao Ma','Xiao Wang','Xiao Zhang'];
-  const toBeHeroXTop20 = ['X','Queen','Dragon Boy','Ghostblade','Little Johnny','Big Johnny','Loli','Lucky Cyan','Ahu','E-Soul','Nice','Ling Lin','Cheng Yang','Xingyun Qing','Yuwei Liu','Luo Li','Shand','Zero','Moon','Smile'];
+  // These names intentionally match the character names actually stored by AniList
+  // in this library. Using hero aliases such as "Queen" or "Dragon Boy" here made
+  // the rank matcher miss the saved profiles and fall back to database order.
+  const linkClickTop20 = ['Xiaoshi Cheng','Guang Lu','Ling Qiao','Bin Chen','Shanshan Xu','Emma','Min Liu','Li Xiao','Xiao Chen','Lei Liu','Hongbin Lu','Zhen Lin','Xia Yu','Yi Dong','Xie Zhu','Meng Liu','Doudou','Xiao Chen Ma','Hongbin Lu Ma','Xiaoshi Cheng Ma'];
+  const toBeHeroXTop20 = ['X','Yuwei Liu','Liang Long','Mo Sha','Xiaoqiang','Luo Li','Xingyun Qing','Ahu','Cheng Yang','Nice','Ling Lin','Yueqing Xiao','Juan','Qi Shi','Pohuai Wang','Budao','Gulang','De Shang','Qing Xia','Hun Dian'];
   const profiles = isLinkClickTitle ? rankedArchive(linkClickTop20,20) : isToBeHeroXTitle ? rankedArchive(toBeHeroXTop20,20) : isOnePiece ? (() => {
     const used=new Set<string>();
     const ordered: (AnimeCharacterProfile & {popularityRank?:number})[]=[];
