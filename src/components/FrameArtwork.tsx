@@ -89,13 +89,12 @@ async function resolve(p:Props):Promise<string>{
   setArtworkCache(key,request);
   return request;
  }
- // Saved artwork is authoritative for custom/imported sources. For normal
- // AniList series records, validate the stored ID once so a stale poster cannot
- // remain attached to the wrong title (while still preserving artwork when the
- // external ID itself is mismatched).
+ // DATABASE ARTWORK IS AUTHORITATIVE.
+ // Adding or syncing another title must never make an existing poster disappear.
+ // If a saved poster exists, render it immediately and do not replace it with a
+ // live AniList result. Live AniList resolution is only for rows without artwork.
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
- const shouldValidateSaved=false;
- if(hasSavedPoster&&!shouldValidateSaved)return p.poster as string;
+ if(hasSavedPoster)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
