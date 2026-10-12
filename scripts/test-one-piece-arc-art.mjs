@@ -51,8 +51,7 @@ const episodeSamples = [
   'https://one-piece.com/o/assets/images/anime/tvstory/4219/story_img_1.png',
   'https://one-piece.com/o/assets/uploads/tvstory/20170808/26d09dcc77dbfdf0990ea87042fe2b4b.png',
   'https://one-piece.com/o/assets/uploads/tvstory/20211215/a33b299ce93749783a62d845cdf82ab6.png',
-  'https://www.vodanime.com/media/one-piece-episode-6-thumbnail-3419070.jpg?v=1787086569',
-  'https://image.idn.media/post/20260928/asasadqwadaqwd_7c4ba1d5-9169-4c9a-b684-bffbe4346f26.jpg'
+  'https://www.vodanime.com/media/one-piece-episode-6-thumbnail-3419070.jpg?v=1787086569'
 ];
 for (const source of episodeSamples) {
   const episodeUrl = projectUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(source);
