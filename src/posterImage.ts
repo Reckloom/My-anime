@@ -38,7 +38,10 @@ export function posterImageSrc(value?: string | null): string {
       parsed.protocol === 'https:' &&
       parsed.hostname === 'media.kitsu.app' &&
       /^\/episode\/\d+\/thumbnail\/[a-f0-9]{32}\.(?:jpe?g|png|webp)$/i.test(parsed.pathname);
-    if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork || anilistArtwork) {
+    // AniList cover URLs are returned with the exact asset filename by GraphQL.
+    // Keep them direct; proxying a guessed/rewritten CDN path can turn valid
+    // artwork into the colored fallback placeholder.
+    if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork) {
       return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
     }
     return url;
