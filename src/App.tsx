@@ -42,7 +42,7 @@ function dbToMedia(raw:unknown):MediaItem{
   anilistId:r.anilist_id==null?undefined:Number(r.anilist_id),sourceProvider:data.provider?String(data.provider):r.anilist_id?'anilist':undefined,
   externalId:data.externalId?String(data.externalId):r.anilist_id?String(r.anilist_id):undefined,
   popularity:data.popularity==null?(v('popularity')==null?undefined:Number(v('popularity'))):Number(data.popularity),
-  title:String(v('title')??''),alternativeTitles:Array.isArray(meta.alternative_titles)?meta.alternative_titles.map(String):[],
+  title:String(v('title')??''),alternativeTitles:Array.isArray(data.alternativeTitles)?data.alternativeTitles.map(String):[],
   description:String(v('description')??''),poster:String(v('poster')??''),backdrop:String(v('backdrop')??''),
   medium:String(r.medium) as Medium,status:String(r.status) as MediaItem['status'],progress:Number(r.progress??0),
   total:r.total==null?(data.customTotal==null?(v('episodes')==null?undefined:Number(v('episodes'))):Number(data.customTotal)):Number(r.total),
@@ -51,8 +51,8 @@ function dbToMedia(raw:unknown):MediaItem{
   customTotal:data.customTotal==null?undefined:Number(data.customTotal),
   genres:Array.isArray(v('genres'))?v('genres').map(String):[],themes:Array.isArray(v('themes'))?v('themes').map(String):[],
   studio:v('studio')?String(v('studio')):undefined,source:v('source')?String(v('source')):undefined,
-  season:meta.season?String(meta.season):undefined,duration:meta.duration==null?undefined:Number(meta.duration),
-  airStart:meta.air_start?String(meta.air_start):undefined,airEnd:meta.air_end?String(meta.air_end):undefined,
+  season:data.season?String(data.season):undefined,duration:data.duration==null?undefined:Number(data.duration),
+  airStart:data.airStart?String(data.airStart):undefined,airEnd:data.airEnd?String(data.airEnd):undefined,
   favorite:Boolean(r.favorite),notes:r.notes?String(r.notes):undefined,
   nextRelease:r.next_release?String(r.next_release):undefined,nextReleaseNumber:r.next_release_number==null?undefined:Number(r.next_release_number),
   availability:data.availability as MediaItem['availability'],externalLinks:data.externalLinks&&typeof data.externalLinks==='object'?data.externalLinks as MediaItem['externalLinks']:undefined,game:data.game as MediaItem['game'],notificationsEnabled:data.frameReleaseRadar?.enabled!==false,releaseRadarState:data.frameReleaseRadar&&typeof data.frameReleaseRadar==='object'?data.frameReleaseRadar:undefined,
@@ -271,7 +271,7 @@ export default function App(){
    const pageSize=500;
    let offset=0;
    while(true){
-    const {data:pageData,error}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data,media_metadata(title,alternative_titles,description,poster,backdrop,genres,themes,year,season,score,studio,source,episodes,duration,air_start,air_end)')
+    const {data:pageData,error}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data')
      .eq('user_id',cloudUserId).order('score',{ascending:false}).order('id',{ascending:true})
      .range(offset,offset+pageSize-1);
     if(error){
@@ -1110,7 +1110,7 @@ function Connections({connections:_,toggle:_toggle,onImportSteamGame}:{connectio
 }
 function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){
  const[items,setItems]=useState<MediaItem[]>([]);
- useEffect(()=>{if(!supabase)return;void(async()=>{const client=supabase;if(!client)return;const {data}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data,media_metadata(title,alternative_titles,description,poster,backdrop,genres,themes,year,season,score,studio,source,episodes,duration,air_start,air_end)').eq('user_id',id).order('score',{ascending:false});setItems((data||[]).map(dbToMedia))})()},[id]);
+ useEffect(()=>{if(!supabase)return;void(async()=>{const client=supabase;if(!client)return;const {data}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data').eq('user_id',id).order('score',{ascending:false});setItems((data||[]).map(dbToMedia))})()},[id]);
  return <div className="page"><button className="breadcrumb" onClick={onBack}>← Back to friends</button><div className="page-heading"><div><small>PERMISSION GRANTED</small><h1>Shared library</h1><p>This library is visible because your friend explicitly allowed access.</p></div></div><div className="media-grid">{items.map(x=><SharedCard key={x.id} item={x} library={items}/>)}</div>{!items.length&&<Empty text="Nothing has been shared yet."/>}</div>;
 }
 function SharedCard({item,library}:{item:MediaItem;library:MediaItem[]}){
