@@ -1,4 +1,5 @@
-import {StrictMode} from 'react';
+import {StrictMode,useEffect} from 'react';
+import {App as CapacitorApp} from '@capacitor/app';
 import {createRoot} from 'react-dom/client';
 import App from './App';
 import {AuthGate, AuthProvider} from './auth/Auth';
@@ -16,5 +17,19 @@ class FrameErrorBoundary extends Component<{children:ReactNode},{error:Error|nul
  }
 }
 
+function FrameNativeBackHandling(){
+ useEffect(()=>{
+  let mounted=true;
+  const listener=CapacitorApp.addListener('backButton',({canGoBack})=>{
+   if(!mounted)return;
+   const close=document.querySelector<HTMLButtonElement>('.detail-overlay .close,.overlay .close');
+   if(close){close.click();return;}
+   if(window.history.length>1&&canGoBack){window.history.back();return;}
+  });
+  return()=>{mounted=false;listener.then(x=>x.remove()).catch(()=>{});};
+ },[]);
+ return null;
+}
+
 registerFramePwa();
-createRoot(document.getElementById('root')!).render(<StrictMode><FrameErrorBoundary><AuthProvider><AuthGate><App /></AuthGate></AuthProvider></FrameErrorBoundary></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><FrameErrorBoundary><AuthProvider><AuthGate><FrameNativeBackHandling/><App /></AuthGate></AuthProvider></FrameErrorBoundary></StrictMode>);
