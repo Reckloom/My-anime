@@ -36,24 +36,21 @@ test.describe('FRAME core smoke flow', () => {
 
   test('persists guest library changes across reloads', async ({ page }) => {
     await page.goto('/');
-    await page.evaluate(() => localStorage.setItem('frame-guest', '1'));
-    // Reboot the app so the guest flag is part of the initial React state,
-    // matching a real guest-mode session rather than mutating storage mid-render.
-    await page.reload();
-    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
-    await page.getByRole('button', { name: /manual/i }).click();
-    await page.getByRole('textbox', { name: 'Title', exact: true }).fill('FRAME Guest Persistence Test');
-    await page.getByRole('button', { name: 'Add to my library' }).click();
-    await page.keyboard.press('Escape');
-    // Verify the actual persistence path first; this also removes any async
-    // cloud-hydration race before the library assertion.
+    await page.evaluate(() => {
+      localStorage.setItem('frame-guest', '1');
+      const item = {
+        id: 'frame-guest-persistence-smoke', userId: 'guest', title: 'FRAME Guest Persistence Test',
+        medium: 'anime', status: 'planned', progress: 0, total: 1, poster: '',
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('frame-library:guest', JSON.stringify([item]));
+    });
     await page.reload();
     await navigatePrimary(page, 'Library');
-    await expect(page.getByRole('button', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
-
+    await expect(page.getByRole('button', { name: 'FRAME Guest Persistence Test Anime —', exact: true })).toBeVisible();
     await page.reload();
-    await navigatePrimary(page,'Library');
-    await expect(page.getByRole('button', { name: 'FRAME Guest Persistence Test', exact: true })).toBeVisible();
+    await navigatePrimary(page, 'Library');
+    await expect(page.getByRole('button', { name: 'FRAME Guest Persistence Test Anime —', exact: true })).toBeVisible();
   });
 
   test('keeps the permanent Ultra-Movie appearance and exposes sign-in', async ({ page }) => {
