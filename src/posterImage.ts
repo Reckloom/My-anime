@@ -30,11 +30,15 @@ export function posterImageSrc(value?: string | null): string {
       parsed.protocol === 'https:' &&
       parsed.hostname === 'artworks.thetvdb.com' &&
       /^\/banners\/episodes\/\d+\/\d+\.(?:jpe?g|png|webp)$/i.test(parsed.pathname);
+    const anilistArtwork =
+      parsed.protocol === 'https:' &&
+      /^s\\d+\\.anilist\\.co$/i.test(parsed.hostname) &&
+      /^\\/file\\/anilistcdn\\/media\\/anime\\/cover\\/.+\\.(?:jpe?g|png|webp)$/i.test(parsed.pathname);
     const kitsuEpisodeArtwork =
       parsed.protocol === 'https:' &&
       parsed.hostname === 'media.kitsu.app' &&
       /^\/episode\/\d+\/thumbnail\/[a-f0-9]{32}\.(?:jpe?g|png|webp)$/i.test(parsed.pathname);
-    if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork) {
+    if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork || anilistArtwork) {
       return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
     }
     return url;
