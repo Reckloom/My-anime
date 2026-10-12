@@ -335,9 +335,15 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  const save=async(list:MediaItem[])=>{
   // Never run a destructive cloud reconciliation against a partially loaded library.
   if(supabase&&!cloudLibraryReady){
-   setAppMessage('Your full library is still loading. Please try that change again in a moment.');
-   window.setTimeout(()=>setAppMessage(''),4000);
-   return false;
+   // The first render can race the cloud-library bootstrap. Wait briefly instead
+   // of dropping a legitimate add/edit when the user clicks immediately.
+   const deadline=Date.now()+8000;
+   while(!cloudLibraryReady&&Date.now()<deadline)await new Promise(resolve=>window.setTimeout(resolve,100));
+   if(!cloudLibraryReady){
+    setAppMessage('Your full library is still loading. Please try that change again in a moment.');
+    window.setTimeout(()=>setAppMessage(''),4000);
+    return false;
+   }
   }
   const previous=itemsRef.current;
   const next=dedupeMediaItems(list.map(normalise));
