@@ -286,17 +286,17 @@ export default function App(){
    }
    if(active){
     const cloudItems=dedupeMediaItems(allCloudRows.map(dbToMedia));
-    // Authenticated cloud data is authoritative. Keep local values only when they
-    // already correspond to a cloud record; never resurrect stale browser-only titles.
+    // Guest mode is intentionally local-first while still hydrating from the
+    // owner's cloud library. Merge the browser cache instead of deleting it;
+    // this preserves immediate guest additions and keeps QA/offline fallback sane.
+    // Authenticated mode remains cloud-authoritative.
     const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
-    // Authenticated libraries must never silently import stale guest-only records.
-    // Guest data remains isolated until the user explicitly imports it.
-    const merged=syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems;
+    const merged=guest
+      ?mergeMediaLists(mergeMediaLists(cloudItems,guestItems),scopedItems)
+      :(syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems);
     setItems(merged);setCloudLibraryReady(true);
     try{localStorage.setItem(`frame-library:${cloudUserId}`,JSON.stringify(merged))}catch{}
-    // Do not auto-import the guest cache after authentication; it can contain
-    // obsolete browser-only records. The account library is the source of truth.
-    if(guestItems.length)localStorage.removeItem('frame-library:guest');
+    if(!guest&&guestItems.length)localStorage.removeItem('frame-library:guest');
 const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',cloudUserId).maybeSingle();if(prefs&&typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);
     const effectivePrefs={...(prefs||{}),...guestPrefs};
     if(Object.keys(effectivePrefs).length){
