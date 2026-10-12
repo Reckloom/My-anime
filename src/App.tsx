@@ -855,7 +855,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
      if(item.medium!=='anime'||!item.anilistId)return item;
      const latest=releasedByAniList.get(Number(item.anilistId));
      if(!latest||latest<=(item.total||0))return item;
-     return normalise({...item,total:latest,customTotal:item.customTotal==null?latest:item.customTotal,progress:latest,status:'completed'});
+     return normalise({...item,total:latest,customTotal:latest,progress:latest,status:'completed'});
     });
     const changed=nextItems.some((item,index)=>item!==currentItems[index]);
     if(changed)await save(nextItems);
