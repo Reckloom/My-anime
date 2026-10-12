@@ -74,7 +74,8 @@ async function resolve(p:Props):Promise<string>{
  const shouldValidateSaved=hasSavedPoster&&isSeriesMedia&&String(p.sourceProvider||'').toLowerCase()==='anilist'&&Boolean(p.anilistId);
  if(hasSavedPoster&&!shouldValidateSaved)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);\nconst dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
+ if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
+ const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
  if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
   if(hasDistinctSavedPoster)return p.poster!;
