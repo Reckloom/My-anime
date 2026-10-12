@@ -36,7 +36,7 @@ const isFabricatedAniListPoster=(value?:string)=>{
  const v=String(value||'').trim();
  return /^https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\/b\d+\.jpg$/i.test(v);
 };
-const isPlaceholderArtwork=(value?:string)=>!value||value.toLowerCase().includes('frame-logo.svg')||isFabricatedAniListPoster(value);
+const isPlaceholderArtwork=(value?:string)=>!value||value.toLowerCase().includes('frame-logo.svg');
 const isHierarchyNode=(p:Props)=>p.sourceProvider==='frame-story-arc'||/^frame-anime-(?:season|arc|episode)$/i.test(p.sourceProvider||'')||isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'')||/(?:^|[-_])(season|s)\d+(?:[-_]|$)/i.test(p.externalId||'')||/(?:^|[-_])arc[-_]/i.test(p.externalId||'');
 const svgFallback=(title:string,medium:Medium)=>{
  const hash=[...title].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,7);
