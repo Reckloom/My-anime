@@ -71,7 +71,7 @@ async function resolve(p:Props):Promise<string>{
  // remain attached to the wrong title (while still preserving artwork when the
  // external ID itself is mismatched).
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
- const shouldValidateSaved=hasSavedPoster&&isSeriesMedia&&String(p.sourceProvider||'').toLowerCase()==='anilist'&&Boolean(p.anilistId);
+ const shouldValidateSaved=false;
  if(hasSavedPoster&&!shouldValidateSaved)return p.poster as string;
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
  if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
