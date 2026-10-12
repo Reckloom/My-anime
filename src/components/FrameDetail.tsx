@@ -101,6 +101,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[saveMessage,setSaveMessage]=useState('');
  const[hierarchyQuery,setHierarchyQuery]=useState('');
   const [hierarchyLimit,setHierarchyLimit]=useState(24);
+ const libraryById=useMemo(()=>new Map(library.map(x=>[x.id,x] as const)),[library]);
   useEffect(()=>{setHierarchyLimit(24)},[item.id,hierarchyQuery]);
   const libraryChildrenByParent=useMemo(()=>{
   const index=new Map<string,MediaItem[]>();
@@ -201,7 +202,6 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
   if(item.parentId){const parent=libraryById.get(item.parentId);if(parent&&navigate){navigate(parent);return}}
   close();
  };
- const libraryById=useMemo(()=>new Map(library.map(x=>[x.id,x] as const)),[library]);
  const game=d.medium==='game',movie=d.medium==='movie';
  const max=game?100:movie?1:(d.total||2000);
  const pct=game||movie?d.progress:(d.progress/(d.total||1)*100);
