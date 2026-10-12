@@ -26,7 +26,8 @@
     "@vitejs/plugin-react": "4.4.1",
     "typescript": "5.7.2",
     "vite": "6.4.4",
-    "@capacitor/cli": "8.5.3"
+    "@capacitor/cli": "8.5.3",
+    "@playwright/test": "1.55.1"
   },
   "overrides": {
     "xcode": {
