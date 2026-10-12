@@ -102,10 +102,15 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const[hierarchyQuery,setHierarchyQuery]=useState('');
   const [hierarchyLimit,setHierarchyLimit]=useState(24);
   useEffect(()=>{setHierarchyLimit(24)},[item.id,hierarchyQuery]);
-  const hierarchyData=useMemo(()=>{
-   const parentItem=d.parentId?library.find(x=>x.id===d.parentId):undefined;
+  const libraryChildrenByParent=useMemo(()=>{
+  const index=new Map<string,MediaItem[]>();
+  for(const entry of library)if(entry.parentId){const bucket=index.get(entry.parentId);if(bucket)bucket.push(entry);else index.set(entry.parentId,[entry]);}
+  return index;
+ },[library]);
+ const hierarchyData=useMemo(()=>{
+   const parentItem=d.parentId?libraryById.get(d.parentId):undefined;
    const isEpisodeRow=(x:MediaItem)=>x.sourceProvider==='frame-anime-episode'||/^one-piece-episode-\d+$/.test(String(x.externalId||''));
-   const directChildren=library.filter(x=>x.parentId===d.id);
+   const directChildren=libraryChildrenByParent.get(d.id)||[];
    // Anime hierarchy is deliberately season/arc only. Episode rows are never
    // shown even if an old import somehow survives in a backup.
    const childParts=directChildren.filter(x=>!isEpisodeRow(x)).sort(compareHierarchyParts);
@@ -115,7 +120,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    const query=hierarchyQuery.trim().toLowerCase();
    const matchingChildParts=childParts.filter(x=>!query||[x.title,x.description,x.season||''].join(' ').toLowerCase().includes(query));
    return {parentItem,childParts,isNarutoPart,hasStoryArcs,isEpisodeGroup,matchingChildParts};
-  },[d.id,d.parentId,d.sourceProvider,d.externalId,library,hierarchyQuery]);
+  },[d.id,d.parentId,d.sourceProvider,d.externalId,library,libraryById,libraryChildrenByParent,hierarchyQuery]);
   const visibleHierarchyChildren=hierarchyData.matchingChildParts.slice(0,hierarchyLimit);
  const navigationHistory=useRef<Array<{item:MediaItem;overlayScrollTop:number;drawerScrollTop:number;bodyScrollTop:number;pageScrollTop:number}>>([]);
  const pendingScrollRestore=useRef<{item:MediaItem;overlayScrollTop:number;drawerScrollTop:number;bodyScrollTop:number;pageScrollTop:number}|null>(null);
