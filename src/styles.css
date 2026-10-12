@@ -3733,7 +3733,7 @@ body{overflow-x:hidden}
  linear-gradient(180deg,#050507 0%,#07070a 48%,#050507 100%)!important}
 .top{height:76px;padding:0 34px;background:rgba(5,5,7,.72)!important;border-bottom:1px solid rgba(255,255,255,.09)!important;backdrop-filter:blur(24px) saturate(150%);box-shadow:0 12px 50px #0008}
 .top nav button{border-radius:999px;padding:10px 16px}
-.top nav button.on,.top nav button:hover{background:#fff10!important;color:#fff}
+.top nav button.on,.top nav button:hover{background:rgba(255,255,255,.08)!important;color:#fff}
 .search{border-radius:999px;background:#ffffff08!important;border-color:#ffffff16!important}
 .add,.primary{border-radius:999px!important;background:#fff!important;box-shadow:0 8px 25px #0006}
 .secondary{border-radius:999px!important;background:#ffffff08!important;border-color:#ffffff18!important}
