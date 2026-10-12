@@ -34,7 +34,7 @@ function normalise(item:MediaItem):MediaItem{
 }
 function dbToMedia(raw:unknown):MediaItem{
  const r=raw as any;
- const meta=r.media_metadata&&typeof r.media_metadata==='object'?r.media_metadata:{};
+ const meta:Record<string,unknown>={};
  const data=r.data&&typeof r.data==='object'?r.data:{};
  const v=(key:string)=>meta[key]??r[key];
  return normalise({
