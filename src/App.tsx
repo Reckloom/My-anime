@@ -271,8 +271,7 @@ export default function App(){
   const load=async()=>{
    setCloudLibraryReady(false);
    const cleanStartKey=`frame-clean-start-2026-10-12:${cloudUserId}`;
-   if(!localStorage.getItem(cleanStartKey)){
-    localStorage.removeItem('frame-library:guest');
+   if(!guest&&!localStorage.getItem(cleanStartKey)){
     localStorage.removeItem('frame-library');
     localStorage.removeItem(`frame-library:${cloudUserId}`);
     try{localStorage.setItem(cleanStartKey,'1')}catch{}
