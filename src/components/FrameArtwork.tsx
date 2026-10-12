@@ -70,6 +70,25 @@ async function resolve(p:Props):Promise<string>{
  const isOnePiece=/^one piece$/i.test(p.title.trim());
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
  const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
+ // AniList-linked anime must resolve the exact current cover asset before any hierarchy fallback.
+ // A stored b<ID>.jpg path is only a legacy identifier and may no longer be the current asset filename.
+ if(p.anilistId&&p.medium==='anime'){
+  const key='anilist-exact:'+p.anilistId;
+  const existing=getArtworkCache(key);if(existing)return existing;
+  const request=withArtworkLimit(async()=>{
+   try{
+    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.anilistId}})});
+    if(response.ok){
+     const json=await response.json() as {data?:{Media?:AniListMedia}};
+     const image=json.data?.Media?.coverImage?.extraLarge;
+     if(image)return image;
+    }
+   }catch{/* retain fallback artwork */}
+   return p.poster&&!isFabricatedAniListPoster(p.poster)?p.poster:(p.parentPoster||svgFallback(p.title,p.medium));
+  });
+  setArtworkCache(key,request);
+  return request;
+ }
  // Saved artwork is authoritative for custom/imported sources. For normal
  // AniList series records, validate the stored ID once so a stale poster cannot
  // remain attached to the wrong title (while still preserving artwork when the
