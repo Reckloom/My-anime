@@ -248,7 +248,7 @@ export default function App(){
  const onePiecePosterCatalogueRef=useRef<Record<string,string>>({});
  const popularitySyncRef=useRef('');
 
- useEffect(()=>{document.documentElement.dataset.density='comfortable';document.documentElement.dataset.frameTheme='ultra-movie';document.documentElement.dataset.frameMode='dark'},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);closeDetail();setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
+ useEffect(()=>{document.documentElement.dataset.density='comfortable';document.documentElement.dataset.frameTheme='ultra-movie';document.documentElement.dataset.frameMode='dark'},[density,theme,appearanceMode]); useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setCommandOpen(true);return}if(e.key==='Escape'){setCommandOpen(false);setFinder(false);setManualEntry(false);setSelected(null);if(history.state?.frameDetailId)history.back();setMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[]);
 
  useEffect(()=>{
   // Keep a recovery snapshot, but serialize it only when the browser is idle.
