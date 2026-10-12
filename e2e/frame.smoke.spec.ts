@@ -410,7 +410,7 @@ test.describe('FRAME AOT archive regression', () => {
     await navigatePrimary(page, 'Library');
     await page.locator('.media-card').filter({ hasText: 'Attack on Titan' }).first().click();
     await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
-    await expect(page.getByText('89 / 89 episodes', { exact: true })).toBeVisible();
+    await expect(page.locator('.progress-edit').filter({hasText:'episodes'}).getByDisplayValue('89').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible();
     await expect(page.getByText('Attack on Titan — Season 1 (Episodes 1–25)', { exact: true })).toBeVisible();
     await expect(page.getByText('Fall of Shiganshina Arc (Episodes 1–2)', { exact: true })).toBeVisible();
