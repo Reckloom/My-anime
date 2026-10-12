@@ -271,7 +271,7 @@ export default function App(){
    const pageSize=500;
    let offset=0;
    while(true){
-    const {data:pageData,error}=await client.from('media_items').select('*,media_metadata(*)')
+    const {data:pageData,error}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data,media_metadata(id,anilist_id,title,alternative_titles,description,poster,backdrop,genres,themes,year,season,score,studio,source,episodes,duration,air_start,air_end,updated_at)')
      .eq('user_id',cloudUserId).order('score',{ascending:false}).order('id',{ascending:true})
      .range(offset,offset+pageSize-1);
     if(error){
@@ -1110,7 +1110,7 @@ function Connections({connections:_,toggle:_toggle,onImportSteamGame}:{connectio
 }
 function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){
  const[items,setItems]=useState<MediaItem[]>([]);
- useEffect(()=>{if(!supabase)return;void(async()=>{const client=supabase;if(!client)return;const {data}=await client.from('media_items').select('*,media_metadata(*)').eq('user_id',id).order('score',{ascending:false});setItems((data||[]).map(dbToMedia))})()},[id]);
+ useEffect(()=>{if(!supabase)return;void(async()=>{const client=supabase;if(!client)return;const {data}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data,media_metadata(id,anilist_id,title,alternative_titles,description,poster,backdrop,genres,themes,year,season,score,studio,source,episodes,duration,air_start,air_end,updated_at)').eq('user_id',id).order('score',{ascending:false});setItems((data||[]).map(dbToMedia))})()},[id]);
  return <div className="page"><button className="breadcrumb" onClick={onBack}>← Back to friends</button><div className="page-heading"><div><small>PERMISSION GRANTED</small><h1>Shared library</h1><p>This library is visible because your friend explicitly allowed access.</p></div></div><div className="media-grid">{items.map(x=><SharedCard key={x.id} item={x} library={items}/>)}</div>{!items.length&&<Empty text="Nothing has been shared yet."/>}</div>;
 }
 function SharedCard({item,library}:{item:MediaItem;library:MediaItem[]}){
