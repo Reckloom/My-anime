@@ -748,6 +748,8 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       favorite: existingSpecial?.favorite || false,
       externalLinks: { officialUrl: 'https://www.heroaca.com/' }
     });
+    // The special is a real released subpart, so the franchise root counter includes it.
+    franchiseEpisodes += 1;
   }
 
   let franchiseEpisodes = 0;
