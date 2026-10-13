@@ -33,7 +33,7 @@ export function posterImageSrc(value?: string | null): string {
     const anilistArtwork =
       parsed.protocol === 'https:' &&
       /^s\d+\.anilist\.co$/i.test(parsed.hostname) &&
-      /^\/file\/anilistcdn\/media\/anime\/cover\/.+\.(?:jpe?g|png|webp)$/i.test(parsed.pathname);
+      /^\/file\/anilistcdn\/media\/anime\/(?:cover\/)?[^/]+\.(?:jpe?g|png|webp)$/i.test(parsed.pathname);
     const kitsuEpisodeArtwork =
       parsed.protocol === 'https:' &&
       parsed.hostname === 'media.kitsu.app' &&
