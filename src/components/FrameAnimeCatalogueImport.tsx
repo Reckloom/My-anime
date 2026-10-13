@@ -729,7 +729,6 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       parentId: rootId,
       sourceProvider: 'frame-anime-special',
       externalId: 'mha-more-431',
-      anilistId: 214886,
       title: 'My Hero Academia No. 170+1: More',
       alternativeTitles: ['My Hero Academia: More', 'Boku no Hero Academia No. 170+1: More'],
       description: 'A 2026 television special adapting the post-finale chapter 431 story.',
