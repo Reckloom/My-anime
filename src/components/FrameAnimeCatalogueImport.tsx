@@ -70,6 +70,99 @@ const BLEACH_ARCS = [
   [15,'Gotei 13 Invading Army',317,342,'A new threat targets the Gotei 13.'],
   [16,'The Lost Substitute Shinigami',343,366,'Ichigo faces life after losing his Soul Reaper powers.']
 ] as const;
+
+// Curated non-overlapping TV arc ranges. Ranges are local to their parent TV
+// part/season; they are organizational metadata only and never add to root totals.
+type CuratedArc = { season: string; name: string; start: number; end: number; description: string };
+const CURATED_ARCS: Record<string, CuratedArc[]> = {
+  'my-hero-academia': [
+    {season:'Season 1',name:'U.A. Entrance & Battle Trial',start:1,end:8,description:'Izuku enters U.A., learns to control One For All and faces the first class trials.'},
+    {season:'Season 1',name:'U.S.J. Arc',start:9,end:13,description:'Class 1-A faces the League of Villains during the U.S.J. attack.'},
+    {season:'Season 2',name:'U.A. Sports Festival',start:1,end:12,description:'Class 1-A competes in U.A.’s major student tournament.'},
+    {season:'Season 2',name:'Vs. Hero Killer Stain',start:13,end:20,description:'The students encounter Stain and the consequences of his ideology.'},
+    {season:'Season 2',name:'Final Exams',start:21,end:25,description:'Students face practical final exams against their teachers.'},
+    {season:'Season 3',name:'Forest Training Camp',start:1,end:7,description:'Class 1-A trains in the forest before a villain attack changes everything.'},
+    {season:'Season 3',name:'Hideout Raid',start:8,end:12,description:'The heroes launch a rescue operation against the League of Villains.'},
+    {season:'Season 3',name:'Provisional Hero License Exam',start:13,end:23,description:'Students compete for provisional hero licenses.'},
+    {season:'Season 3',name:'Shie Hassaikai Setup',start:24,end:25,description:'The heroes prepare for the next major conflict.'},
+    {season:'Season 4',name:'Shie Hassaikai',start:1,end:14,description:'The heroes confront Overhaul and the Shie Hassaikai.'},
+    {season:'Season 4',name:'Remedial Course',start:15,end:18,description:'Students complete remedial training after the license exam.'},
+    {season:'Season 4',name:'U.A. School Festival',start:19,end:21,description:'Class 1-A works to make the school festival a success.'},
+    {season:'Season 4',name:'Pro Hero',start:22,end:25,description:'Endeavor faces a major test as the new No. 1 hero.'},
+    {season:'Season 5',name:'Joint Training',start:1,end:12,description:'Classes 1-A and 1-B compete in joint battle training.'},
+    {season:'Season 5',name:'Meta Liberation Army',start:13,end:25,description:'The League of Villains collides with the Meta Liberation Army.'},
+    {season:'Season 6',name:'Paranormal Liberation War',start:1,end:13,description:'Heroes and villains clash in an enormous coordinated war.'},
+    {season:'Season 6',name:'Dark Hero',start:14,end:25,description:'Society collapses around Izuku as he operates independently.'},
+    {season:'Season 7',name:'Star and Stripe',start:1,end:2,description:'America’s top hero enters the conflict.'},
+    {season:'Season 7',name:'U.A. Traitor',start:3,end:5,description:'The heroes uncover the traitor and prepare for the final battle.'},
+    {season:'Season 7',name:'Final War',start:6,end:21,description:'The heroes fight the villains in the decisive war.'},
+    {season:'Final Season',name:'Final War',start:1,end:9,description:'The final season concludes the decisive battle.'},
+    {season:'Final Season',name:'Epilogue',start:10,end:11,description:'The story closes with the aftermath and future of the heroes.'}
+  ],
+  'solo-leveling': [
+    {season:'Season 1',name:'Double Dungeon',start:1,end:2,description:'Jinwoo survives the deadly double dungeon and awakens the System.'},
+    {season:'Season 1',name:'Instant Dungeon & Dungeon Raids',start:3,end:7,description:'Jinwoo begins systematic leveling and takes on increasingly dangerous gates.'},
+    {season:'Season 1',name:'Yoo Jinho Raid Party',start:8,end:10,description:'Jinwoo works with Jinho while preparing for his class change.'},
+    {season:'Season 1',name:'Job Change',start:11,end:12,description:'Jinwoo faces the brutal class-change dungeon.'},
+    {season:'Season 2',name:'Red Gate',start:1,end:3,description:'A training raid turns into a deadly Red Gate survival battle.'},
+    {season:'Season 2',name:'Demon Castle',start:4,end:9,description:'Jinwoo clears the Demon Castle while seeking the Elixir of Life.'},
+    {season:'Season 2',name:'Jeju Island',start:10,end:13,description:'Jinwoo joins the decisive Jeju Island raid and confronts the Ant King.'}
+  ],
+  'hells-paradise': [
+    {season:'Season 1',name:'Island',start:1,end:7,description:'Gabimaru and the condemned prisoners arrive on the mysterious island.'},
+    {season:'Season 1',name:'Lord Tensen',start:8,end:13,description:'The survivors uncover the island’s deeper mysteries and face Lord Tensen.'},
+    {season:'Season 2',name:'Horizon of the Island',start:1,end:6,description:'The surviving group continues the search while facing new threats.'},
+    {season:'Season 2',name:'Lord Tensen Conflict',start:7,end:12,description:'The struggle against the island’s forces escalates toward its conclusion.'}
+  ],
+  'mashle': [
+    {season:'Season 1',name:'Easton Enrollment',start:1,end:5,description:'Mash enters Easton Magic Academy and begins proving himself.'},
+    {season:'Season 1',name:'Magia Lupus',start:6,end:12,description:'Mash confronts the Magia Lupus group and their leader.'},
+    {season:'Season 2',name:'Divine Visionary Selection Exam',start:1,end:12,description:'Mash and his friends compete in the Divine Visionary Selection Exam.'}
+  ],
+  'chainsaw-man': [
+    {season:'Season 1',name:'Introduction',start:1,end:3,description:'Denji becomes Chainsaw Man and joins Public Safety.'},
+    {season:'Season 1',name:'Bat Devil',start:4,end:6,description:'Denji and Power confront the Bat Devil.'},
+    {season:'Season 1',name:'Eternity Devil',start:7,end:9,description:'The Public Safety team becomes trapped in a terrifying devil encounter.'},
+    {season:'Season 1',name:'Katana Man',start:10,end:12,description:'Denji and the surviving hunters pursue Katana Man.'}
+  ],
+  'death-note': [
+    {season:'TV Series',name:'Kira Investigation',start:1,end:25,description:'Light and L engage in their central battle of wits over Kira.'},
+    {season:'TV Series',name:'Near & Mello',start:26,end:37,description:'A new generation of investigators takes the fight to Kira.'}
+  ],
+  'jujutsu-kaisen': [
+    {season:'Season 1',name:'Fearsome Womb',start:1,end:8,description:'Yuji enters Jujutsu High and confronts his first major curses.'},
+    {season:'Season 1',name:'Vs. Mahito',start:9,end:13,description:'Yuji and Nanami face Mahito and his evolving threat.'},
+    {season:'Season 1',name:'Kyoto Goodwill Event',start:14,end:21,description:'Tokyo and Kyoto students clash in the Goodwill Event.'},
+    {season:'Season 1',name:'Death Painting',start:22,end:24,description:'Yuji and his allies confront the Death Painting brothers.'},
+    {season:'Season 2',name:'Hidden Inventory / Premature Death',start:1,end:5,description:'Gojo and Geto’s past is revealed.'},
+    {season:'Season 2',name:'Shibuya Incident',start:6,end:23,description:'The Shibuya Incident reshapes the jujutsu world.'},
+    {season:'Season 3',name:'Culling Game: Part 1',start:1,end:12,description:'Yuji and the sorcerers enter the Culling Game.'}
+  ],
+  'demon-slayer': [
+    {season:'Season 1',name:'Final Selection',start:1,end:5,description:'Tanjiro trains and survives Final Selection.'},
+    {season:'Season 1',name:'First Mission',start:6,end:7,description:'Tanjiro begins his work as a Demon Slayer.'},
+    {season:'Season 1',name:'Asakusa',start:8,end:10,description:'Tanjiro encounters Muzan and the demon Tamayo.'},
+    {season:'Season 1',name:'Tsuzumi Mansion',start:11,end:14,description:'Tanjiro joins Zenitsu and Inosuke against a dangerous demon.'},
+    {season:'Season 1',name:'Natagumo Mountain',start:15,end:21,description:'The group faces the Spider Family and Rui.'},
+    {season:'Season 1',name:'Rehabilitation Training',start:22,end:26,description:'Tanjiro recovers and trains at the Butterfly Mansion.'},
+    {season:'Mugen Train Arc',name:'Mugen Train',start:1,end:7,description:'Tanjiro and his allies board the Mugen Train with Rengoku.'},
+    {season:'Entertainment District Arc',name:'Entertainment District',start:1,end:11,description:'The Demon Slayers investigate demon activity in Yoshiwara.'},
+    {season:'Swordsmith Village Arc',name:'Swordsmith Village',start:1,end:11,description:'Tanjiro protects the Swordsmith Village from Upper Rank demons.'},
+    {season:'Hashira Training Arc',name:'Hashira Training',start:1,end:8,description:'The Demon Slayer Corps prepares for the final confrontation.'}
+  ],
+  'tokyo-revengers': [
+    {season:'Season 1',name:'Moebius',start:1,end:13,description:'Takemichi becomes involved in the Moebius conflict.'},
+    {season:'Season 1',name:'Valhalla',start:14,end:24,description:'The Bloody Halloween conflict pits Toman against Valhalla.'},
+    {season:'Season 2',name:'Christmas Showdown',start:1,end:13,description:'Takemichi and Chifuyu confront the Black Dragon conflict.'},
+    {season:'Season 3',name:'Tenjiku',start:1,end:13,description:'Toman faces Izana and the Tenjiku gang.'},
+    {season:'Season 4',name:'Three Deities War',start:1,end:13,description:'The final televised conflict begins around the Three Deities.'}
+  ],
+  'summer-time-rendering': [
+    {season:'Season 1',name:'Mio & the Shadow Mystery',start:1,end:7,description:'Shinpei discovers the Shadow phenomenon and begins repeating July 22.'},
+    {season:'Season 1',name:'Hiruko & Ushio',start:8,end:14,description:'The mystery expands as Shinpei and Ushio investigate the island.'},
+    {season:'Season 1',name:'Final Loop',start:15,end:25,description:'The group prepares for the decisive confrontation with Shide.'}
+  ]
+};
 const SEARCH_QUERY = 'query ($search:String!,$page:Int!,$perPage:Int!,$type:MediaType!){Page(page:$page,perPage:$perPage){media(search:$search,type:$type,sort:[SEARCH_MATCH]){id idMal type format title{romaji english native userPreferred} synonyms coverImage{extraLarge} bannerImage genres season seasonYear averageScore}}}';
 const DETAIL_FIELDS = 'id idMal type format status title{romaji english native userPreferred} synonyms description coverImage{extraLarge} bannerImage genres tags{name} season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id idMal type format status title{romaji english native userPreferred} synonyms coverImage{extraLarge} bannerImage genres season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day}}}}';
 const ROOT_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + ' characters(sort:ROLE,perPage:20){edges{role node{id name{full native} image{large} description siteUrl}}}}}';
@@ -579,6 +672,45 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       });
     }
   }
+  // Add curated story arcs as children of their actual TV part. Arc totals are
+  // deliberately derived from start/end ranges and never contribute to root totals.
+  const curated = CURATED_ARCS[task.key] || [];
+  for (const media of chosen) {
+    const mediaTitle = normalizeText(preferredTitle(media));
+    const candidates = curated.filter(arc => {
+      const s = normalizeText(arc.season);
+      return mediaTitle.includes(s) || (s === 'tv series' && mediaTitle.includes(normalizeText(task.title)));
+    });
+    const mediaId = itemIds.get(Number(media.id));
+    if (!mediaId) continue;
+    for (let i = 0; i < candidates.length; i++) {
+      const arc = candidates[i];
+      const arcId = 'frame-story-arc-' + task.key + '-' + Number(media.id) + '-' + String(i + 1).padStart(2, '0');
+      const existingArc = library.find(item => item.id === arcId);
+      const count = arc.end - arc.start + 1;
+      incoming.push({
+        id: arcId,
+        parentId: mediaId,
+        sourceProvider: 'frame-story-arc',
+        externalId: arcId,
+        title: arc.name,
+        description: arc.description + ' Episodes ' + arc.start + '–' + arc.end + ' of this part.',
+        poster: String(media.coverImage?.extraLarge || ''),
+        backdrop: String(media.bannerImage || media.coverImage?.extraLarge || ''),
+        medium: 'anime',
+        status: existingArc?.status || 'planned',
+        progress: existingArc?.progress || 0,
+        total: count,
+        progressUnit: 'episodes',
+        genres: existingArc?.genres || media.genres || [],
+        themes: existingArc?.themes || [],
+        studio: media.studios?.nodes?.[0]?.name,
+        source: 'FRAME curated story arc',
+        externalLinks: existingArc?.externalLinks || {}
+      });
+    }
+  }
+
   let franchiseEpisodes = 0;
   for (let index = 0; index < chosen.length; index++) {
     const media = chosen[index];
@@ -592,7 +724,10 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     );
     // Never assume a new title or season is watched just because episode
     // metadata exists. Keep an existing entry's progress, otherwise start at 0.
-    const progress = Math.max(0, Number(existingMedia?.progress) || 0);
+    const confirmedCompleted = task.key === 'my-hero-academia' || task.key === 'summertime-rendering';
+    const progress = confirmedCompleted
+      ? Math.max(0, movie ? 1 : episodes.length)
+      : Math.max(0, Number(existingMedia?.progress) || 0);
     const total = movie ? 1 : episodes.length;
     if (!movie) {
       franchiseEpisodes += episodes.length;
@@ -630,7 +765,10 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     rootRow.total = Number(rootExisting?.total) > 0
       ? Math.min(2000, Number(rootExisting!.total))
       : Math.min(2000, franchiseEpisodes);
-    rootRow.progress = Math.min(Math.max(0, Number(rootExisting?.progress) || 0), rootRow.total || 0);
+    rootRow.progress = (task.key === 'my-hero-academia' || task.key === 'summertime-rendering')
+      ? rootRow.total
+      : Math.min(Math.max(0, Number(rootExisting?.progress) || 0), rootRow.total || 0);
+    if (task.key === 'my-hero-academia' || task.key === 'summertime-rendering') rootRow.status = 'completed';
     rootRow.customTotal = undefined;
     rootRow.description = clean(rootDetails.description);
   }
