@@ -48,7 +48,8 @@ const TASKS: Task[] = [
   { key: 'solo-leveling', title: 'Solo Leveling', search: 'Ore dake Level Up na Ken', aliases: ['Solo Leveling', 'Ore dake Level Up na Ken'], relatedLimit: 8, relationDepth: 2 },
   { key: 'spy-family', title: 'Spy × Family', search: 'Spy x Family', aliases: ['Spy x Family', 'Spy × Family'], relatedLimit: 16, relationDepth: 2 },
   { key: 'chainsaw-man', title: 'Chainsaw Man', search: 'Chainsaw Man', aliases: ['Chainsaw Man'], relatedLimit: 9, relationDepth: 2 },
-  { key: 'tokyo-revengers', title: 'Tokyo Revengers', search: 'Tokyo Revengers', aliases: ['Tokyo Revengers'], relatedLimit: 12, relationDepth: 2 }
+  { key: 'tokyo-revengers', title: 'Tokyo Revengers', search: 'Tokyo Revengers', aliases: ['Tokyo Revengers'], relatedLimit: 12, relationDepth: 2 },
+  { key: 'demon-slayer', title: 'Demon Slayer: Kimetsu no Yaiba', search: 'Kimetsu no Yaiba', aliases: ['Demon Slayer: Kimetsu no Yaiba', 'Kimetsu no Yaiba', 'Demon Slayer'], relatedLimit: 24, relationDepth: 3 }
 ];
 
 const BLEACH_ARCS = [
@@ -71,7 +72,7 @@ const BLEACH_ARCS = [
 ] as const;
 const SEARCH_QUERY = 'query ($search:String!,$page:Int!,$perPage:Int!,$type:MediaType!){Page(page:$page,perPage:$perPage){media(search:$search,type:$type,sort:[SEARCH_MATCH]){id idMal type format title{romaji english native userPreferred} synonyms coverImage{extraLarge} bannerImage genres season seasonYear averageScore}}}';
 const DETAIL_FIELDS = 'id idMal type format status title{romaji english native userPreferred} synonyms description coverImage{extraLarge} bannerImage genres tags{name} season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id idMal type format status title{romaji english native userPreferred} synonyms coverImage{extraLarge} bannerImage genres season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day}}}}';
-const ROOT_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + ' characters(sort:ROLE,perPage:15){edges{role node{id name{full native} image{large} description siteUrl}}}}}';
+const ROOT_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + ' characters(sort:ROLE,perPage:20){edges{role node{id name{full native} image{large} description siteUrl}}}}}';
 const RELATED_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + '}}';
 const ALLOWED_RELATIONS = new Set(['PREQUEL', 'SEQUEL', 'SIDE_STORY', 'SPIN_OFF', 'PARENT', 'CHARACTER']);
 const ALLOWED_FORMATS = new Set(['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL']);
@@ -404,7 +405,7 @@ function charactersFrom(media: CatalogueMedia): AnimeCharacterProfile[] {
       sourceUrl: String(node?.siteUrl || '').trim() || undefined
     });
   }
-  return result.slice(0, 15);
+  return result.slice(0, 20);
 }
 
 function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: MediaItem[], isRoot: boolean, rootId: string) {
@@ -615,64 +616,9 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       mappedMedia.source = 'FRAME curated story arc';
     }
     incoming.push(mappedMedia);
-    if (!movie) {
-      const malId = Number(media.idMal) > 0 ? Number(media.idMal) : undefined;
-      for (const episode of episodes) {
-        const episodeExternalId = 'anilist:' + Number(media.id) + ':episode:' + episode.number;
-        const existingEpisode = library.find(x =>
-          (x.sourceProvider === 'frame-anime-episode' && x.externalId === episodeExternalId) ||
-          (Number(x.episode?.episodeNumber) === episode.number &&
-            Boolean(malId && String(x.externalLinks?.malId || '') === String(malId) &&
-              x.medium === 'anime' && x.id !== id))
-        );
-        const episodeId = existingEpisode?.id || ('frame-anime-episode-' + Number(media.id) + '-' + episode.number + '-' + scope);
-        const code = 'EP ' + pad(episode.number);
-        const episodeMeta: EpisodeMetadata = {
-          seasonNumber: 1,
-          episodeNumber: episode.number,
-          episodeCode: code,
-          airDate: episode.airDate,
-          ratingSource: episode.source,
-          imdbEpisodeUrl: 'https://www.imdb.com/find/?q=' + encodeURIComponent(preferredTitle(media) + ' episode ' + episode.number + ' ' + episode.title),
-          googleImageSearchUrl: 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(preferredTitle(media) + ' episode ' + episode.number + ' ' + episode.title + ' official still'),
-          posterSource: episode.poster ? episode.source.toLowerCase() + '-episode-image' : 'not-supplied-by-source',
-          synopsis: episode.synopsis
-        };
-        incoming.push({
-          id: episodeId,
-          // Preserve an existing curated arc assignment when a catalogue refresh
-          // revisits the same episode; never flatten a nested episode onto its part.
-          parentId: task.key === 'bleach' && index === 0
-            ? (bleachArcIds.get(BLEACH_ARCS.find(arc => episode.number >= arc[2] && episode.number <= arc[3])?.[0] || -1) || existingEpisode?.parentId || id)
-            : (existingEpisode?.parentId || id),
-          sourceProvider: 'frame-anime-episode',
-          externalId: episodeExternalId,
-          title: 'Episode ' + pad(episode.number) + ' — ' + episode.title,
-          description: episode.synopsis || '',
-          poster: episode.poster || '',
-          backdrop: '',
-          medium: 'anime',
-          status: 'planned',
-          progress: 0,
-          total: 1,
-          customTotal: undefined,
-          progressUnit: 'episodes',
-          year: episode.airDate ? Number(episode.airDate.slice(0, 4)) : (media.startDate?.year ? Number(media.startDate.year) : undefined),
-          score: undefined,
-          genres: Array.isArray(media.genres) ? media.genres.map(String) : [],
-          themes: [],
-          favorite: false,
-          season: preferredTitle(media),
-          source: episode.source,
-          episode: episodeMeta,
-          externalLinks: {
-            malId: malId ? String(malId) : undefined,
-            officialUrl: malId && episode.source !== 'Kitsu' ? 'https://myanimelist.net/anime/' + malId + '/episode/' + episode.number : undefined,
-            newsUrl: episode.sourceUrl
-          }
-        });
-      }
-    }
+    // FRAME's permanent anime model intentionally stores no individual episode rows.
+    // Episode catalogues above are used only to verify released counts/totals; the UI
+    // represents episodes through season/part totals and curated arc ranges.
   }
 
   // The root's progress represents the released episodes across its imported animated entries.
@@ -701,7 +647,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   return {
     items: finalItems,
     warnings: [...new Set(warnings)],
-    summary: chosen.length + ' animated entries; ' + finalItems.filter(x => x.sourceProvider === 'frame-anime-episode').length + ' titled episodes; ' + (verified ? 'catalogue checks passed' : 'catalogue needs another verification pass')
+    summary: chosen.length + ' animated entries; no individual episode rows; ' + (verified ? 'catalogue checks passed' : 'catalogue needs another verification pass')
   };
 }
 
@@ -832,7 +778,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
   const warningsCount = Object.values(warningsByTask).reduce((sum, list) => sum + list.length, 0);
   return <section className="anime-catalogue-import settings-panel settings-panel-wide" aria-label="Anime catalogue import">
     <div className="section-title">
-      <div><small>CATALOGUE REPAIR</small><h2>Anime library import</h2><p>Fetch AniList metadata, related animated entries, character portraits, and paginated titled episodes. Each completed franchise is saved separately so the import can resume after an interrupted session.</p></div>
+      <div><small>CATALOGUE REPAIR</small><h2>Anime library import</h2><p>Fetch AniList metadata, related animated entries, character portraits, and source-verified episode counts without creating individual episode rows. Each completed franchise is saved separately so the import can resume after an interrupted session.</p></div>
     </div>
     {!enabled && <p className="muted">Sign in to import catalogue records into your account.</p>}
     <div className="anime-catalogue-import-status">
@@ -859,6 +805,6 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
       })}</div>
       <p className="muted">One Piece is intentionally not re-imported because its existing catalogue is the reference entry. Dragon Ball GT and Dragon Ball Daima are excluded by the importer.</p>
     </details>
-    <p className="anime-catalogue-import-footnote">Only episodes with a real source title are stored. If AniList and the episode sources disagree, the task remains flagged rather than filling gaps with invented titles. Images are sourced per title from AniList; unavailable source artwork is reported.</p>
+    <p className="anime-catalogue-import-footnote">No individual episode rows are stored. Episode sources are used only to verify released totals; if AniList and the episode sources disagree, the task remains flagged. Images are sourced per title from AniList; unavailable source artwork is reported.</p>
   </section>;
 }
