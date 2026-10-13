@@ -188,7 +188,8 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
 }
 function safeInitialArtwork(p:Props){
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
- if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||svgFallback(p.title,p.medium);
+ if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||'/frame-logo.svg';
+ if(p.medium==='anime'&&p.anilistId)return p.parentPoster||'/frame-logo.svg';
  if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
  return p.parentPoster||svgFallback(p.title,p.medium);
 }
