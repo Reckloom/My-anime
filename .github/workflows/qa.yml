@@ -1,4 +1,5 @@
 name: FRAME Feature QA
+# Smoke-test the current main branch after every application fix.
 
 on:
   push:
