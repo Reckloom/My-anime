@@ -722,6 +722,34 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     }
   }
 
+  if (task.key === 'my-hero-academia') {
+    const existingSpecial = library.find(item => item.anilistId === 214886 || normalizeText(item.title) === normalizeText('My Hero Academia No. 170+1: More'));
+    incoming.push({
+      id: existingSpecial?.id || 'frame-mha-more-special-' + scope,
+      parentId: rootId,
+      sourceProvider: 'frame-anime-special',
+      externalId: 'mha-more-431',
+      anilistId: 214886,
+      title: 'My Hero Academia No. 170+1: More',
+      alternativeTitles: ['My Hero Academia: More', 'Boku no Hero Academia No. 170+1: More'],
+      description: 'A 2026 television special adapting the post-finale chapter 431 story.',
+      poster: String(rootDetails.coverImage?.extraLarge || ''),
+      backdrop: String(rootDetails.bannerImage || rootDetails.coverImage?.extraLarge || ''),
+      medium: 'anime',
+      status: 'completed',
+      progress: 1,
+      total: 1,
+      progressUnit: 'episodes',
+      year: 2026,
+      genres: rootDetails.genres || [],
+      themes: [],
+      studio: rootDetails.studios?.nodes?.[0]?.name,
+      source: 'Manga',
+      favorite: existingSpecial?.favorite || false,
+      externalLinks: { officialUrl: 'https://www.heroaca.com/' }
+    });
+  }
+
   let franchiseEpisodes = 0;
   for (let index = 0; index < chosen.length; index++) {
     const media = chosen[index];
@@ -739,9 +767,9 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const progress = confirmedCompleted
       ? Math.max(0, movie ? 1 : episodes.length)
       : Math.max(0, Number(existingMedia?.progress) || 0);
-    const total = movie ? 1 : episodes.length;
+    const total = movie ? 1 : (task.key === 'my-hero-academia' && /final season/i.test(preferredTitle(media)) ? 11 : episodes.length);
     if (!movie) {
-      franchiseEpisodes += episodes.length;
+      franchiseEpisodes += total;
     }
     const mappedMedia = mapMediaItem(media, {
       id,
@@ -823,6 +851,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
   useEffect(() => { libraryRef.current = library; }, [library]);
   const [logs, setLogs] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const autoStartedRef = useRef(false);
 
   const addLog = (message: string) => setLogs(prev => [message, ...prev].slice(0, 8));
   const persistCompleted = (keys: string[], warnings: Record<string, string[]>) => {
@@ -919,6 +948,14 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
       setRunning(false);
     }
   };
+
+  useEffect(() => {
+    if (!enabled || !userId || running || autoStartedRef.current) return;
+    const remaining = TASKS.some(task => !completedKeys.includes(task.key));
+    if (!remaining) return;
+    autoStartedRef.current = true;
+    void runCatalogue(false);
+  }, [enabled, userId, running, completedKeys]);
 
   const verifiedCount = completedKeys.filter(key =>
     TASKS.some(task => task.key === key) &&
