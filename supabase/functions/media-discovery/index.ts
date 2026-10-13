@@ -720,7 +720,7 @@ Deno.serve(async(req:Request)=>{
       const allowedIdn=source.hostname==='image.idn.media'&&/\.(?:jpe?g|png|webp|avif)$/i.test(source.pathname);
       const allowedTvdb=source.hostname==='artworks.thetvdb.com'&&/^\/banners\/episodes\/\d+\/\d+\.(?:jpe?g|png|webp)$/i.test(source.pathname);
       const allowedKitsu=source.hostname==='media.kitsu.app'&&/^\/episode\/\d+\/thumbnail\/[a-f0-9]{32}\.(?:jpe?g|png|webp)$/i.test(source.pathname);
-      const allowedAniList=/^s\d+\.anilist\.co$/i.test(source.hostname)&&/^\/file\/anilistcdn\/media\/anime\/cover\/.+\.(?:jpe?g|png|webp)$/i.test(source.pathname);
+      const allowedAniList=/^s\d+\.anilist\.co$/i.test(source.hostname)&&/^\/file\/anilistcdn\/media\/anime\/(?:cover\/)?[^/]+\.(?:jpe?g|png|webp)$/i.test(source.pathname);
       if(source.protocol!=='https:'||!(allowedWiki||allowedOfficialEpisode||allowedVodAnime||allowedIdn||allowedTvdb||allowedKitsu||allowedAniList)){
         return new Response('Image host or path is not allowed.',{status:403,headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
       }
