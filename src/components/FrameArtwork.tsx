@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import type {MediaItem,Medium} from '../types';
-import {posterImageSrc} from '../posterImage';
+import {posterImageSrc,proxyImageSrc} from '../posterImage';
 import {ANILIST_URL,type AniListMedia,SEARCH_QUERY,DETAIL_QUERY} from '../anilist';
 
 type Props={
@@ -198,5 +198,5 @@ export function FrameArtwork(p:Props){
  const [src,setSrc]=useState(()=>safeInitialArtwork(p));
  useEffect(()=>{let active=true;void resolve(p).then(value=>{if(active)setSrc(value)});return()=>{active=false}},[p.title,p.medium,p.poster,p.anilistId,p.parentPoster,p.parentTitle,p.parentMedium,p.parentAnilistId,p.sourceProvider,p.externalId]);
  const fallback=safeInitialArtwork(p);
- return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=posterImageSrc(fallback!==src?fallback:(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium)))}}/>;
+ return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;if(/https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\//i.test(failedSrc)&&img.dataset.anilistProxyApplied!=='1'){img.dataset.anilistProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=posterImageSrc(fallback!==src?fallback:(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium)))}}/>;
 }
