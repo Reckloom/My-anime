@@ -42,9 +42,9 @@ export function posterImageSrc(value?: string | null): string {
     // Keep them direct; proxying a guessed/rewritten CDN path can turn valid
     // artwork into the colored fallback placeholder.
     if (anilistArtwork) {
-      // Route AniList covers through FRAME's artwork proxy. This avoids browser-side
-      // CDN/hotlink failures while preserving the exact URL returned by AniList.
-      return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
+      // Keep AniList covers direct. The CDN already supports browser delivery;
+      // proxying every poster adds a second network hop and makes the grid slower.
+      return parsed.href;
     }
     if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork) {
       return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
