@@ -679,7 +679,18 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const mediaTitle = normalizeText(preferredTitle(media));
     const candidates = curated.filter(arc => {
       const s = normalizeText(arc.season);
-      return mediaTitle.includes(s) || (s === 'tv series' && mediaTitle.includes(normalizeText(task.title)));
+      const arcSeasonNumber = Number(s.match(/season (\\d+)/)?.[1] || 0);
+      const mediaSeasonNumber = Number(
+        mediaTitle.match(/(?:season|series|s) (\\d+)/)?.[1] ||
+        mediaTitle.match(/(\\d+)(?:st|nd|rd|th) season/)?.[1] || 0
+      );
+      const finalSeason = s === 'final season' && (mediaTitle.includes('final season') || mediaTitle.includes('8th season') || mediaTitle.includes('8th season'));
+      const firstChosenIsSeasonOne = Number(media.id) === Number(chosen[0]?.id) && arcSeasonNumber === 1;
+      return mediaTitle.includes(s) ||
+        (s === 'tv series' && mediaTitle.includes(normalizeText(task.title))) ||
+        (arcSeasonNumber > 0 && mediaSeasonNumber === arcSeasonNumber) ||
+        finalSeason ||
+        firstChosenIsSeasonOne;
     });
     const mediaId = itemIds.get(Number(media.id));
     if (!mediaId) continue;
