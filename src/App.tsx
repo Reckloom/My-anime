@@ -919,7 +919,15 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   catch(e){setRadarError(e instanceof Error?e.message:'Release Radar unavailable.')}
   finally{setRadarBusy(false)}
  };
- useEffect(()=>{if(!supabase||!user?.id)return;void refreshRadar();const timer=window.setInterval(()=>void refreshRadar(),30*60*1000);return()=>window.clearInterval(timer)},[user?.id,releaseNotificationsEnabled]);
+ useEffect(()=>{
+  if(!supabase||!user?.id)return;
+  // Release Radar is a background feature; never let it compete with the first
+  // library paint. Delay the first request until the UI has settled.
+  let cancelled=false;
+  const run=()=>{if(!cancelled)void refreshRadar()};
+  const timer=window.setTimeout(run,8000);
+  return()=>{cancelled=true;window.clearTimeout(timer)};
+ },[user?.id,releaseNotificationsEnabled]);
  const persist=async(key:string,value:string)=>{const client=supabase;if(client){const defaults={user_id:cloudUserId,theme:'ultra-movie',density:'comfortable',accent:'gold',default_sort:'popularity',default_media_filter:'anime',voice_enabled:true,compact_nav:false,appearance_mode:'dark',updated_at:new Date().toISOString(),[key]:value};const {error}=await client.from('user_preferences').upsert(defaults,{onConflict:'user_id'});if(error)console.warn('[FRAME preferences]',error.message);return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs[key]=value;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
  const updateReleaseNotifications=async(enabled:boolean)=>{setReleaseNotificationsEnabled(enabled);const client=supabase;if(client){const {error}=await client.from('user_preferences').upsert({user_id:cloudUserId,theme:'ultra-movie',density:'comfortable',accent:'gold',default_sort:'popularity',default_media_filter:'anime',voice_enabled:true,compact_nav:false,appearance_mode:'dark',release_notifications_enabled:enabled,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error){setReleaseNotificationsEnabled(!enabled);setAppMessage('Notification setting could not be saved: '+error.message);window.setTimeout(()=>setAppMessage(''),5000)}return}if(guest){try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};prefs.release_notifications_enabled=enabled;localStorage.setItem('frame-guest-preferences',JSON.stringify(prefs))}catch{}}};
  const removeOwnedArtwork=async(url?:string)=>{const client=supabase;if(!client||!user?.id||!url)return;try{const parsed=new URL(url);const prefix='/storage/v1/object/public/frame-media-art/';if(!parsed.pathname.startsWith(prefix))return;const path=decodeURIComponent(parsed.pathname.slice(prefix.length));if(path.startsWith(user.id+'/'))await client.storage.from('frame-media-art').remove([path]);}catch{}};
@@ -964,6 +972,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  const hydrateDescendants=async(rootId:string)=>{
   const client=supabase;
   if(!client||!cloudUserId)return;
+  const existingChildren=itemsRef.current.some(x=>x.parentId===rootId);
+  if(existingChildren)return;
   const loadedIds=new Set<string>([rootId]);
   let frontier=[rootId];
   const rows:any[]=[];
