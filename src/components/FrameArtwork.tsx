@@ -91,14 +91,14 @@ async function resolve(p:Props):Promise<string>{
      if(image)return image;
     }
    }catch{/* retain fallback artwork */}
-   return p.parentPoster||svgFallback(p.title,p.medium);
+   return p.parentPoster||'/frame-logo.svg';
   });
   setArtworkCache(key,request);
   return request;
  }
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return hasSavedPoster?p.poster as string:svgFallback(p.title,p.medium);
+ if(isEpisode)return hasSavedPoster?p.poster as string:'/frame-logo.svg';
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
  if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
@@ -167,7 +167,7 @@ async function resolve(p:Props):Promise<string>{
    const image=media?.coverImage?.extraLarge;
    const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
   if(image&&media?.type===type&&titleMatches)return image;
-  if(media&&!titleMatches)return hasSavedPoster&&p.poster?p.poster:svgFallback(p.title,p.medium);
+  if(media&&!titleMatches)return hasSavedPoster&&p.poster?p.poster:'/frame-logo.svg';
   }catch{/* external metadata can be unavailable */}
   if(isSeriesMedia){if(hasSavedPoster&&p.poster)return p.poster as string;return p.parentPoster||svgFallback(p.title,p.medium);}
   return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
@@ -190,12 +190,13 @@ function safeInitialArtwork(p:Props){
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
  if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||'/frame-logo.svg';
  if(p.medium==='anime'&&p.anilistId)return p.parentPoster||'/frame-logo.svg';
- if(['anime','manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
+ if(p.medium==='anime')return p.parentPoster||'/frame-logo.svg';
+  if(['manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
  return p.parentPoster||svgFallback(p.title,p.medium);
 }
 export function FrameArtwork(p:Props){
  const [src,setSrc]=useState(()=>safeInitialArtwork(p));
  useEffect(()=>{let active=true;void resolve(p).then(value=>{if(active)setSrc(value)});return()=>{active=false}},[p.title,p.medium,p.poster,p.anilistId,p.parentPoster,p.parentTitle,p.parentMedium,p.parentAnilistId,p.sourceProvider,p.externalId]);
  const fallback=safeInitialArtwork(p);
- return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=posterImageSrc(fallback!==src?fallback:svgFallback(p.title,p.medium))}}/>;
+ return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=posterImageSrc(fallback!==src?fallback:(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium)))}}/>;
 }
