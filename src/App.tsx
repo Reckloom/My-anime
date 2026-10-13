@@ -1025,6 +1025,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    const fresh=itemsRef.current.find(x=>x.id===selected.id);
    if(fresh&&fresh!==selected)setSelected(fresh);
   },[items,selected]);
+  const openDetail=(item:MediaItem)=>{
   const state={frameRoute:true,framePage:page,frameDetailId:item.id};
   history.pushState(state,'',window.location.href);
   setSelected(item);
