@@ -2,6 +2,12 @@ const DEFAULT_SUPABASE_URL = 'https://blwnhfhpckqbetwxamqr.supabase.co';
 
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL?.trim() || DEFAULT_SUPABASE_URL).replace(/\/$/, '');
 
+export function proxyImageSrc(value?: string | null): string {
+  const url = String(value || '').trim();
+  if (!url) return `${import.meta.env.BASE_URL}frame-logo.svg`;
+  return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(url);
+}
+
 export function posterImageSrc(value?: string | null): string {
   const url = String(value || '').trim();
   if (!url) return `${import.meta.env.BASE_URL}frame-logo.svg`;
