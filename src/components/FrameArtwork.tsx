@@ -113,7 +113,7 @@ async function resolve(p:Props):Promise<string>{
     }
    }catch{/* parent artwork can be unavailable */}
   }
-  return p.parentPoster||svgFallback(p.title,p.medium);
+  return p.parentPoster||'/frame-logo.svg';
  }
  if(isHierarchyNode(p)){
   if(hasDistinctSavedPoster)return p.poster as string;
@@ -143,9 +143,9 @@ async function resolve(p:Props):Promise<string>{
     }
    }catch{/* parent artwork can be unavailable */}
   }
-  return p.parentPoster||svgFallback(p.title,p.medium);
+  return p.parentPoster||'/frame-logo.svg';
  }
- if(!isSeriesMedia)return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
+ if(!isSeriesMedia)return p.poster||p.parentPoster||(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium));
  const type=p.medium==='anime'?'ANIME':'MANGA';
  const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':parent:'+(p.parentPoster||'')+':source:'+(p.posterSource||'');
  const existing=getArtworkCache(key);if(existing)return existing;
@@ -169,8 +169,8 @@ async function resolve(p:Props):Promise<string>{
   if(image&&media?.type===type&&titleMatches)return image;
   if(media&&!titleMatches)return hasSavedPoster&&p.poster?p.poster:'/frame-logo.svg';
   }catch{/* external metadata can be unavailable */}
-  if(isSeriesMedia){if(hasSavedPoster&&p.poster)return p.poster as string;return p.parentPoster||svgFallback(p.title,p.medium);}
-  return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
+  if(isSeriesMedia){if(hasSavedPoster&&p.poster)return p.poster as string;return p.parentPoster||'/frame-logo.svg';}
+  return p.poster||p.parentPoster||(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium));
  });
  setArtworkCache(key,request);
  void request.then(value=>{if(value.startsWith('data:image/svg+xml')&&getArtworkCache(key)===request)cache.delete(key)}).catch(()=>{if(cache.get(key)===request)cache.delete(key)});
@@ -191,8 +191,8 @@ function safeInitialArtwork(p:Props){
  if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||'/frame-logo.svg';
  if(p.medium==='anime'&&p.anilistId)return p.parentPoster||'/frame-logo.svg';
  if(p.medium==='anime')return p.parentPoster||'/frame-logo.svg';
-  if(['manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||svgFallback(p.title,p.medium);
- return p.parentPoster||svgFallback(p.title,p.medium);
+  if(['manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||'/frame-logo.svg';
+ return p.parentPoster||'/frame-logo.svg';
 }
 export function FrameArtwork(p:Props){
  const [src,setSrc]=useState(()=>safeInitialArtwork(p));
