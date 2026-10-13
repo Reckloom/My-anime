@@ -1020,7 +1020,11 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    console.warn('[FRAME detail hydration]',error);
   }
  };
- useEffect(()=>{\n  if(!selected)return;\n  const fresh=itemsRef.current.find(x=>x.id===selected.id);\n  if(fresh&&fresh!==selected)setSelected(fresh);\n },[items,selected]);\n const openDetail=(item:MediaItem)=>{
+  useEffect(()=>{
+   if(!selected)return;
+   const fresh=itemsRef.current.find(x=>x.id===selected.id);
+   if(fresh&&fresh!==selected)setSelected(fresh);
+  },[items,selected]);
   const state={frameRoute:true,framePage:page,frameDetailId:item.id};
   history.pushState(state,'',window.location.href);
   setSelected(item);
