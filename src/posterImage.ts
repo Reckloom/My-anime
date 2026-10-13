@@ -46,7 +46,7 @@ export function posterImageSrc(value?: string | null): string {
       // Always use FRAME's image proxy for saved AniList artwork so the UI gets
       // a normal same-origin-ish HTTPS image response instead of a fragile CDN
       // request. The proxy validates the exact AniList URL and caches it.
-      return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
+      return 'https://images.weserv.nl/?url=' + encodeURIComponent(parsed.hostname + parsed.pathname + parsed.search);
     }
     if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork) {
       return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
