@@ -311,7 +311,7 @@ export default function App(){
     return;
    }
    if(active){
-    const loadedCloudItems=repairAnimePosters(dedupeMediaItems((rootRows||[]).map(dbToMedia)));
+    const loadedCloudItems=dedupeMediaItems((rootRows||[]).map(dbToMedia));
     // Keep saved watch progress unchanged when loading from cloud.
     const cloudItems=loadedCloudItems;
     // Guest mode is intentionally local-first while still hydrating from the
@@ -993,7 +993,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     frontier=next;
    }
    if(!rows.length)return;
-   const children=repairAnimePosters(dedupeMediaItems(rows.map(dbToMedia)));
+   const children=dedupeMediaItems(rows.map(dbToMedia));
    const current=itemsRef.current;
    const merged=mergeMediaLists(current,children);
    itemsRef.current=merged;
