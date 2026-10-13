@@ -8,9 +8,19 @@ export function proxyImageSrc(value?: string | null): string {
   return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(url);
 }
 
+export function isFabricatedAniListPoster(value?: string | null): boolean {
+  const v = String(value || '').trim();
+  return /^https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\/b\d+\.jpg(?:\?[^\s]*)?$/i.test(v);
+}
+
+export function isPlaceholderPoster(value?: string | null): boolean {
+  const v = String(value || '').trim();
+  return !v || /frame-logo\.svg/i.test(v) || isFabricatedAniListPoster(v);
+}
+
 export function posterImageSrc(value?: string | null): string {
   const url = String(value || '').trim();
-  if (!url) return `${import.meta.env.BASE_URL}frame-logo.svg`;
+  if (!url || isFabricatedAniListPoster(url)) return `${import.meta.env.BASE_URL}frame-logo.svg`;
   if (url.startsWith('/')) return `${import.meta.env.BASE_URL}${url.slice(1)}`;
 
   try {
@@ -23,7 +33,7 @@ export function posterImageSrc(value?: string | null): string {
       parsed.protocol === 'https:' &&
       parsed.hostname === 'one-piece.com' &&
       (/^\/img\/anime\/story\/img_story_\d+\.jpg$/i.test(parsed.pathname) ||
-       /^\/o\/assets\/images\/anime\/tvstory\/[a-z0-9_-]+\/story_img_\d+\.jpg$/i.test(parsed.pathname));
+       /^\/o\/assets\/images\/anime\/tvstory\/[a-z0-9_-]+\/story_img_[a-z0-9_-]+\.jpg$/i.test(parsed.pathname));
     const vodAnimeEpisodeArtwork =
       parsed.protocol === 'https:' &&
       parsed.hostname === 'www.vodanime.com' &&
@@ -44,16 +54,7 @@ export function posterImageSrc(value?: string | null): string {
       parsed.protocol === 'https:' &&
       parsed.hostname === 'media.kitsu.app' &&
       /^\/episode\/\d+\/thumbnail\/[a-f0-9]{32}\.(?:jpe?g|png|webp)$/i.test(parsed.pathname);
-    // AniList cover URLs are returned with the exact asset filename by GraphQL.
-    // Keep them direct; proxying a guessed/rewritten CDN path can turn valid
-    // artwork into the colored fallback placeholder.
-    if (anilistArtwork) {
-      // AniList CDN covers can be hotlink-unreliable in some browsers/networks.
-      // Always use FRAME's image proxy for saved AniList artwork so the UI gets
-      // a normal same-origin-ish HTTPS image response instead of a fragile CDN
-      // request. The proxy validates the exact AniList URL and caches it.
-      return parsed.href;
-    }
+    if (anilistArtwork) return parsed.href;
     if (wikiEpisodeArtwork || officialEpisodeArtwork || vodAnimeEpisodeArtwork || idnEpisodeArtwork || tvdbEpisodeArtwork || kitsuEpisodeArtwork) {
       return supabaseUrl + '/functions/v1/media-discovery?action=proxy-image&url=' + encodeURIComponent(parsed.href);
     }
