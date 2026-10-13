@@ -34,11 +34,11 @@ const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g
 const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
 const isFabricatedAniListPoster=(value?:string)=>{
  const v=String(value||'').trim();
- return /^https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\/b\d+\.jpg$/i.test(v);
+ return /^https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\/b\d+\.jpg(?:\?[^\s]*)?$/i.test(v);
 };
 const isBareAniListCover=(value?:string)=>{
  const v=String(value||'').trim();
- return /^https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\/b\d+\.jpg$/i.test(v);
+ return /^https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\/b\d+\.jpg(?:\?[^\s]*)?$/i.test(v);
 };
 const isPlaceholderArtwork=(value?:string)=>!value||value.toLowerCase().includes('frame-logo.svg')||isBareAniListCover(value);
 const isHierarchyNode=(p:Props)=>p.sourceProvider==='frame-story-arc'||/^frame-anime-(?:season|arc|episode)$/i.test(p.sourceProvider||'')||isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'')||/(?:^|[-_])(season|s)\d+(?:[-_]|$)/i.test(p.externalId||'')||/(?:^|[-_])arc[-_]/i.test(p.externalId||'');
