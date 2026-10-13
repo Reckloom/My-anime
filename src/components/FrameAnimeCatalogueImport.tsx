@@ -49,7 +49,8 @@ const TASKS: Task[] = [
   { key: 'spy-family', title: 'Spy × Family', search: 'Spy x Family', aliases: ['Spy x Family', 'Spy × Family'], relatedLimit: 16, relationDepth: 2 },
   { key: 'chainsaw-man', title: 'Chainsaw Man', search: 'Chainsaw Man', aliases: ['Chainsaw Man'], relatedLimit: 9, relationDepth: 2 },
   { key: 'tokyo-revengers', title: 'Tokyo Revengers', search: 'Tokyo Revengers', aliases: ['Tokyo Revengers'], relatedLimit: 12, relationDepth: 2 },
-  { key: 'demon-slayer', title: 'Demon Slayer: Kimetsu no Yaiba', search: 'Kimetsu no Yaiba', aliases: ['Demon Slayer: Kimetsu no Yaiba', 'Kimetsu no Yaiba', 'Demon Slayer'], relatedLimit: 24, relationDepth: 3 }
+  { key: 'demon-slayer', title: 'Demon Slayer: Kimetsu no Yaiba', search: 'Kimetsu no Yaiba', aliases: ['Demon Slayer: Kimetsu no Yaiba', 'Kimetsu no Yaiba', 'Demon Slayer'], relatedLimit: 24, relationDepth: 3 },
+  { key: 'link-click', title: 'Link Click', search: 'Link Click', aliases: ['Link Click', 'Shiguang Dailiren'], relatedLimit: 18, relationDepth: 3 }
 ];
 
 const BLEACH_ARCS = [
@@ -766,10 +767,8 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const progress = confirmedCompleted
       ? Math.max(0, movie ? 1 : episodes.length)
       : Math.max(0, Number(existingMedia?.progress) || 0);
-    const total = movie ? 1 : (task.key === 'my-hero-academia' && /final season/i.test(preferredTitle(media)) ? 11 : episodes.length);
-    if (!movie) {
-      franchiseEpisodes += total;
-    }
+    const total = movie ? 1 : (task.key === 'my-hero-academia' && /final season/i.test(preferredTitle(media)) ? Math.min(11, episodes.length) : episodes.length);
+    franchiseEpisodes += total;
     const mappedMedia = mapMediaItem(media, {
       id,
       parentId: task.key === 'naruto'
@@ -800,13 +799,15 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     // Keep the user's established root-level tracking total stable. Related
     // seasons, specials and spin-offs remain individually tracked beneath it;
     // blindly summing every relation can inflate the main-series episode count.
-    rootRow.total = Number(rootExisting?.total) > 0
-      ? Math.min(2000, Number(rootExisting!.total))
-      : Math.min(2000, franchiseEpisodes);
-    rootRow.progress = (task.key === 'my-hero-academia' || task.key === 'summertime-rendering')
-      ? rootRow.total
-      : Math.min(Math.max(0, Number(rootExisting?.progress) || 0), rootRow.total || 0);
-    if (task.key === 'my-hero-academia' || task.key === 'summertime-rendering') rootRow.status = 'completed';
+    // The root is a live franchise counter: sum every currently released child
+    // part, including countable movies/specials, and never use AniList's eventual
+    // planned episode total for an airing season.
+    rootRow.total = Math.min(2000, franchiseEpisodes);
+    rootRow.progress = Math.min(Math.max(0, Number(rootExisting?.progress) || 0), rootRow.total || 0);
+    if ((task.key === 'my-hero-academia' || task.key === 'summertime-rendering') && rootRow.total > 0) {
+      rootRow.progress = rootRow.total;
+      rootRow.status = 'completed';
+    }
     rootRow.customTotal = undefined;
     rootRow.description = clean(rootDetails.description);
   }
@@ -907,7 +908,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
                 ...imported,
                 id: existing.id,
                 parentId: imported.parentId === undefined && imported.sourceProvider === 'frame-anime-catalogue' ? undefined : (imported.parentId ?? existing.parentId),
-                progress: existing.progress,
+                progress: Math.min(Number(existing.progress) || 0, Number(imported.total) || 0),
                 status: existing.status,
                 favorite: existing.favorite,
                 personalRating: existing.personalRating,
@@ -951,9 +952,18 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
   useEffect(() => {
     if (!enabled || !userId || running || autoStartedRef.current) return;
     const remaining = TASKS.some(task => !completedKeys.includes(task.key));
-    if (!remaining) return;
+    let stale = false;
+    try {
+      const raw = localStorage.getItem('frame-anime-catalogue:v2:' + userId);
+      const parsed = raw ? JSON.parse(raw) as StoredProgress : null;
+      stale = !parsed?.updatedAt || (Date.now() - Date.parse(parsed.updatedAt)) >= 6 * 60 * 60 * 1000;
+    } catch {
+      stale = true;
+    }
+    if (!remaining && !stale) return;
     autoStartedRef.current = true;
-    void runCatalogue(false);
+    // A normal page open checks for newly released episodes; it never marks them watched.
+    void runCatalogue(stale);
   }, [enabled, userId, running, completedKeys]);
 
   const verifiedCount = completedKeys.filter(key =>
@@ -990,6 +1000,6 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
       })}</div>
       <p className="muted">One Piece is intentionally not re-imported because its existing catalogue is the reference entry. Dragon Ball GT and Dragon Ball Daima are excluded by the importer.</p>
     </details>
-    <p className="anime-catalogue-import-footnote">No individual episode rows are stored. Episode sources are used only to verify released totals; if AniList and the episode sources disagree, the task remains flagged. Images are sourced per title from AniList; unavailable source artwork is reported.</p>
+    <p className="anime-catalogue-import-footnote">No individual episode rows are stored. Root totals are live released-content totals across all imported subparts, with movies/specials counted as one item (for example, 12 TV episodes + 1 movie = 13). Airing seasons use only episodes released so far; future episodes are never counted as already available and never marked watched. A page-open refresh checks the catalogue again at least every 6 hours.</p>
   </section>;
 }
