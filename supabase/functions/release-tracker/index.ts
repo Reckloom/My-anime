@@ -77,11 +77,11 @@ Deno.serve(async req=>{
 
   const {data:tracked,error:trackedError}=await admin
     .from('media_items')
-    .select('id,user_id,metadata_id,anilist_id,title,progress,total,data')
+    .select('id,user_id,parent_id,metadata_id,anilist_id,title,progress,total,data')
     .eq('medium','anime').is('parent_id',null).not('anilist_id','is',null);
   if(trackedError)return json({error:trackedError.message},500);
 
-  const items=(tracked||[]) as Array<{id:string;user_id:string;metadata_id:string|null;anilist_id:number;title:string;progress:number;total:number|null;data?:{frameReleaseRadar?:{enabled?:boolean}}|null}>;
+  const items=(tracked||[]) as Array<{id:string;user_id:string;parent_id:string|null;metadata_id:string|null;anilist_id:number;title:string;progress:number;total:number|null;data?:{frameReleaseRadar?:{enabled?:boolean}}|null}>;
   const ids=[...new Set(items.map(x=>Number(x.anilist_id)).filter(x=>Number.isInteger(x)&&x>0))];
   if(!ids.length)return json({ok:true,checked:0,upserted:0,notifications:0,reminders:0});
 
@@ -143,29 +143,48 @@ Deno.serve(async req=>{
       next_release_number:next?Number(next.episode):null,
       updated_at:nowIso
     };
-    // Keep the episode total in sync when a newly aired episode is detected.
-    if(latestReleased>Number(item.total||0))update.total=latestReleased;
+    // Live availability rule: an airing TV part uses only episodes actually aired.
+    // The root franchise total is handled separately from its subparts and is never
+    // overwritten with AniList's eventual/planned episode count.
+    if(item.parent_id && latestReleased>Number(item.total||0))update.total=latestReleased;
     await admin.from('media_items')
       .update(update)
       .eq('id',item.id)
       .eq('user_id',item.user_id);
-    if(latestReleased>Number(item.total||0)){
-      // Mirror the refreshed episode count into episode subparts beneath the main entry.
+    if(item.parent_id && latestReleased>Number(item.total||0) && item.data?.frameReleaseRadar?.enabled!==false){
+      await admin.from('frame_notifications').insert({
+        user_id:item.user_id,
+        type:'update',
+        title:item.title+' · Episode total updated',
+        body:'AniList now lists '+latestReleased+' aired episodes. FRAME updated the season/part total automatically; watched progress was left unchanged.',
+        href:'media:'+item.id,
+        dedupe_key:'catalogue-total:'+item.anilist_id+':'+latestReleased
+      },{onConflict:'user_id,dedupe_key',ignoreDuplicates:true});
+    }
+  }
+
+  // Recompute every franchise root from its released subparts. Direct child
+  // movies/specials count as one item; arc rows normally sit below a season/part
+  // and therefore do not inflate the root. Watched progress is never increased here.
+  const userIds=[...new Set(items.map(item=>item.user_id))];
+  for(const userId of userIds){
+    const {data:allRows,error:rootError}=await admin.from('media_items')
+      .select('id,parent_id,medium,total,data')
+      .eq('user_id',userId).eq('medium','anime');
+    if(rootError)continue;
+    const roots=(allRows||[]).filter((x:any)=>!x.parent_id);
+    for(const root of roots){
+      const children=(allRows||[]).filter((x:any)=>String(x.parent_id||'')===String(root.id));
+      if(!children.length)continue;
+      const total=children.reduce((sum:number,x:any)=>sum+Math.max(0,Number(x.total||0)),0);
+      const rootData=root.data&&typeof root.data==='object'?root.data:{};
       await admin.from('media_items')
-        .update({total:latestReleased,updated_at:nowIso})
-        .eq('parent_id',item.id)
-        .eq('user_id',item.user_id);
-      // Make meaningful catalogue changes visible in FRAME's Updates tab.
-      if(item.data?.frameReleaseRadar?.enabled!==false){
-        await admin.from('frame_notifications').insert({
-          user_id:item.user_id,
-          type:'update',
-          title:item.title+' · Episode total updated',
-          body:'AniList now lists '+latestReleased+' aired episodes. FRAME updated this title and its episode sub-entry automatically.',
-          href:'media:'+item.id,
-          dedupe_key:'catalogue-total:'+item.anilist_id+':'+latestReleased
-        },{onConflict:'user_id,dedupe_key',ignoreDuplicates:true});
-      }
+        .update({
+          total:Math.min(2000,total),
+          data:{...rootData,customTotal:null,liveRootTotal:true},
+          updated_at:nowIso
+        })
+        .eq('id',root.id).eq('user_id',userId);
     }
   }
 
