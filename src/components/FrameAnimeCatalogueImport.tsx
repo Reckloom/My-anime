@@ -962,10 +962,10 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
     } catch {
       stale = true;
     }
-    if (!remaining && !stale) return;
-    autoStartedRef.current = true;
-    // A normal page open checks for newly released episodes; it never marks them watched.
-    void runCatalogue(stale);
+    // Never run the full catalogue importer automatically on page load. It is a
+    // heavy network/database job and must not compete with the library UI.
+    // Release totals are handled by the server-side release tracker instead.
+    if (!remaining) return;
   }, [enabled, userId, running, completedKeys]);
 
   const verifiedCount = completedKeys.filter(key =>
