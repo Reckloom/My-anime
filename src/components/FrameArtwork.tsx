@@ -195,8 +195,12 @@ function safeInitialArtwork(p:Props){
  return p.parentPoster||'/frame-logo.svg';
 }
 export function FrameArtwork(p:Props){
- const [src,setSrc]=useState(()=>safeInitialArtwork(p));
- useEffect(()=>{let active=true;void resolve(p).then(value=>{if(active)setSrc(value)});return()=>{active=false}},[p.title,p.medium,p.poster,p.anilistId,p.parentPoster,p.parentTitle,p.parentMedium,p.parentAnilistId,p.sourceProvider,p.externalId]);
+ const identity=[p.title,p.medium,p.anilistId??'',p.sourceProvider??'',p.externalId??'',p.poster??'',p.posterSource??'',p.parentPoster??''].join('|');
  const fallback=safeInitialArtwork(p);
- return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(img.dataset.fallbackApplied==='1')return;img.dataset.fallbackApplied='1';img.src=posterImageSrc(fallback!==src?fallback:(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium)))}}/>;
+ const [resolved,setResolved]=useState<{identity:string;src:string}|null>(null);
+ const [failedIdentity,setFailedIdentity]=useState('');
+ useEffect(()=>{let active=true;setFailedIdentity('');void resolve(p).then(value=>{if(active)setResolved({identity,src:value})});return()=>{active=false}},[identity]);
+ const base=resolved&&resolved.identity===identity?resolved.src:fallback;
+ const src=failedIdentity===identity?svgFallback(p.title,p.medium):base;
+ return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
 }
