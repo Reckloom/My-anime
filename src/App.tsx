@@ -213,8 +213,18 @@ export default function App(){
  const [cloudLibraryReady,setCloudLibraryReady]=useState(false);
  const [items,setItems]=useState<MediaItem[]>(()=>{
   try{
+   // Keep the startup cache tiny: the home/library grids only need root entries.
+   // Full seasons/arcs/parts are fetched lazily when a title is opened.
+   const rootCache=localStorage.getItem(`frame-library:roots:${uid}`);
+   if(rootCache){
+    const parsed=JSON.parse(rootCache);
+    if(Array.isArray(parsed))return dedupeMediaItems(parsed.map(normalise));
+   }
    const scoped=localStorage.getItem(storageKey);
-   if(scoped)return dedupeMediaItems(JSON.parse(scoped).map(normalise));
+   if(scoped){
+    const parsed=JSON.parse(scoped);
+    if(Array.isArray(parsed))return dedupeMediaItems(parsed.filter((x:any)=>!x?.parentId).map(normalise));
+   }
    if(uid!=='guest'){
     const legacy=localStorage.getItem('frame-library');
     if(legacy){
@@ -257,7 +267,10 @@ export default function App(){
   // Keep a recovery snapshot, but serialize it only when the browser is idle.
   // This avoids making large episode libraries compete with scrolling/clicks.
   let cancelled=false;
-  const persist=()=>{if(cancelled)return;try{localStorage.setItem(storageKey,JSON.stringify(items))}catch{}};
+  const persist=()=>{if(cancelled)return;try{
+   // Recovery cache is root-only as well; child catalogues are hydrated when opened.
+   localStorage.setItem(`frame-library:roots:${uid}`,JSON.stringify(items.filter(x=>!x.parentId)));
+  }catch{}};
   if(typeof window.requestIdleCallback==='function'){
    const handle=window.requestIdleCallback(persist,{timeout:1500});
    return()=>{cancelled=true;window.cancelIdleCallback?.(handle)};
@@ -289,27 +302,19 @@ export default function App(){
    const guestPrefsRaw=localStorage.getItem('frame-guest-preferences');
    let guestPrefs:Record<string,string>={};
    try{const parsed=guestPrefsRaw?JSON.parse(guestPrefsRaw):{};if(parsed&&typeof parsed==='object')guestPrefs=parsed as Record<string,string>}catch{}
-   // Supabase/PostgREST commonly caps each response at 1,000 rows. Page through
-   // the full account library so lower-scored records are never silently omitted.
-   const allCloudRows:any[]=[];
-   const pageSize=500;
-   let offset=0;
-   while(true){
-    const {data:pageData,error}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data')
-     .eq('user_id',cloudUserId).order('score',{ascending:false}).order('id',{ascending:true})
-     .range(offset,offset+pageSize-1);
-    if(error){
-     console.warn('[FRAME cloud library load]',error);
-     // Keep the local cache on transient failures; never replace a library with [].
-     if(active)setCloudLibraryReady(true);
-     return;
-    }
-    allCloudRows.push(...(pageData||[]));
-    if(!pageData||pageData.length<pageSize)break;
-    offset+=pageSize;
+   // Startup is intentionally root-only. The previous implementation downloaded
+   // every season/arc/episode-like child row before the first screen could settle.
+   // That made the library slower as the catalogue grew. Children are loaded on demand.
+   const {data:rootRows,error}=await client.from('media_items')
+    .select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data')
+    .eq('user_id',cloudUserId).is('parent_id',null).order('score',{ascending:false}).order('id',{ascending:true});
+   if(error){
+    console.warn('[FRAME cloud root library load]',error);
+    if(active)setCloudLibraryReady(true);
+    return;
    }
    if(active){
-    const loadedCloudItems=repairAnimePosters(dedupeMediaItems(allCloudRows.map(dbToMedia)));
+    const loadedCloudItems=repairAnimePosters(dedupeMediaItems((rootRows||[]).map(dbToMedia)));
     // Keep saved watch progress unchanged when loading from cloud.
     const cloudItems=loadedCloudItems;
     // Guest mode is intentionally local-first while still hydrating from the
@@ -331,7 +336,9 @@ export default function App(){
       ?mergeMediaLists(mergeMediaLists(cloudItems,latestGuestItems),scopedItems)
       :(syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems);
     setItems(merged);setCloudLibraryReady(true);
-    try{localStorage.setItem(`frame-library:${cloudUserId}`,JSON.stringify(merged))}catch{}
+    try{
+     localStorage.setItem(`frame-library:roots:${cloudUserId}`,JSON.stringify(merged.filter(x=>!x.parentId)));
+    }catch{}
     if(!guestMode&&guestItems.length)localStorage.removeItem('frame-library:guest');
 const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id',cloudUserId).maybeSingle();if(prefs&&typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);
     const effectivePrefs={...(prefs||{}),...guestPrefs};
@@ -958,10 +965,43 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   return true;
  });
 },[items,query,filters,sortedItems,libraryIndexes]);
+ const hydrateDescendants=async(rootId:string)=>{
+  const client=supabase;
+  if(!client||!cloudUserId)return;
+  const loadedIds=new Set<string>([rootId]);
+  let frontier=[rootId];
+  const rows:any[]=[];
+  try{
+   // Walk the hierarchy a level at a time so seasons, arcs and other nested
+   // parts arrive only for the title the user actually opened.
+   while(frontier.length){
+    const {data,error}=await client.from('media_items').select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data')
+      .eq('user_id',cloudUserId).in('parent_id',frontier).order('score',{ascending:false}).order('id',{ascending:true});
+    if(error)throw error;
+    const next:string[]=[];
+    for(const row of data||[]){
+     const id=String(row.id);
+     if(loadedIds.has(id))continue;
+     loadedIds.add(id);rows.push(row);next.push(id);
+    }
+    frontier=next;
+   }
+   if(!rows.length)return;
+   const children=repairAnimePosters(dedupeMediaItems(rows.map(dbToMedia)));
+   const current=itemsRef.current;
+   const merged=mergeMediaLists(current,children);
+   itemsRef.current=merged;
+   setItems(merged);
+   try{localStorage.setItem(`frame-library:detail:${rootId}`,JSON.stringify(children))}catch{}
+  }catch(error){
+   console.warn('[FRAME detail hydration]',error);
+  }
+ };
  const openDetail=(item:MediaItem)=>{
   const state={frameRoute:true,framePage:page,frameDetailId:item.id};
   history.pushState(state,'',window.location.href);
   setSelected(item);
+  void hydrateDescendants(item.id);
  };
  const navigateDetail=(item:MediaItem)=>{
   const state={frameRoute:true,framePage:page,frameDetailId:item.id};
