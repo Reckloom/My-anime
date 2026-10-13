@@ -669,6 +669,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
         themes: existingArc?.themes || [],
         favorite: existingArc?.favorite || false,
         source: 'FRAME curated story arc',
+        favorite: existingArc?.favorite || false,
         externalLinks: existingArc?.externalLinks || {}
       });
     }
