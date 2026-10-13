@@ -723,6 +723,8 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     }
   }
 
+  let franchiseEpisodes = 0;
+
   if (task.key === 'my-hero-academia') {
     const existingSpecial = library.find(item => item.anilistId === 214886 || normalizeText(item.title) === normalizeText('My Hero Academia No. 170+1: More'));
     incoming.push({
@@ -752,7 +754,6 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     franchiseEpisodes += 1;
   }
 
-  let franchiseEpisodes = 0;
   for (let index = 0; index < chosen.length; index++) {
     const media = chosen[index];
     const movie = MOVIE_FORMATS.has(String(media.format || ''));
@@ -798,9 +799,6 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   // The root's progress represents the released episodes across its imported animated entries.
   const rootRow = incoming.find(x => x.id === rootId);
   if (rootRow && chosen.length > 1) {
-    // Keep the user's established root-level tracking total stable. Related
-    // seasons, specials and spin-offs remain individually tracked beneath it;
-    // blindly summing every relation can inflate the main-series episode count.
     // The root is a live franchise counter: sum every currently released child
     // part, including countable movies/specials, and never use AniList's eventual
     // planned episode total for an airing season.
@@ -813,6 +811,8 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     rootRow.customTotal = undefined;
     rootRow.description = clean(rootDetails.description);
   }
+  // The root total is deliberately derived from released imported subparts.
+  // Movies/specials count as one released item; airing TV parts use only aired episodes.
   const missingPosterTitles = chosen.filter(media => !String(media.coverImage?.extraLarge || '').trim()).map(preferredTitle);
   if (missingPosterTitles.length) warnings.push('Cover artwork unavailable from AniList for: ' + missingPosterTitles.join(', ') + '.');
   if (!String(rootDetails.coverImage?.extraLarge || '').trim()) warnings.push('Main poster URL is missing from AniList for ' + task.title + '.');
