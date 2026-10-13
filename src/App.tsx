@@ -988,10 +988,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 },[items,query,filters,sortedItems,libraryIndexes]);
  const hydrateDescendants=async(rootId:string)=>{
   const client=supabase;
-  // Guest mode keeps the complete library in localStorage but only restores
-  // roots at startup. Hydrate the opened title from that local snapshot.
-  if(!client||!cloudUserId){
-   if(!guest)return;
+  // Guest mode must never query the cloud owner library. The app intentionally
+  // uses a fixed owner id for authenticated fallback, so test guest state first.
+  if(guest){
    try{
     const raw=localStorage.getItem(storageKey);
     if(!raw)return;
@@ -1015,6 +1014,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    }catch(error){console.warn('[FRAME guest detail hydration]',error)}
    return;
   }
+  if(!client||!cloudUserId)return;
   const existingChildren=itemsRef.current.some(x=>x.parentId===rootId);
   if(existingChildren)return;
   const loadedIds=new Set<string>([rootId]);
