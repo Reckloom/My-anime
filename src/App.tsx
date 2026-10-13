@@ -386,7 +386,24 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    }
   }
   const previous=itemsRef.current;
-  const next=dedupeMediaItems(list.map(normalise));
+  let next=dedupeMediaItems(list.map(normalise));
+  // Franchise roots always show the released total of their direct subparts.
+  // Direct seasons/parts/movies/specials are the countable units; nested arc
+  // rows must not inflate the franchise total. Never touch watched progress here.
+  const directChildrenByParent=new Map<string,MediaItem[]>();
+  for(const item of next){
+   if(!item.parentId)continue;
+   const bucket=directChildrenByParent.get(item.parentId)||[];
+   bucket.push(item);
+   directChildrenByParent.set(item.parentId,bucket);
+  }
+  next=next.map(item=>{
+   if(item.medium!=='anime'||item.parentId) return item;
+   const children=directChildrenByParent.get(item.id)||[];
+   if(!children.length) return item;
+   const releasedTotal=children.reduce((sum,child)=>sum+Math.max(0,Number(child.total||0)),0);
+   return normalise({...item,total:releasedTotal,customTotal:undefined});
+  });
   itemsRef.current=next;setItems(next);
   if(guestMode){
    try{
