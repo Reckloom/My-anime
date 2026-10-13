@@ -988,7 +988,33 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
 },[items,query,filters,sortedItems,libraryIndexes]);
  const hydrateDescendants=async(rootId:string)=>{
   const client=supabase;
-  if(!client||!cloudUserId)return;
+  // Guest mode keeps the complete library in localStorage but only restores
+  // roots at startup. Hydrate the opened title from that local snapshot.
+  if(!client||!cloudUserId){
+   if(!guest)return;
+   try{
+    const raw=localStorage.getItem(storageKey);
+    if(!raw)return;
+    const parsed=JSON.parse(raw);
+    if(!Array.isArray(parsed))return;
+    const all=dedupeMediaItems(parsed.map(normalise));
+    const wanted=new Set<string>([rootId]);
+    let changed=true;
+    while(changed){
+     changed=false;
+     for(const entry of all){
+      if(entry.parentId&&wanted.has(entry.parentId)&&!wanted.has(entry.id)){wanted.add(entry.id);changed=true;}
+     }
+    }
+    const children=all.filter(entry=>entry.id!==rootId&&wanted.has(entry.id));
+    if(!children.length)return;
+    const merged=mergeMediaLists(itemsRef.current,children);
+    itemsRef.current=merged;
+    setItems(merged);
+    try{localStorage.setItem('frame-library:detail:'+rootId,JSON.stringify(children))}catch{}
+   }catch(error){console.warn('[FRAME guest detail hydration]',error)}
+   return;
+  }
   const existingChildren=itemsRef.current.some(x=>x.parentId===rootId);
   if(existingChildren)return;
   const loadedIds=new Set<string>([rootId]);
