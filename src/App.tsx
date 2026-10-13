@@ -277,7 +277,7 @@ export default function App(){
   }
   const timer=window.setTimeout(persist,900);
   return()=>{cancelled=true;window.clearTimeout(timer)};
- },[items,storageKey]);
+ },[items,uid]);
  useEffect(()=>{if(!guest)return;try{const raw=localStorage.getItem('frame-guest-preferences');const prefs=raw?JSON.parse(raw):{};if(typeof prefs.release_notifications_enabled==='boolean')setReleaseNotificationsEnabled(prefs.release_notifications_enabled);if(prefs.default_sort)setSortMode(String(prefs.default_sort==='rating'?'popularity':prefs.default_sort));if(prefs.density)setDensity(String(prefs.density));setTheme('ultra-movie');setAppearanceMode('dark')}catch{}},[guest]);
 
  useEffect(()=>{
@@ -296,9 +296,6 @@ export default function App(){
    const guestRaw=localStorage.getItem('frame-library:guest');
    let guestItems:MediaItem[]=[];
    try{const parsed=guestRaw?JSON.parse(guestRaw):[];if(Array.isArray(parsed))guestItems=parsed.map(normalise)}catch{}
-   const scopedRaw=localStorage.getItem(`frame-library:${cloudUserId}`);
-   let scopedItems:MediaItem[]=[];
-   try{const parsed=scopedRaw?JSON.parse(scopedRaw):[];if(Array.isArray(parsed))scopedItems=parsed.map(normalise)}catch{}
    const guestPrefsRaw=localStorage.getItem('frame-guest-preferences');
    let guestPrefs:Record<string,string>={};
    try{const parsed=guestPrefsRaw?JSON.parse(guestPrefsRaw):{};if(parsed&&typeof parsed==='object')guestPrefs=parsed as Record<string,string>}catch{}
@@ -321,7 +318,6 @@ export default function App(){
     // owner's cloud library. Merge the browser cache instead of deleting it;
     // this preserves immediate guest additions and keeps QA/offline fallback sane.
     // Authenticated mode remains cloud-authoritative.
-    const syncedLocal=scopedItems.filter(local=>cloudItems.some(cloud=>sameMedia(cloud,local)));
     const guestMode=guest||localStorage.getItem('frame-guest')==='1';
     // Re-read the guest cache after cloud hydration finishes. Guest mode can be
     // enabled while this async request is in flight, so the first snapshot may
@@ -333,8 +329,8 @@ export default function App(){
      if(Array.isArray(parsed))latestGuestItems=parsed.map(normalise);
     }catch{}
     const merged=guestMode
-      ?mergeMediaLists(mergeMediaLists(cloudItems,latestGuestItems),scopedItems)
-      :(syncedLocal.length?mergeMediaLists(cloudItems,syncedLocal):cloudItems);
+      ?mergeMediaLists(cloudItems,latestGuestItems)
+      :cloudItems;
     setItems(merged);setCloudLibraryReady(true);
     try{
      localStorage.setItem(`frame-library:roots:${cloudUserId}`,JSON.stringify(merged.filter(x=>!x.parentId)));
