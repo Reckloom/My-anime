@@ -480,14 +480,17 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    if(found<0){merged.push(item);changed.set(item.id,item);continue}
    const current=merged[found];
    // Source refreshes may update catalogue metadata and totals, but the user's   // progress/status are authoritative. Never mark episodes watched or rewind   // progress just because an import batch contains different defaults.
-   const customTotal=current.customTotal??item.customTotal;
-   const total=customTotal!=null?customTotal:(item.total!=null?item.total:current.total);
-   const progress=Math.max(0,Number(current.progress)||0);
+   // The explicit completed-import batch is user-confirmed progress, unlike a generic metadata sync.
+   // Respect that opt-in only for catalogue rows flagged completed with their full released total.
+   const completedCatalogueImport=item.sourceProvider==='frame-anime-catalogue'&&item.status==='completed'&&Number(item.total)>0&&Number(item.progress)>=Number(item.total);
+   const customTotal=completedCatalogueImport?undefined:(current.customTotal??item.customTotal);
+   const total=completedCatalogueImport?item.total:(customTotal!=null?customTotal:(item.total!=null?item.total:current.total));
+   const progress=completedCatalogueImport?Math.max(0,Number(item.total)||0):Math.max(0,Number(current.progress)||0);
    const next=normalise({
     ...current,...item,id:current.id,parentId:item.parentId??current.parentId,
     metadataId:current.metadataId??item.metadataId,total,
     customTotal,progress,
-    status:current.status||item.status,personalRating:current.personalRating??item.personalRating,
+    status:completedCatalogueImport?'completed':(current.status||item.status),personalRating:current.personalRating??item.personalRating,
     favorite:current.favorite,notes:current.notes??item.notes,
     poster:item.poster&&item.poster!=='/frame-logo.svg'?item.poster:current.poster||item.poster,
     backdrop:item.backdrop||current.backdrop,description:item.description||current.description,
