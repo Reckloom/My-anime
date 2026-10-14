@@ -50,8 +50,37 @@ const TASKS: Task[] = [
   { key: 'chainsaw-man', title: 'Chainsaw Man', search: 'Chainsaw Man', aliases: ['Chainsaw Man'], relatedLimit: 9, relationDepth: 2 },
   { key: 'tokyo-revengers', title: 'Tokyo Revengers', search: 'Tokyo Revengers', aliases: ['Tokyo Revengers'], relatedLimit: 12, relationDepth: 2 },
   { key: 'demon-slayer', title: 'Demon Slayer: Kimetsu no Yaiba', search: 'Kimetsu no Yaiba', aliases: ['Demon Slayer: Kimetsu no Yaiba', 'Kimetsu no Yaiba', 'Demon Slayer'], relatedLimit: 24, relationDepth: 3 },
-  { key: 'link-click', title: 'Link Click', search: 'Link Click', aliases: ['Link Click', 'Shiguang Dailiren'], relatedLimit: 18, relationDepth: 3 }
+  { key: 'link-click', title: 'Link Click', search: 'Link Click', aliases: ['Link Click', 'Shiguang Dailiren'], relatedLimit: 18, relationDepth: 3 },
+
+  { key: 'haikyu', title: 'Haikyu!!', search: 'Haikyuu!!', aliases: ['Haikyu!!', 'Haikyuu!!', 'Haikyuu!! Karasuno Koukou vs Shiratorizawa Gakuen Koukou'], relatedLimit: 16, relationDepth: 2 },
+  { key: 'classroom-of-the-elite', title: 'Classroom of the Elite', search: 'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e', aliases: ['Classroom of the Elite', 'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e', 'Classroom of the Elite II'], relatedLimit: 12, relationDepth: 2 },
+  { key: 'assassination-classroom', title: 'Assassination Classroom', search: 'Ansatsu Kyoushitsu', aliases: ['Assassination Classroom', 'Ansatsu Kyoushitsu'], relatedLimit: 8, relationDepth: 2 },
+  { key: 'rent-a-girlfriend', title: 'Rent-a-Girlfriend', search: 'Kanojo, Okarishimasu', aliases: ['Rent-a-Girlfriend', 'Kanojo, Okarishimasu'], relatedLimit: 12, relationDepth: 2 },
+  { key: 'greatest-demon-lord', title: 'The Greatest Demon Lord Is Reborn as a Typical Nobody', search: 'Shijou Saikyou no Daimaou, Murabito A ni Tensei suru', aliases: ['The Greatest Demon Lord Is Reborn as a Typical Nobody', 'The Greatest Demon Lord is Reborn as a Typical Nobody', 'Shijou Saikyou no Daimaou, Murabito A ni Tensei suru'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'worthless-appraiser', title: 'Even Given a Worthless "Appraiser" Class, I’m Actually the Strongest', search: 'Fuguushoku Kanteishi ga Jitsu wa Saikyou Datta', aliases: ['Even Given the Worthless “Appraiser” Class, I’m Actually the Strongest', 'Even Given a Worthless "Appraiser" Class, I’m Actually the Strongest', 'Fuguushoku [Kanteishi] ga Jitsu wa Saikyou Datta: Naraku de Kitaeta Saikyou no [Shingan] de Musou Suru'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'failure-frame', title: 'Failure Frame', search: 'Hazurewaku no Joutai Ijou Skill de Saikyou ni Natta Ore ga Subete wo Juurin Suru made', aliases: ['Failure Frame', 'Failure Frame: I Became the Strongest and Annihilated Everything with Low-Level Spells', 'Hazurewaku no Joutai Ijou Skill de Saikyou ni Natta Ore ga Subete wo Juurin Suru made'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'dandadan', title: 'DAN DA DAN', search: 'Dandadan', aliases: ['DAN DA DAN', 'Dandadan'], relatedLimit: 8, relationDepth: 2 },
+  { key: 'kaiju-no-8', title: 'Kaiju No. 8', search: 'Kaijuu 8-gou', aliases: ['Kaiju No. 8', 'Kaijuu 8-gou'], relatedLimit: 8, relationDepth: 2 },
+  { key: 'wrong-way-healing-magic', title: 'The Wrong Way to Use Healing Magic', search: 'Chiyu Mahou no Machigatta Tsukaikata', aliases: ['The Wrong Way to Use Healing Magic', 'Chiyu Mahou no Machigatta Tsukaikata'], relatedLimit: 5, relationDepth: 1 },
+  { key: '7th-prince', title: 'I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability', search: 'Tensei Shitara Dai Nana Ouji Datta node, Kimamani Majutsu wo Kiwamemasu', aliases: ['I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability', 'Tensei Shitara Dai Nana Ouji Datta node, Kimamani Majutsu wo Kiwamemasu'], relatedLimit: 6, relationDepth: 2 },
+  { key: 'level-2-cheat', title: 'Chillin’ in Another World with Level 2 Super Cheat Powers', search: 'Lv2 kara Cheat datta Moto Yuusha Kouho no Mattari Isekai Life', aliases: ['Chillin’ in Another World with Level 2 Super Cheat Powers', "Chillin' in Another World with Level 2 Super Cheat Powers", 'Lv2 kara Cheat datta Moto Yuusha Kouho no Mattari Isekai Life'], relatedLimit: 5, relationDepth: 2 },
+  { key: 're-monster', title: 'Re:Monster', search: 'Re:Monster', aliases: ['Re:Monster', 'ReMonster'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'zom-100', title: 'Zom 100: Bucket List of the Dead', search: 'Zom 100: Zombie ni Naru made ni Shitai 100 no Koto', aliases: ['Zom 100: Bucket List of the Dead', 'Zom 100: Zombie ni Naru made ni Shitai 100 no Koto'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'unwanted-undead-adventurer', title: 'The Unwanted Undead Adventurer', search: 'Nozomanu Fushi no Boukensha', aliases: ['The Unwanted Undead Adventurer', 'Nozomanu Fushi no Boukensha'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'berserk-of-gluttony', title: 'Berserk of Gluttony', search: 'Boushoku no Berserk', aliases: ['Berserk of Gluttony', 'Boushoku no Berserk'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'cheat-skill-another-world', title: 'I Got a Cheat Skill in Another World and Became Unrivaled in the Real World, Too', search: 'Isekai de Cheat Skill wo Te ni Shita Ore wa, Genjitsu Sekai wo mo Musou Suru', aliases: ['I Got a Cheat Skill in Another World and Became Unrivaled in the Real World, Too', 'Iseleve', 'Isekai de Cheat Skill wo Te ni Shita Ore wa, Genjitsu Sekai wo mo Musou Suru'], relatedLimit: 5, relationDepth: 1 },
+  { key: 'campfire-cooking', title: 'Campfire Cooking in Another World with My Absurd Skill', search: 'Tondemo Skill de Isekai Hourou Meshi', aliases: ['Campfire Cooking in Another World with My Absurd Skill', 'Tondemo Skill de Isekai Hourou Meshi'], relatedLimit: 8, relationDepth: 2 },
+  { key: 'parallel-world-pharmacy', title: 'Parallel World Pharmacy', search: 'Isekai Yakkyoku', aliases: ['Parallel World Pharmacy', 'Isekai Yakkyoku'], relatedLimit: 5, relationDepth: 1 },
 ];
+const USER_COMPLETED_TASKS = new Set([
+  'haikyu', 'one-punch-man', 'spy-family', 'classroom-of-the-elite',
+  'assassination-classroom', 'rent-a-girlfriend', 'greatest-demon-lord',
+  'worthless-appraiser', 'failure-frame', 'dandadan', 'kaiju-no-8',
+  'wrong-way-healing-magic', '7th-prince', 'level-2-cheat', 're-monster',
+  'zom-100', 'unwanted-undead-adventurer', 'berserk-of-gluttony',
+  'cheat-skill-another-world', 'campfire-cooking', 'parallel-world-pharmacy'
+]);
+
 
 const BLEACH_ARCS = [
   [1,'Agent of the Shinigami',1,20,'Ichigo becomes a Substitute Soul Reaper and protects Karakura Town.'],
@@ -504,13 +533,29 @@ function charactersFrom(media: CatalogueMedia): AnimeCharacterProfile[] {
 
 function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: MediaItem[], isRoot: boolean, rootId: string) {
   const wantedMedium = MOVIE_FORMATS.has(String(media.format || '')) ? 'movie' : 'anime';
-  const existing = library.find(x => x.anilistId === Number(media.id) && x.medium === wantedMedium);
+  const mediaNumber = Number(media.id);
+  const existing = library.find(x => x.anilistId === mediaNumber && x.medium === wantedMedium);
   if (existing) return existing.id;
   if (isRoot) return rootId;
-  const scope = userId.replace(/-/g, '').slice(0, 12);
-  return 'frame-anime-media-' + Number(media.id) + '-' + scope;
-}
 
+  // Older season rows may lack anilist_id in the table even though their saved
+  // AniList poster URL contains the exact media ID. Reuse those rows on refresh.
+  const idFromPoster = (value: string) => {
+    const url = String(value || '');
+    const match = url.match(/img\\.anili\\.st\\/media\\/(\\d+)/i)
+      || url.match(/\\/media\\/anime\\/cover\\/(?:large|medium)\\/bx?(\\d+)[-.]/i);
+    return match ? Number(match[1]) : undefined;
+  };
+  const existingChild = library.find(x =>
+    x.parentId === rootId &&
+    x.medium === wantedMedium &&
+    (x.anilistId === mediaNumber || idFromPoster(x.poster) === mediaNumber)
+  );
+  if (existingChild) return existingChild.id;
+
+  const scope = userId.replace(/-/g, '').slice(0, 12);
+  return 'frame-anime-media-' + mediaNumber + '-' + scope;
+}
 function mapMediaItem(media: CatalogueMedia, opts: {
   id: string; parentId?: string; progress: number; total: number; characters?: AnimeCharacterProfile[];
 }): MediaItem {
@@ -767,7 +812,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     );
     // Never assume a new title or season is watched just because episode
     // metadata exists. Keep an existing entry's progress, otherwise start at 0.
-    const confirmedCompleted = task.key === 'my-hero-academia' || task.key === 'summertime-rendering';
+    const confirmedCompleted = USER_COMPLETED_TASKS.has(task.key) || task.key === 'my-hero-academia' || task.key === 'summertime-rendering';
     const progress = confirmedCompleted
       ? Math.max(0, movie ? 1 : episodes.length)
       : Math.max(0, Number(existingMedia?.progress) || 0);
@@ -805,7 +850,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     // planned episode total for an airing season.
     rootRow.total = Math.min(2000, franchiseEpisodes);
     rootRow.progress = Math.min(Math.max(0, Number(rootExisting?.progress) || 0), rootRow.total || 0);
-    if ((task.key === 'my-hero-academia' || task.key === 'summertime-rendering') && rootRow.total > 0) {
+    if ((USER_COMPLETED_TASKS.has(task.key) || task.key === 'my-hero-academia' || task.key === 'summertime-rendering') && rootRow.total > 0) {
       rootRow.progress = rootRow.total;
       rootRow.status = 'completed';
     }
@@ -911,13 +956,13 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
                 ...imported,
                 id: existing.id,
                 parentId: imported.parentId === undefined && imported.sourceProvider === 'frame-anime-catalogue' ? undefined : (imported.parentId ?? existing.parentId),
-                progress: Math.min(Number(existing.progress) || 0, Number(imported.total) || 0),
-                status: existing.status,
+                progress: USER_COMPLETED_TASKS.has(task.key) ? Math.max(0, Number(imported.total) || 0) : Math.min(Number(existing.progress) || 0, Number(imported.total) || 0),
+                status: USER_COMPLETED_TASKS.has(task.key) ? 'completed' : existing.status,
                 favorite: existing.favorite,
                 personalRating: existing.personalRating,
                 notes: existing.notes,
-                customTotal,
-                total: existing.customTotal != null ? existing.customTotal : imported.total
+                customTotal: USER_COMPLETED_TASKS.has(task.key) ? undefined : customTotal,
+                total: USER_COMPLETED_TASKS.has(task.key) ? imported.total : (existing.customTotal != null ? existing.customTotal : imported.total)
               };
             }
           }
