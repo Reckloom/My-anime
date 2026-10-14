@@ -175,19 +175,32 @@ async function resolve(p:Props):Promise<string>{
  if(forcedRoot) return forcedRoot;
  if(forcedHierarchy) return forcedHierarchy;
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
- const freshHierarchyPoster = isHierarchyNode(p) && p.medium==='anime' && p.anilistId
-   ? `https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b${p.anilistId}.jpg`
-   : '';
  const replaceableHierarchyPoster=Boolean(
    !hasSavedPoster
-   || /img\.anili\.st\/media\//i.test(currentPoster)
-   || /s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\//i.test(currentPoster)
+   || /img\\.anili\\.st\\/media\\//i.test(currentPoster)
+   || /s\\d+\\.anilist\\.co\\/file\\/anilistcdn\\/media\\/anime\\/cover\\/large\\//i.test(currentPoster)
    || /(?:not-available|not-supplied-by-source)/i.test(String(p.posterSource||''))
  );
- // DATABASE ARTWORK IS AUTHORITATIVE unless the saved hierarchy artwork is
- // one of the known legacy/low-resolution forms. This prevents good curated
- // posters from being overwritten while still upgrading old blurry covers.
- if(freshHierarchyPoster && replaceableHierarchyPoster)return freshHierarchyPoster;
+ // Never fabricate an AniList cover URL from b<ID>.jpg. AniList assets can
+ // have different filenames, so hierarchy artwork must come from the exact
+ // coverImage.extraLarge returned by AniList.
+ if(isHierarchyNode(p) && p.medium==='anime' && p.anilistId && replaceableHierarchyPoster){
+  const key='anilist-hierarchy-exact:'+p.anilistId;
+  const existing=getArtworkCache(key);if(existing)return existing;
+  const request=withArtworkLimit(async()=>{
+   try{
+    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.anilistId}})});
+    if(response.ok){
+     const json=await response.json() as {data?:{Media?:AniListMedia}};
+     const image=json.data?.Media?.coverImage?.extraLarge;
+     if(image && await isPortraitSource(image))return image;
+    }
+   }catch{/* exact AniList artwork can be unavailable */}
+   return '';
+  });
+  setArtworkCache(key,request);
+  return request;
+ }
  if(!forcedRoot && hasSavedPoster)return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
