@@ -84,6 +84,24 @@ const svgFallback=(title:string,medium:Medium)=>{
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 const FORCED_REPLACEMENT_ARTWORK:Record<string,string>={
+  'steins gate':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b9253.jpg',
+  'hell s paradise':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b128893.jpg',
+  'solo leveling':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b151807.jpg',
+  'chainsaw man':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b127230.jpg',
+  'dragon ball gt':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b225.jpg',
+  'dragon ball daima':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b170083.jpg',
+  'kono subarashii sekai ni shukufuku wo':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b21202.jpg',
+  'that time i got reincarnated as a slime':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b101280.jpg',
+  'summer time render':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b129201.jpg',
+  're zero kara hajimeru isekai seikatsu':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b21355.jpg',
+  'to be hero x':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b156092.jpg',
+  'vinland saga':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b101348.jpg',
+  'fullmetal alchemist brotherhood':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b5114.jpg',
+  'bleach':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b269.jpg',
+  'dragon ball z':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b813.jpg',
+  'dragon ball':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b223.jpg',
+  'dragon ball super':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b21175.jpg',
+  'attack on titan':'https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b16498.jpg',
   'welcome to demon school iruma kun':'https://image.tmdb.org/t/p/original/tm6JNOQvkNyjHmqvKHM89PLqSTe.jpg',
   'sentenced to be a hero':'https://images.plex.tv/photo?scale=1&size=large-1920&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2Fk8bh5mvHDx3czHSF56v9lRyulLC.jpg',
   'i parry everything':'https://fr.web.img2.acsta.net/img/a8/da/a8dabd07ee11431241d0284cfcdf7514.jpg',
@@ -148,11 +166,21 @@ async function resolve(p:Props):Promise<string>{
  if(forcedRoot) return forcedRoot;
  if(forcedHierarchy) return forcedHierarchy;
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
+ const freshHierarchyPoster = isHierarchyNode(p) && p.medium==='anime' && p.anilistId
+   ? await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.anilistId}})})
+     .then(async response => {
+       if(!response.ok)return '';
+       const json=await response.json() as {data?:{Media?:AniListMedia}};
+       const image=json.data?.Media?.coverImage?.extraLarge;
+       return image && await isPortraitSource(image) ? image : '';
+     }).catch(()=> '')
+   : '';
  const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
  // DATABASE ARTWORK IS AUTHORITATIVE.
  // Existing saved artwork always wins. AniList is only a source for rows that
  // do not already have a trusted poster, preventing future imports/syncs from
  // silently replacing established library artwork.
+ if(freshHierarchyPoster)return freshHierarchyPoster;
  if(!forcedRoot && hasSavedPoster)return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
