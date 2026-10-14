@@ -21,6 +21,19 @@ function parseList(value:string){return [...new Set(value.split(/[,\n]/).map(x=>
 function numberOrUndefined(value:string){return value.trim()===''?undefined:Number(value)}
 function hierarchyPartOrder(item:MediaItem){
  const t=item.title.trim().toLowerCase();
+ // Explicit season metadata always wins over alphabetical/title order.
+ // This keeps Season 1 → Season 2 → Season 3 ... even when titles or
+ // release dates are inconsistent, while still allowing parts/cours inside a season.
+ const seasonText=String(item.season||'').trim();
+ const seasonMatch=seasonText.match(/season\s*(\d+)/i)||t.match(/season\s*(\d+)/i);
+ const partMatch=t.match(/part\s*(\d+)/i);
+ const courMatch=t.match(/cour\s*(\d+)/i);
+ if(seasonMatch){
+  const season=Number(seasonMatch[1]);
+  const part=partMatch?Number(partMatch[1]):0;
+  const cour=courMatch?Number(courMatch[1]):0;
+  return season*1000+part*10+cour;
+ }
  const exact:Record<string,number>={
   'steins;gate':10,
   'steins;gate: oukoubakko no poriomania':20,
