@@ -90,6 +90,20 @@ function repairAnimePosters(items:MediaItem[]){
 function toRow(item:MediaItem,userId:string){
  return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,popularity:item.popularity??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,externalLinks:item.externalLinks??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false},episode:item.episode??null,characters:item.characters??null}};
 }
+function preservePersistedArtwork(next:MediaItem,current?:MediaItem):MediaItem{
+ if(!current)return next;
+ const incomingPoster=String(next.poster||'').trim();
+ const currentPoster=String(current.poster||'').trim();
+ const incomingMissing=!incomingPoster||/frame-logo\.svg/i.test(incomingPoster);
+ const currentValid=Boolean(currentPoster&&!/frame-logo\.svg/i.test(currentPoster));
+ const incomingBackdrop=String(next.backdrop||'').trim();
+ const currentBackdrop=String(current.backdrop||'').trim();
+ return {
+  ...next,
+  poster:incomingMissing&&currentValid?currentPoster:next.poster,
+  backdrop:!incomingBackdrop&&currentBackdrop?currentBackdrop:next.backdrop
+ };
+}
 function progressPercent(item:MediaItem){
  const total=item.total||item.customTotal||0;
  if(item.medium==='game'||item.medium==='visual-novel')return Math.max(0,Math.min(100,item.progress||0));
@@ -435,7 +449,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     // entire library (which is especially expensive for large episode catalogues).
     const batchSize=50;
     for(let offset=0;offset<changed.length;offset+=batchSize){
-     const {error}=await client.from('media_items').upsert(changed.slice(offset,offset+batchSize).map(item=>toRow(item,cloudUserId)),{onConflict:'id'});
+     const safeChanged=changed.slice(offset,offset+batchSize).map(item=>preservePersistedArtwork(item,previousById.get(item.id)));
+     const {error}=await client.from('media_items').upsert(safeChanged.map(item=>toRow(item,cloudUserId)),{onConflict:'id'});
      if(error){
       const detail=error.message||error.details||error.hint||'Unknown database error';
       setAppMessage('Cloud save failed: '+detail);
@@ -505,7 +520,10 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    });
    merged[found]=next;changed.set(next.id,next);
   }
-  const rows=[...changed.values()].map(item=>toRow(item,cloudUserId));
+  const rows=[...changed.values()].map(item=>{
+   const current=itemsRef.current.find(existing=>existing.id===item.id);
+   return toRow(preservePersistedArtwork(item,current),cloudUserId);
+  });
   for(let offset=0;offset<rows.length;offset+=100){
    const batch=rows.slice(offset,offset+100);
    const {data,error}=await client.from('media_items').upsert(batch,{onConflict:'id'}).select('id');
