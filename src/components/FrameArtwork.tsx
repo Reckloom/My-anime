@@ -142,8 +142,11 @@ async function resolve(p:Props):Promise<string>{
    ? FORCED_REPLACEMENT_ARTWORK[normal(p.title)]
    : undefined;
  const forcedHierarchy = isHierarchyNode(p) ? FORCED_HIERARCHY_ARTWORK[normal(p.parentTitle||'')+'|'+normal(p.title)] : undefined;
- if(forcedRoot && await isPortraitSource(forcedRoot)) return forcedRoot;
- if(forcedHierarchy && await isPortraitSource(forcedHierarchy)) return forcedHierarchy;
+ // Curated artwork is already intentionally selected. Do not make rendering depend
+ // on a fresh browser dimension/network probe on every reload; transient image-host
+ // failures were turning good posters into blanks.
+ if(forcedRoot) return forcedRoot;
+ if(forcedHierarchy) return forcedHierarchy;
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
  const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
  // DATABASE ARTWORK IS AUTHORITATIVE.
@@ -172,14 +175,14 @@ async function resolve(p:Props):Promise<string>{
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
  if(isEpisode)return hasSavedPoster && await isPortraitSource(p.poster)?p.poster as string:'';
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
- if(dedicatedHierarchyPoster && await isPortraitSource(dedicatedHierarchyPoster))return dedicatedHierarchyPoster;
+ if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
-   if(hasDistinctSavedPoster && await isPortraitSource(p.poster))return p.poster!;
+   if(hasSavedPoster)return p.poster!;
    // Arcs must use their own image; never reuse the parent anime poster.
    return '';
   }
  if(isHierarchyNode(p)){
-  if(hasDistinctSavedPoster && await isPortraitSource(p.poster))return p.poster as string;
+  if(hasSavedPoster)return p.poster as string;
   // First try to find artwork for the exact season/arc title. This keeps
   // every anime consistent instead of making special-case poster rules.
   if(isSeriesMedia){
