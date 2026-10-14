@@ -20,7 +20,7 @@ import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
 import {FrameArtwork,artworkFallbackAncestor} from './components/FrameArtwork';
 
-const poster='/frame-logo.svg';
+const poster=import.meta.env.BASE_URL+'frame-logo.svg';
 const FRAME_OWNER_ID='281a6fa2-a51f-4a50-9fea-213710a10876';
 const types:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
 const unitFor=(m:Medium)=>({anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as Record<Medium,string>)[m];
@@ -1156,7 +1156,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>{if(!href)return;if(href.startsWith('media:')){const match=items.find(x=>x.id===href.slice(6));if(match){openDetail(match);return}}go(href)}}/>
     {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
     <button className="top-account" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
-      <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt={(profile.display_name||user?.email||'Account')+' avatar'} onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
+      <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt={(profile.display_name||user?.email||'Account')+' avatar'} onError={e=>{e.currentTarget.src=import.meta.env.BASE_URL+'frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
       <span className="top-account-name">{profile?.display_name||user?.email?.split('@')[0]||'Account'}</span>
     </button>
     <button className="top-icon mobile-only" aria-label={menu?'Close navigation menu':'Open navigation menu'} title={menu?'Close navigation menu':'Open navigation menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
