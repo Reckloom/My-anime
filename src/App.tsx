@@ -29,8 +29,14 @@ type Radar={mediaId:string;anilistId:number;title:string;poster:string;episode:n
 
 function normalise(item:MediaItem):MediaItem{
  const total=item.total&&item.total>0?item.total:(item.medium==='game'||item.medium==='visual-novel'?100:item.medium==='movie'?1:undefined);
- const cleanBackdrop=item.backdrop&&item.backdrop.trim()!==item.poster.trim()?item.backdrop:'';
- return {...item,poster:item.poster||poster,backdrop:cleanBackdrop,total,progress:total==null?Math.max(0,item.progress||0):Math.max(0,Math.min(item.progress||0,total)),progressUnit:item.progressUnit||unitFor(item.medium)};
+ const rawPoster=String(item.poster||'').trim();
+ // Missing artwork must stay missing in application state. Previously normalise()
+ // converted every empty poster into /frame-logo.svg. That placeholder was then
+ // written back to Supabase by unrelated saves/imports, permanently replacing the
+ // real database URL and making posters appear once, then disappear after reload.
+ const stablePoster=rawPoster==='/frame-logo.svg'||rawPoster.endsWith('/frame-logo.svg')?'':rawPoster;
+ const cleanBackdrop=item.backdrop&&item.backdrop.trim()!==stablePoster?item.backdrop:'';
+ return {...item,poster:stablePoster,backdrop:cleanBackdrop,total,progress:total==null?Math.max(0,item.progress||0):Math.max(0,Math.min(item.progress||0,total)),progressUnit:item.progressUnit||unitFor(item.medium)};
 }
 function dbToMedia(raw:unknown):MediaItem{
  const r=raw as any;
