@@ -159,6 +159,7 @@ async function resolve(p:Props):Promise<string>{
   }
   // A missing exact season/arc image is not permission to inherit the root poster.
   return '';
+ }
  if(!isSeriesMedia){if(p.medium==='anime')return (p.poster && await isPortraitSource(p.poster))?p.poster:'';return p.poster||p.parentPoster||svgFallback(p.title,p.medium);}
  const type=p.medium==='anime'?'ANIME':'MANGA';
  const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':parent:'+(p.parentPoster||'')+':source:'+(p.posterSource||'');
