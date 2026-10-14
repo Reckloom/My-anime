@@ -72,7 +72,7 @@ const TASKS: Task[] = [
   { key: 'campfire-cooking', title: 'Campfire Cooking in Another World with My Absurd Skill', search: 'Tondemo Skill de Isekai Hourou Meshi', aliases: ['Campfire Cooking in Another World with My Absurd Skill', 'Tondemo Skill de Isekai Hourou Meshi'], relatedLimit: 8, relationDepth: 2 },
   { key: 'parallel-world-pharmacy', title: 'Parallel World Pharmacy', search: 'Isekai Yakkyoku', aliases: ['Parallel World Pharmacy', 'Isekai Yakkyoku'], relatedLimit: 5, relationDepth: 1 },
 ];
-const USER_COMPLETED_TASKS = new Set([
+// This release batch is intentionally scoped to the 21 anime requested for this import.\n// The importer must not silently re-run unrelated legacy catalogue tasks.\nconst USER_COMPLETED_TASKS = new Set([
   'haikyu', 'one-punch-man', 'spy-family', 'classroom-of-the-elite',
   'assassination-classroom', 'rent-a-girlfriend', 'greatest-demon-lord',
   'worthless-appraiser', 'failure-frame', 'dandadan', 'kaiju-no-8',
@@ -976,7 +976,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
     } catch { /* Import still works when browser storage is unavailable. */ }
   };
 
-  const runCatalogue = async (force = false) => {
+  const BATCH_TASKS = TASKS.filter(task => USER_COMPLETED_TASKS.has(task.key));\n\n  const runCatalogue = async (force = false) => {
     if (running) return;
     if (!enabled || !userId || !supabase) {
       setError('Sign in to FRAME before importing the anime catalogue.');
@@ -1049,9 +1049,9 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
           setProcessed(index + 1);
         }
       }
-      const pending = TASKS.filter(task => !done.includes(task.key));
+      const pending = BATCH_TASKS.filter(task => !done.includes(task.key));
       setCurrent(pending.length ? 'Import paused with ' + pending.length + ' task(s) needing retry.' : 'All catalogue tasks passed source checks.');
-      addLog(pending.length ? pending.length + ' task(s) remain incomplete or need source verification.' : 'All ' + TASKS.length + ' configured entries passed the importer checks.');
+      addLog(pending.length ? pending.length + ' task(s) remain incomplete or need source verification.' : 'All ' + BATCH_TASKS.length + ' requested anime passed the importer checks.');
     } catch (authOrRunError) {
       const message = authOrRunError instanceof Error ? authOrRunError.message : 'The catalogue import could not start.';
       setError(message);
