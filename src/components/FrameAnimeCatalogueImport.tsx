@@ -1007,8 +1007,8 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
       // localStorage is only a resume hint. A task is considered complete only
       // when its root actually exists in the current library, preventing stale
       // browser state from making the importer silently skip missing anime.
-      for (let index = 0; index < TASKS.length; index++) {
-        const task = TASKS[index];
+      for (let index = 0; index < BATCH_TASKS.length; index++) {
+        const task = BATCH_TASKS[index];
         if (done.includes(task.key) && taskRootExists(task)) {
           setProcessed(index + 1);
           continue;
