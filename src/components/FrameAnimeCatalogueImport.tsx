@@ -52,8 +52,8 @@ const TASKS: Task[] = [
   { key: 'demon-slayer', title: 'Demon Slayer: Kimetsu no Yaiba', search: 'Kimetsu no Yaiba', aliases: ['Demon Slayer: Kimetsu no Yaiba', 'Kimetsu no Yaiba', 'Demon Slayer'], relatedLimit: 24, relationDepth: 3 },
   { key: 'link-click', title: 'Link Click', search: 'Link Click', aliases: ['Link Click', 'Shiguang Dailiren'], relatedLimit: 18, relationDepth: 3 },
 
-  { key: 'haikyu', title: 'Haikyu!!', search: 'Haikyuu!!', aliases: ['Haikyu!!', 'Haikyuu!!', 'Haikyuu!! Karasuno Koukou vs Shiratorizawa Gakuen Koukou'], relatedLimit: 16, relationDepth: 2 },
-  { key: 'classroom-of-the-elite', title: 'Classroom of the Elite', search: 'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e', aliases: ['Classroom of the Elite', 'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e', 'Classroom of the Elite II'], relatedLimit: 12, relationDepth: 2 },
+  { key: 'haikyu', title: 'Haikyu!!', search: 'Haikyuu!!', aliases: ['Haikyu!!', 'Haikyuu!!', 'Haikyuu!! Karasuno Koukou vs Shiratorizawa Gakuen Koukou'], relatedLimit: 18, relationDepth: 3 },
+  { key: 'classroom-of-the-elite', title: 'Classroom of the Elite', search: 'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e', aliases: ['Classroom of the Elite', 'Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e', 'Classroom of the Elite II'], relatedLimit: 16, relationDepth: 3 },
   { key: 'assassination-classroom', title: 'Assassination Classroom', search: 'Ansatsu Kyoushitsu', aliases: ['Assassination Classroom', 'Ansatsu Kyoushitsu'], relatedLimit: 8, relationDepth: 2 },
   { key: 'rent-a-girlfriend', title: 'Rent-a-Girlfriend', search: 'Kanojo, Okarishimasu', aliases: ['Rent-a-Girlfriend', 'Kanojo, Okarishimasu'], relatedLimit: 12, relationDepth: 2 },
   { key: 'greatest-demon-lord', title: 'The Greatest Demon Lord Is Reborn as a Typical Nobody', search: 'Shijou Saikyou no Daimaou, Murabito A ni Tensei suru', aliases: ['The Greatest Demon Lord Is Reborn as a Typical Nobody', 'The Greatest Demon Lord is Reborn as a Typical Nobody', 'Shijou Saikyou no Daimaou, Murabito A ni Tensei suru'], relatedLimit: 5, relationDepth: 1 },
@@ -796,8 +796,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       favorite: existingSpecial?.favorite || false,
       externalLinks: { officialUrl: 'https://www.heroaca.com/' }
     });
-    // The special is a real released subpart, so the franchise root counter includes it.
-    franchiseEpisodes += 1;
+    // Specials are stored separately and do not inflate the TV episode total.
   }
 
   for (let index = 0; index < chosen.length; index++) {
@@ -817,7 +816,9 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       ? Math.max(0, movie ? 1 : episodes.length)
       : Math.max(0, Number(existingMedia?.progress) || 0);
     const total = movie ? 1 : (task.key === 'my-hero-academia' && /final season/i.test(preferredTitle(media)) ? Math.min(11, episodes.length) : episodes.length);
-    franchiseEpisodes += total;
+    // The franchise root total is TV/TV_SHORT episode count only. Movies, OVAs,
+    // specials and other formats remain separately represented and never inflate it.
+    if (['TV', 'TV_SHORT'].includes(String(media.format || ''))) franchiseEpisodes += total;
     const mappedMedia = mapMediaItem(media, {
       id,
       parentId: task.key === 'naruto'
