@@ -156,7 +156,13 @@ const dedicatedHierarchyArtwork=(title:string)=>{
 async function resolve(p:Props):Promise<string>{
  const sharedOnePiecePoster='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const isOnePiece=/^one piece$/i.test(p.title.trim());
- const forcedRoot = p.medium==='anime' && !isHierarchyNode(p)
+ const currentPoster=String(p.poster||'').trim();
+ const replaceablePoster=!currentPoster
+   || isPlaceholderArtwork(currentPoster)
+   || /img\.anili\.st\/media\//i.test(currentPoster)
+   || /s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\//i.test(currentPoster)
+   || /(?:not-available|not-supplied-by-source)/i.test(String(p.posterSource||''));
+ const forcedRoot = p.medium==='anime' && !isHierarchyNode(p) && replaceablePoster
    ? FORCED_REPLACEMENT_ARTWORK[normal(p.title)]
    : undefined;
  const forcedHierarchy = isHierarchyNode(p) ? FORCED_HIERARCHY_ARTWORK[normal(p.parentTitle||'')+'|'+normal(p.title)] : undefined;
