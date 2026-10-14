@@ -31,7 +31,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.getByRole('button', { name: 'Close details', exact: true }).click();
 
     await navigatePrimary(page, 'Library');
-    await expect(page.getByRole('button', { name: /FRAME QA Test Title Anime —/ })).toBeVisible();
+    await expect(page.getByText('FRAME QA Test Title', { exact: true })).toBeVisible();
   });
 
   test('persists guest library changes across reloads', async ({ page }) => {
