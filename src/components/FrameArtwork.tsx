@@ -245,8 +245,12 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
  return current;
 }
 function safeInitialArtwork(p:Props){
- if(p.medium==='anime')return '';
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
+ const forcedRoot = p.medium==='anime' && !isHierarchyNode(p) ? FORCED_REPLACEMENT_ARTWORK[normal(p.title)] : undefined;
+ const forcedHierarchy = isHierarchyNode(p) ? FORCED_HIERARCHY_ARTWORK[normal(p.parentTitle||'')+'|'+normal(p.title)] : undefined;
+ if(forcedRoot)return forcedRoot;
+ if(forcedHierarchy)return forcedHierarchy;
+ if(p.medium==='anime')return dedicatedHierarchyArtwork(p.title)||'';
  if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||'';
   if(['manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||'/frame-logo.svg';
  return p.parentPoster||'/frame-logo.svg';
@@ -257,8 +261,13 @@ export function FrameArtwork(p:Props){
  const [resolved,setResolved]=useState<{identity:string;src:string}|null>(null);
  const [failedIdentity,setFailedIdentity]=useState('');
  useEffect(()=>{let active=true;setFailedIdentity('');void resolve(p).then(value=>{if(active)setResolved({identity,src:value})});return()=>{active=false}},[identity]);
- const base=resolved&&resolved.identity===identity?resolved.src:(p.medium==='anime'?'':fallback);
- const src=failedIdentity===identity?(p.medium==='anime'?'':svgFallback(p.title,p.medium)):base;
+ // Render a persisted/curated poster immediately. The previous anime-specific
+ // empty initial state made every reload depend on an async AniList/network
+ // lookup before a poster could appear.
+ const base=resolved&&resolved.identity===identity?resolved.src:fallback;
+ // If a remote image fails, keep a deterministic visual fallback instead of a
+ // blank <img>. The next mount can still retry the saved URL.
+ const src=failedIdentity===identity?svgFallback(p.title,p.medium):base;
  const displaySrc=src?posterImageSrc(src):undefined;
  return <img className={p.className} {...(displaySrc?{src:displaySrc}:{})} alt={displaySrc?(p.alt??p.title):''} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;const rawSource=resolved&&resolved.identity===identity?resolved.src:'';if(p.medium==='anime'&&rawSource&&failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.directRetryApplied!=='1'){img.dataset.directRetryApplied='1';img.src=rawSource;return}if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
 }
