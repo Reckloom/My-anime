@@ -162,20 +162,18 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
    // Keep restoring after navigation commits. The target drawer can still be
    // re-laid out by image loads after the first paint, so one timeout is not
    // sufficient on slower devices.
+   // Restore after layout changes without keeping a 25Hz timer alive for up to
+   // ten seconds. ResizeObserver handles asynchronous artwork/content growth;
+   // a small set of delayed retries covers non-resizing navigation updates.
    let restoreAttempts=0;
-   let restoreTimer:number|undefined;
    const restoreScroll=()=>{
     const overlay=document.querySelector<HTMLElement>('.detail-overlay');
     const drawer=document.querySelector<HTMLElement>('.detail-overlay .detail-drawer');
     const body=document.querySelector<HTMLElement>('.detail-overlay .detail-body');
-    // Wait for the destination entry, then restore again as asynchronous
-    // artwork and hierarchy content expand the scroll range.
     const heading=document.querySelector<HTMLElement>('#frame-detail-title');
     const destinationReady=heading?.textContent?.trim()===previous.item.title;
     if(destinationReady){
      const setInstantScroll=(element:HTMLElement,desired:number)=>{
-      // Keep programmatic restoration instant; restoring the previous CSS
-      // value can re-enable smooth scrolling and leave the drawer mid-way.
       element.style.setProperty('scroll-behavior','auto','important');
       element.style.setProperty('overflow-anchor','none','important');
       const target=Math.min(desired,Math.max(0,element.scrollHeight-element.clientHeight));
@@ -186,17 +184,15 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
      if(drawer)setInstantScroll(drawer,previous.drawerScrollTop);
      if(body)setInstantScroll(body,previous.bodyScrollTop);
      window.scrollTo({top:previous.pageScrollTop,left:0,behavior:'auto'});
-     if(restoreAttempts<3||restoreAttempts%25===0)console.debug('[FRAME scroll restore]',{attempt:restoreAttempts,desired:previous.drawerScrollTop,actual:drawer?.scrollTop,scrollHeight:drawer?.scrollHeight,clientHeight:drawer?.clientHeight});
+     if(restoreAttempts<3)console.debug('[FRAME scroll restore]',{attempt:restoreAttempts,desired:previous.drawerScrollTop,actual:drawer?.scrollTop,scrollHeight:drawer?.scrollHeight,clientHeight:drawer?.clientHeight});
     }
     restoreAttempts++;
-    if(restoreAttempts>=250){
-     if(restoreTimer!==undefined)window.clearInterval(restoreTimer);
-     restoreObserver?.disconnect();
-    }
    };
    const restoreObserver=typeof ResizeObserver!=='undefined'?new ResizeObserver(restoreScroll):undefined;
    [document.querySelector<HTMLElement>('.detail-overlay'),document.querySelector<HTMLElement>('.detail-overlay .detail-drawer'),document.querySelector<HTMLElement>('.detail-overlay .detail-body')].forEach(target=>{if(target)restoreObserver?.observe(target)});
-   restoreTimer=window.setInterval(restoreScroll,40);
+   restoreScroll();
+   const retryDelays=[50,120,250,500,900,1500,2500];
+   retryDelays.forEach(delay=>window.setTimeout(restoreScroll,delay));
    return;
   }
   if(item.parentId){const parent=libraryById.get(item.parentId);if(parent&&navigate){navigate(parent);return}}
