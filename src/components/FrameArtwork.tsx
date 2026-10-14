@@ -30,6 +30,39 @@ async function withArtworkLimit<T>(job:()=>Promise<T>):Promise<T>{
  activeArtworkRequests++;
  try{return await job()}finally{activeArtworkRequests--;artworkRequestQueue.shift()?.();}
 }
+
+const portraitValidationCache = new Map<string, Promise<boolean>>();
+async function isPortraitSource(source?: string): Promise<boolean> {
+ const url = String(source || '').trim();
+ if (!url || url.startsWith('data:') || /frame-logo\.svg/i.test(url)) return false;
+ const previous = portraitValidationCache.get(url);
+ if (previous) return previous;
+ const check = new Promise<boolean>(resolve => {
+  const image = new Image();
+  let finished = false;
+  const timer = window.setTimeout(() => finish(false), 10000);
+  const finish = (valid: boolean) => {
+   if (finished) return;
+   finished = true;
+   window.clearTimeout(timer);
+   resolve(valid);
+  };
+  image.onload = () => finish(
+   image.naturalWidth > 0 &&
+   image.naturalHeight > image.naturalWidth &&
+   image.naturalHeight / image.naturalWidth >= 1.3
+  );
+  image.onerror = () => finish(false);
+  image.src = url;
+ });
+ portraitValidationCache.set(url, check);
+ while (portraitValidationCache.size > 512) {
+  const first = portraitValidationCache.keys().next().value as string | undefined;
+  if (!first) break;
+  portraitValidationCache.delete(first);
+ }
+ return check;
+}
 const normal=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 const isNarutoHierarchy=(p:Props)=>/frame-naruto-(?:arc|episode)/i.test(p.sourceProvider||'');
 const isFabricatedAniListPoster=(value?:string)=>{
@@ -78,7 +111,7 @@ async function resolve(p:Props):Promise<string>{
  // Existing saved artwork always wins. AniList is only a source for rows that
  // do not already have a trusted poster, preventing future imports/syncs from
  // silently replacing established library artwork.
- if(hasSavedPoster)return p.poster as string;
+ if(hasSavedPoster && await isPortraitSource(p.poster))return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
   const existing=getArtworkCache(key);if(existing)return existing;
@@ -88,21 +121,21 @@ async function resolve(p:Props):Promise<string>{
     if(response.ok){
      const json=await response.json() as {data?:{Media?:AniListMedia}};
      const image=json.data?.Media?.coverImage?.extraLarge;
-     if(image)return image;
+     if(image && await isPortraitSource(image))return image;
     }
    }catch{/* retain fallback artwork */}
-   return p.parentPoster||'/frame-logo.svg';
+   return '';
   });
   setArtworkCache(key,request);
   return request;
  }
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return hasSavedPoster?p.poster as string:'/frame-logo.svg';
+ if(isEpisode)return hasSavedPoster && await isPortraitSource(p.poster)?p.poster as string:'';
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
- if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
+ if(dedicatedHierarchyPoster && await isPortraitSource(dedicatedHierarchyPoster))return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
-  if(hasDistinctSavedPoster)return p.poster!;
+  if(hasDistinctSavedPoster && await isPortraitSource(p.poster))return p.poster!;
   if(p.parentAnilistId){
    try{
     const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.parentAnilistId}})});
@@ -116,7 +149,7 @@ async function resolve(p:Props):Promise<string>{
   return p.parentPoster||'/frame-logo.svg';
  }
  if(isHierarchyNode(p)){
-  if(hasDistinctSavedPoster)return p.poster as string;
+  if(hasDistinctSavedPoster && await isPortraitSource(p.poster))return p.poster as string;
   // First try to find artwork for the exact season/arc title. This keeps
   // every anime consistent instead of making special-case poster rules.
   if(isSeriesMedia){
@@ -145,7 +178,7 @@ async function resolve(p:Props):Promise<string>{
   }
   return p.parentPoster||'/frame-logo.svg';
  }
- if(!isSeriesMedia)return p.poster||p.parentPoster||(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium));
+ if(!isSeriesMedia){if(p.medium==='anime')return (p.poster && await isPortraitSource(p.poster))?p.poster:'';return p.poster||p.parentPoster||svgFallback(p.title,p.medium);}
  const type=p.medium==='anime'?'ANIME':'MANGA';
  const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':parent:'+(p.parentPoster||'')+':source:'+(p.posterSource||'');
  const existing=getArtworkCache(key);if(existing)return existing;
@@ -166,8 +199,8 @@ async function resolve(p:Props):Promise<string>{
    }
    const image=media?.coverImage?.extraLarge;
    const titleMatches=Boolean(media&&[media.title.english,media.title.romaji,media.title.native,media.title.userPreferred,...(media.synonyms||[])].some(v=>v&&normal(v)===normal(p.title)));
-  if(image&&media?.type===type&&titleMatches)return image;
-  if(media&&!titleMatches)return hasSavedPoster&&p.poster?p.poster:'/frame-logo.svg';
+  if(image&&media?.type===type&&titleMatches&&await isPortraitSource(image))return image;
+  if(media&&!titleMatches)return hasSavedPoster&&p.poster&&await isPortraitSource(p.poster)?p.poster:'';
   }catch{/* external metadata can be unavailable */}
   if(isSeriesMedia){if(hasSavedPoster&&p.poster)return p.poster as string;return p.parentPoster||'/frame-logo.svg';}
   return p.poster||p.parentPoster||(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium));
@@ -187,10 +220,9 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
  return current;
 }
 function safeInitialArtwork(p:Props){
+ if(p.medium==='anime')return '';
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
- if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||'/frame-logo.svg';
- if(p.medium==='anime'&&p.anilistId)return p.parentPoster||'/frame-logo.svg';
- if(p.medium==='anime')return p.parentPoster||'/frame-logo.svg';
+ if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||'';
   if(['manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||'/frame-logo.svg';
  return p.parentPoster||'/frame-logo.svg';
 }
