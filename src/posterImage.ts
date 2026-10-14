@@ -60,6 +60,6 @@ export function posterImageSrc(value?: string | null): string {
     }
     return url;
   } catch {
-    return '/frame-logo.svg';
+    return `${import.meta.env.BASE_URL}frame-logo.svg`;
   }
 }
