@@ -994,9 +994,9 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
       let warningMap = force ? {} : { ...warningsByTask };
       if (force) persistCompleted([], {});
       const normalizeTaskTitle = (value: string) => value.toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9]+/g, ' ').trim();
-      const taskRootExists = (task: Task) => {
+      const taskRoot = (task: Task) => {
         const wanted = normalizeTaskTitle(task.title);
-        return libraryRef.current.some(item => {
+        return libraryRef.current.find(item => {
           if (item.medium !== 'anime' || item.parentId) return false;
           const actual = normalizeTaskTitle(item.title);
           return actual === wanted ||
@@ -1004,12 +1004,21 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
             (task.key === 'one-punch-man' && actual.includes('one punch man'));
         });
       };
+      const taskRootExists = (task: Task) => Boolean(taskRoot(task));
+      const taskAlreadyComplete = (task: Task) => {
+        const root = taskRoot(task);
+        return Boolean(root && root.status === 'completed' && Number(root.total || 0) > 0 && Number(root.progress || 0) >= Number(root.total || 0));
+      };
       // localStorage is only a resume hint. A task is considered complete only
       // when its root actually exists in the current library, preventing stale
       // browser state from making the importer silently skip missing anime.
       for (let index = 0; index < BATCH_TASKS.length; index++) {
         const task = BATCH_TASKS[index];
-        if (done.includes(task.key) && taskRootExists(task)) {
+        if (taskAlreadyComplete(task)) {
+          if (!done.includes(task.key)) {
+            done.push(task.key);
+            persistCompleted(done, warningMap);
+          }
           setProcessed(index + 1);
           continue;
         }
@@ -1087,14 +1096,15 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
     const normalizeTaskTitle = (value: string) => value.toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9]+/g, ' ').trim();
     const remaining = BATCH_TASKS.some(task => {
       const wanted = normalizeTaskTitle(task.title);
-      const exists = library.some(item => {
+      const root = library.find(item => {
         if (item.medium !== 'anime' || item.parentId) return false;
         const actual = normalizeTaskTitle(item.title);
         return actual === wanted ||
           (task.key === 'spy-family' && actual.includes('spy') && actual.includes('family')) ||
           (task.key === 'one-punch-man' && actual.includes('one punch man'));
       });
-      return !completedKeys.includes(task.key) || !exists;
+      const complete = Boolean(root && root.status === 'completed' && Number(root.total || 0) > 0 && Number(root.progress || 0) >= Number(root.total || 0));
+      return !complete;
     });
     if (!remaining) return;
     autoStartedRef.current = true;
