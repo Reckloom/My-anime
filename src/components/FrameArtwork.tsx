@@ -138,6 +138,12 @@ const dedicatedHierarchyArtwork=(title:string)=>{
 async function resolve(p:Props):Promise<string>{
  const sharedOnePiecePoster='https://media.themoviedb.org/t/p/w500/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg';
  const isOnePiece=/^one piece$/i.test(p.title.trim());
+ const forcedRoot = p.medium==='anime' && !isHierarchyNode(p)
+   ? FORCED_REPLACEMENT_ARTWORK[normal(p.title)]
+   : undefined;
+ const forcedHierarchy = isHierarchyNode(p) ? FORCED_HIERARCHY_ARTWORK[normal(p.parentTitle||'')+'|'+normal(p.title)] : undefined;
+ if(forcedRoot && await isPortraitSource(forcedRoot)) return forcedRoot;
+ if(forcedHierarchy && await isPortraitSource(forcedHierarchy)) return forcedHierarchy;
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
  const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
  // DATABASE ARTWORK IS AUTHORITATIVE.
