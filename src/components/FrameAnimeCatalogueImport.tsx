@@ -205,6 +205,35 @@ let lastAniListRequestAt = 0;
 let lastJikanRequestAt = 0;
 
 const sleep = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms));
+
+const portraitCheckCache = new Map<string, Promise<boolean>>();
+async function verifyPortraitArtwork(url?: string): Promise<boolean> {
+  const value = String(url || '').trim();
+  if (!/^https?:\\/\\//i.test(value)) return false;
+  const cached = portraitCheckCache.get(value);
+  if (cached) return cached;
+  const check = new Promise<boolean>(resolve => {
+    const image = new Image();
+    let completed = false;
+    const timer = window.setTimeout(() => finish(false), 10000);
+    const finish = (valid: boolean) => {
+      if (completed) return;
+      completed = true;
+      window.clearTimeout(timer);
+      resolve(valid);
+    };
+    image.onload = () => finish(
+      image.naturalWidth > 0 &&
+      image.naturalHeight > image.naturalWidth &&
+      image.naturalHeight / image.naturalWidth >= 1.3
+    );
+    image.onerror = () => finish(false);
+    image.src = value;
+  });
+  portraitCheckCache.set(value, check);
+  return check;
+}
+
 const pad = (n: number) => String(n).padStart(3, '0');
 const clean = (value?: string | null) => cleanDescription(value || '');
 const preferredTitle = (m: CatalogueMedia) => String(m.title?.english || m.title?.userPreferred || m.title?.romaji || m.title?.native || 'Untitled').trim();
@@ -868,8 +897,43 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const key = item.sourceProvider === 'frame-anime-episode' ? String(item.externalId) : 'media:' + String(item.anilistId || item.id);
     uniqueRows.set(key, item);
   }
-  const finalItems = [...uniqueRows.values()];
-  const verified = !warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|missing episode posters|Main poster URL is missing|added \d+ numbered episode entries/i.test(w));
+  let finalItems = [...uniqueRows.values()];
+  // Load each poster and validate its intrinsic dimensions before persistence.
+  // A portrait CSS box must not make a landscape source count as a valid poster.
+  const itemsById = new Map(finalItems.map(item => [item.id, item]));
+  const checkedItems: MediaItem[] = [];
+  for (const item of finalItems) {
+    if (item.medium !== 'anime' && item.medium !== 'movie') {
+      checkedItems.push(item);
+      continue;
+    }
+    const parent = item.parentId
+      ? (itemsById.get(item.parentId) || library.find(existing => existing.id === item.parentId))
+      : undefined;
+    const duplicatedParentArtwork = Boolean(item.parentId && parent?.poster && item.poster && parent.poster === item.poster);
+    const portrait = !duplicatedParentArtwork && await verifyPortraitArtwork(item.poster);
+    if (!portrait) {
+      warnings.push(item.title + ': poster failed natural portrait/deduplication verification; no fallback poster was saved.');
+      checkedItems.push({ ...item, poster: '' });
+    } else {
+      checkedItems.push(item);
+    }
+    if (Array.isArray(item.characters) && item.characters.length) {
+      const profiles = [];
+      for (const character of item.characters) {
+        const characterPortrait = character.image ? await verifyPortraitArtwork(character.image) : false;
+        if (character.image && !characterPortrait) {
+          warnings.push(item.title + ': character portrait failed natural portrait verification for ' + character.name + '.');
+          profiles.push({ ...character, image: undefined });
+        } else {
+          profiles.push(character);
+        }
+      }
+      checkedItems[checkedItems.length - 1] = { ...checkedItems[checkedItems.length - 1], characters: profiles };
+    }
+  }
+  finalItems = checkedItems;
+  const verified = !warnings.some(w => /reports \\d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|missing episode posters|Main poster URL is missing|added \\d+ numbered episode entries|portrait verification/i.test(w));
   return {
     items: finalItems,
     warnings: [...new Set(warnings)],
