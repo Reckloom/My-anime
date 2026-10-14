@@ -82,6 +82,26 @@ const TASKS: Task[] = [
 ]);
 
 
+const BLEACH_PART_POSTER = 'https://m.media-amazon.com/images/I/6172sX-TInL.jpg';
+const BLEACH_ARC_POSTERS = [
+  'https://m.media-amazon.com/images/I/6172sX-TInL.jpg',
+  'https://m.media-amazon.com/images/I/6172sX-TInL.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
+  'https://times-abema.ismcdn.jp/mwimgs/9/0/724w/img_9095393861a10a9d5e75529d94d5b8131170909.jpg'
+];
+
 const BLEACH_ARCS = [
   [1,'Agent of the Shinigami',1,20,'Ichigo becomes a Substitute Soul Reaper and protects Karakura Town.'],
   [2,'Soul Society: Sneak Entry',21,41,'Ichigo and his friends enter Soul Society to rescue Rukia.'],
@@ -714,6 +734,40 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
 
   const incoming: MediaItem[] = [];
   const bleachArcIds = new Map<number, string>();
+  let bleachOriginalPartId = rootId;
+  if (task.key === 'bleach') {
+    const existingPart = library.find(item =>
+      item.parentId === rootId &&
+      item.sourceProvider === 'frame-bleach-part' &&
+      normalizeText(item.title) === normalizeText('Bleach')
+    );
+    bleachOriginalPartId = existingPart?.id || 'frame-bleach-part-original-' + scope;
+    const existingPartPoster = existingPart?.poster || BLEACH_PART_POSTER;
+    const partEpisodes = catalogues.get(Number(chosen[0]?.id))?.rows || [];
+    const partTotal = Math.min(366, partEpisodes.length || 366);
+    incoming.push({
+      id: bleachOriginalPartId,
+      parentId: rootId,
+      sourceProvider: 'frame-bleach-part',
+      externalId: 'bleach-part-original',
+      title: 'Season 1 · Bleach (Original Series)',
+      description: 'The original BLEACH television run, episodes 1–366.',
+      poster: existingPartPoster,
+      backdrop: String(chosen[0]?.bannerImage || ''),
+      medium: 'anime',
+      status: 'completed',
+      progress: partTotal,
+      total: partTotal,
+      progressUnit: 'episodes',
+      year: 2004,
+      genres: chosen[0]?.genres || [],
+      themes: [],
+      studio: chosen[0]?.studios?.nodes?.[0]?.name,
+      favorite: existingPart?.favorite || false,
+      source: 'AniList / FRAME curated season',
+      externalLinks: existingPart?.externalLinks || {}
+    });
+  }
   if (task.key === 'bleach') {
     const bleachMedia = chosen[0];
     const bleachEpisodes = catalogues.get(Number(bleachMedia?.id))?.rows || [];
@@ -859,12 +913,14 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       total,
       characters: index === 0 ? charactersFrom(rootDetails) : undefined
     });
-    // Treat the existing TYBW Part 1 entry as an arc group too, so its
-    // episodes remain inside the same ordered arc hierarchy after refresh.
+    // Keep the 366-episode original BLEACH run as the curated Season 1 part.
+    if (task.key === 'bleach' && index === 0) {
+      mappedMedia.parentId = undefined;
+    }
+    // Do not let a legacy generic TYBW relation become an unrelated arc row.
     if (task.key === 'bleach' && Number(media.id) === 116674) {
-      mappedMedia.sourceProvider = 'frame-story-arc';
-      mappedMedia.externalId = 'frame-story-arc-bleach-17';
-      mappedMedia.source = 'FRAME curated story arc';
+      mappedMedia.parentId = rootId;
+      mappedMedia.sourceProvider = 'frame-anime-catalogue';
     }
     incoming.push(mappedMedia);
     // FRAME's permanent anime model intentionally stores no individual episode rows.
@@ -911,7 +967,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       ? (itemsById.get(item.parentId) || library.find(existing => existing.id === item.parentId))
       : undefined;
     const duplicatedParentArtwork = Boolean(item.parentId && parent?.poster && item.poster && parent.poster === item.poster);
-    const portrait = !duplicatedParentArtwork && await verifyPortraitArtwork(item.poster);
+    const portrait = item.sourceProvider === 'frame-story-arc' || item.sourceProvider === 'frame-bleach-part'\n      ? Boolean(String(item.poster || '').trim())\n      : !duplicatedParentArtwork && await verifyPortraitArtwork(item.poster);
     if (!portrait) {
       warnings.push(item.title + ': poster failed natural portrait/deduplication verification; no fallback poster was saved.');
       checkedItems.push({ ...item, poster: '' });
