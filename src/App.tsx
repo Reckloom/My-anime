@@ -466,7 +466,6 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
   if(!client){setAppMessage('Cloud database is unavailable.');return false}
-  if(!cloudLibraryReady){setAppMessage('The full library is still loading. Please retry the import batch shortly.');return false}
   const merged=dedupeMediaItems(itemsRef.current);
   const changed=new Map<string,MediaItem>();
   for(const raw of incoming){
