@@ -84,22 +84,22 @@ const TASKS: Task[] = [
 
 const BLEACH_PART_POSTER = 'https://m.media-amazon.com/images/I/6172sX-TInL.jpg';
 const BLEACH_ARC_POSTERS = [
-  'https://m.media-amazon.com/images/I/6172sX-TInL.jpg',
-  'https://m.media-amazon.com/images/I/6172sX-TInL.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://image.tmdb.org/t/p/original/kmzGaQRQkPE0koslYrjH4kL9GCk.jpg',
-  'https://times-abema.ismcdn.jp/mwimgs/9/0/724w/img_9095393861a10a9d5e75529d94d5b8131170909.jpg'
+  'https://pbs.twimg.com/media/HD5N1FoboAISjP6.jpg',
+  'https://anime-figures-australia.au/cdn/shop/files/poster-rukia-rescue-bleach-894.webp?v=1735336671',
+  'https://artworks.thetvdb.com/banners/v4/season/16959/posters/628326c4441bd.jpg',
+  'https://images.everyeye.it/img-screenshot/bleach-thousand-year-blood-war-v1-926037-640.webp',
+  'https://artworks.thetvdb.com/banners/v4/season/28677/posters/631e62e36d675.jpg',
+  'https://i.pinimg.com/736x/b7/24/30/b72430de343560818a94cc724912d57d.jpg',
+  'https://anime-figures-australia.au/cdn/shop/files/poster-battle-of-karakura-bleach-870.webp?v=1735336597',
+  'https://img.lemino.docomo.ne.jp/cms/b10158d/b10158d_w1.jpg?auto=webp&quality=75&width=3840',
+  'https://i2.wp.com/pictures.betaseries.com/fonds/poster/5e955e7d9811f8f5e64d8fbb62e538ea.jpg',
+  'https://bleach-anime.com/assets/img/special/gallery/main_09.jpg',
+  'https://bleach-anime.com/assets/img/special/gallery/main_08.jpg',
+  'https://bleach-anime.com/assets/img/special/gallery/main_07.jpg',
+  'https://bleach-anime.com/assets/img/special/gallery/main_06.jpg',
+  'https://bleach-anime.com/assets/img/special/gallery/main_05.jpg',
+  'https://bleach-anime.com/assets/img/special/gallery/main_04.jpg',
+  'https://bleach-anime.com/assets/img/special/gallery/main_03.jpg'
 ];
 
 const BLEACH_ARCS = [
