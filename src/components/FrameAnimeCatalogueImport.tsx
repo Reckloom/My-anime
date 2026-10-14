@@ -866,6 +866,10 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   }
 
   let franchiseEpisodes = 0;
+  // Steins;Gate has a curated 55-episode watched root in FRAME: the main TV
+  // series + Steins;Gate 0. Connected side-story/spin-off works are represented
+  // separately and must never change that root counter during a re-import.
+  const STEINS_GATE_CURATED_ROOT_TOTAL = 55;
 
   if (task.key === 'my-hero-academia') {
     const existingSpecial = library.find(item => item.anilistId === 214886 || normalizeText(item.title) === normalizeText('My Hero Academia No. 170+1: More'));
@@ -944,10 +948,13 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   // The root's progress represents the released episodes across its imported animated entries.
   const rootRow = incoming.find(x => x.id === rootId);
   if (rootRow && chosen.length > 1) {
-    // The root is a live franchise counter: sum every currently released child
-    // part, including countable movies/specials, and never use AniList's eventual
-    // planned episode total for an airing season.
-    rootRow.total = Math.min(2000, franchiseEpisodes);
+    // Most roots are live counters derived from their released TV/TV_SHORT parts.
+    // Steins;Gate is intentionally different: its connected side-story/spin-off
+    // TV works are library entries, not extra episodes of the 55-episode watched
+    // root. Preserve the established 55-episode franchise counter on re-import.
+    rootRow.total = task.key === 'steins-gate'
+      ? Math.max(STEINS_GATE_CURATED_ROOT_TOTAL, Number(rootExisting?.total) || 0)
+      : Math.min(2000, franchiseEpisodes);
     rootRow.progress = Math.min(Math.max(0, Number(rootExisting?.progress) || 0), rootRow.total || 0);
     if ((USER_COMPLETED_TASKS.has(task.key) || task.key === 'my-hero-academia' || task.key === 'summertime-rendering') && rootRow.total > 0) {
       rootRow.progress = rootRow.total;
@@ -956,8 +963,9 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     rootRow.customTotal = undefined;
     rootRow.description = clean(rootDetails.description);
   }
-  // The root total is deliberately derived from released imported subparts.
-  // Movies/specials count as one released item; airing TV parts use only aired episodes.
+  // The root total is deliberately derived from released imported subparts for
+  // ordinary franchises. Curated exceptions (currently Steins;Gate) preserve
+  // their established root-total semantics.
   const missingPosterTitles = chosen.filter(media => !String(media.coverImage?.extraLarge || '').trim()).map(preferredTitle);
   if (missingPosterTitles.length) warnings.push('Cover artwork unavailable from AniList for: ' + missingPosterTitles.join(', ') + '.');
   if (!String(rootDetails.coverImage?.extraLarge || '').trim()) warnings.push('Main poster URL is missing from AniList for ' + task.title + '.');
