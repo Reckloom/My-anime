@@ -319,9 +319,15 @@ function isEligibleRelation(task: Task, edge: { relationType?: string; node?: Ca
   const node = edge.node;
   if (!node || node.type !== 'ANIME' || !Number(node.id)) return false;
   const relationType = String(edge.relationType || '');
-  const relationAllowed = ALLOWED_RELATIONS.has(relationType) || (task.key === 'steins-gate' && STEINS_GATE_EXTRA_RELATIONS.has(relationType));
+  const steinsExtra = task.key === 'steins-gate' && STEINS_GATE_EXTRA_RELATIONS.has(relationType);
+  const relationAllowed = ALLOWED_RELATIONS.has(relationType) || steinsExtra;
   if (!relationAllowed) return false;
-  if (!ALLOWED_FORMATS.has(String(node.format || ''))) return false;
+  const format = String(node.format || '');
+  if (!ALLOWED_FORMATS.has(format)) return false;
+  // Steins;Gate side-story/spin-off links are intentionally preserved, but
+  // only episodic releases belong in the hierarchy. Movies/OVAs/specials stay
+  // separate related works and must never become season/part children.
+  if (steinsExtra && !['TV', 'TV_SHORT'].includes(format)) return false;
   if (String(node.status || '') === 'NOT_YET_RELEASED') return false;
   if (excludedTitle(task, preferredTitle(node))) return false;
   return true;
@@ -665,7 +671,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
   const chosen: CatalogueMedia[] = [rootDetails];
   const warnings: string[] = [];
   const seen = new Set<number>([Number(rootDetails.id)]);
-  const queue: Array<{ id: number; depth: number; parentId: number }> = [];
+  const queue: Array<{ id: number; depth: number; parentId: number; relationType: string }> = [];
   const parentByMediaId = new Map<number, number>();
   if (task.relatedLimit > 0) {
     const relationEdges = rootDetails.relations?.edges || [];
@@ -674,7 +680,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       : relationEdges;
     for (const edge of eligibleEdges) {
       if (isEligibleRelation(task, edge) && Number(edge.node?.id) !== Number(rootDetails.id)) {
-        queue.push({ id: Number(edge.node!.id), depth: 1, parentId: Number(rootDetails.id) });
+        queue.push({ id: Number(edge.node!.id), depth: 1, parentId: Number(rootDetails.id), relationType: String(edge.relationType || '') });
       }
     }
   }
@@ -684,14 +690,14 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     seen.add(next.id);
     try {
       const related = await fetchDetails(next.id, false);
-      if (!isEligibleRelation(task, { relationType: 'SEQUEL', node: related })) continue;
+      if (!isEligibleRelation(task, { relationType: next.relationType, node: related })) continue;
       chosen.push(related);
       parentByMediaId.set(Number(related.id), next.parentId);
       if (next.depth < task.relationDepth) {
         for (const edge of related.relations?.edges || []) {
           const childId = Number(edge.node?.id);
           if (childId && !seen.has(childId) && isEligibleRelation(task, edge)) {
-            queue.push({ id: childId, depth: next.depth + 1, parentId: Number(related.id) });
+            queue.push({ id: childId, depth: next.depth + 1, parentId: Number(related.id), relationType: String(edge.relationType || '') });
           }
         }
       }
