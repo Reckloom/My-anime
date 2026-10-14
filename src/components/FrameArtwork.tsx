@@ -178,12 +178,16 @@ async function resolve(p:Props):Promise<string>{
  const freshHierarchyPoster = isHierarchyNode(p) && p.medium==='anime' && p.anilistId
    ? `https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b${p.anilistId}.jpg`
    : '';
- const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
- // DATABASE ARTWORK IS AUTHORITATIVE.
- // Existing saved artwork always wins. AniList is only a source for rows that
- // do not already have a trusted poster, preventing future imports/syncs from
- // silently replacing established library artwork.
- if(freshHierarchyPoster)return freshHierarchyPoster;
+ const replaceableHierarchyPoster=Boolean(
+   !hasSavedPoster
+   || /img\.anili\.st\/media\//i.test(currentPoster)
+   || /s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\//i.test(currentPoster)
+   || /(?:not-available|not-supplied-by-source)/i.test(String(p.posterSource||''))
+ );
+ // DATABASE ARTWORK IS AUTHORITATIVE unless the saved hierarchy artwork is
+ // one of the known legacy/low-resolution forms. This prevents good curated
+ // posters from being overwritten while still upgrading old blurry covers.
+ if(freshHierarchyPoster && replaceableHierarchyPoster)return freshHierarchyPoster;
  if(!forcedRoot && hasSavedPoster)return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
