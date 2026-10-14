@@ -218,6 +218,7 @@ const DETAIL_FIELDS = 'id idMal type format status title{romaji english native u
 const ROOT_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + ' characters(sort:ROLE,perPage:20){edges{role node{id name{full native} image{large} description siteUrl}}}}}';
 const RELATED_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + '}}';
 // Franchise hierarchy must contain only direct released TV/TV_SHORT story entries.\n// Side stories, spin-offs, character links, movies, OVAs and specials are not\n// seasons/parts of the main anime and must never be pulled into the hierarchy.\nconst ALLOWED_RELATIONS = new Set(['PREQUEL', 'SEQUEL']);
+const STEINS_GATE_EXTRA_RELATIONS = new Set(['SIDE_STORY', 'SPIN_OFF']);
 const ALLOWED_FORMATS = new Set(['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL']);
 const MOVIE_FORMATS = new Set(['MOVIE']);
 const MIN_REQUEST_GAP_MS = 720;
@@ -316,7 +317,10 @@ function excludedTitle(task: Task, title: string) {
 
 function isEligibleRelation(task: Task, edge: { relationType?: string; node?: CatalogueMedia | null }) {
   const node = edge.node;
-  if (!node || node.type !== 'ANIME' || !Number(node.id) || !ALLOWED_RELATIONS.has(String(edge.relationType || ''))) return false;
+  if (!node || node.type !== 'ANIME' || !Number(node.id)) return false;
+  const relationType = String(edge.relationType || '');
+  const relationAllowed = ALLOWED_RELATIONS.has(relationType) || (task.key === 'steins-gate' && STEINS_GATE_EXTRA_RELATIONS.has(relationType));
+  if (!relationAllowed) return false;
   if (!ALLOWED_FORMATS.has(String(node.format || ''))) return false;
   if (String(node.status || '') === 'NOT_YET_RELEASED') return false;
   if (excludedTitle(task, preferredTitle(node))) return false;
