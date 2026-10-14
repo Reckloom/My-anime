@@ -292,6 +292,21 @@ export function artworkFallbackAncestor(item:MediaItem,library:MediaItem[]):Medi
  }
  return current;
 }
+async function recoverHierarchyArtwork(p:Props):Promise<string>{
+ const dedicated=dedicatedHierarchyArtwork(p.title);
+ if(dedicated)return dedicated;
+ if(!isHierarchyNode(p)||p.medium!=='anime')return '';
+ try{
+  const query=p.anilistId?DETAIL_QUERY:SEARCH_QUERY;
+  const variables=p.anilistId?{id:p.anilistId}:{search:p.title,page:1,perPage:12,type:'ANIME'};
+  const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query,variables})});
+  if(!response.ok)return '';
+  const json=await response.json() as {data?:{Media?:AniListMedia;Page?:{media?:AniListMedia[]}}};
+  const target=normal(p.title);
+  const media=p.anilistId?json.data?.Media:(json.data?.Page?.media||[]).find(m=>[m.title.english,m.title.romaji,m.title.native,m.title.userPreferred,...(m.synonyms||[])].some(v=>v&&normal(v)===target));
+  return media?.coverImage?.extraLarge||'';
+ }catch{return ''}
+}
 function safeInitialArtwork(p:Props){
  if(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||''))return p.poster;
  const forcedRoot = p.medium==='anime' && !isHierarchyNode(p) ? FORCED_REPLACEMENT_ARTWORK[normal(p.title)] : undefined;
@@ -308,7 +323,8 @@ export function FrameArtwork(p:Props){
  const fallback=safeInitialArtwork(p);
  const [resolved,setResolved]=useState<{identity:string;src:string}|null>(null);
  const [failedIdentity,setFailedIdentity]=useState('');
- useEffect(()=>{let active=true;setFailedIdentity('');void resolve(p).then(value=>{if(active)setResolved({identity,src:value})});return()=>{active=false}},[identity]);
+ const [recoveryAttempted,setRecoveryAttempted]=useState('');
+ useEffect(()=>{let active=true;setFailedIdentity('');setRecoveryAttempted('');void resolve(p).then(value=>{if(active)setResolved({identity,src:value})});return()=>{active=false}},[identity]);
  // Render a persisted/curated poster immediately. The previous anime-specific
  // empty initial state made every reload depend on an async AniList/network
  // lookup before a poster could appear.
@@ -317,5 +333,5 @@ export function FrameArtwork(p:Props){
  // blank <img>. The next mount can still retry the saved URL.
  const src=failedIdentity===identity?svgFallback(p.title,p.medium):base;
  const displaySrc=src?posterImageSrc(src):undefined;
- return <img className={p.className} {...(displaySrc?{src:displaySrc}:{})} alt={displaySrc?(p.alt??p.title):''} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;const rawSource=resolved&&resolved.identity===identity?resolved.src:'';if(p.medium==='anime'&&rawSource&&failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.directRetryApplied!=='1'){img.dataset.directRetryApplied='1';img.src=rawSource;return}if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
+ return <img className={p.className} {...(displaySrc?{src:displaySrc}:{})} alt={displaySrc?(p.alt??p.title):''} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;const rawSource=resolved&&resolved.identity===identity?resolved.src:'';if(p.medium==='anime'&&isHierarchyNode(p)&&recoveryAttempted!==identity){setRecoveryAttempted(identity);void recoverHierarchyArtwork(p).then(src=>{if(src){img.src=posterImageSrc(src);return}if(failedIdentity!==identity)setFailedIdentity(identity)});return}if(p.medium==='anime'&&rawSource&&failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.directRetryApplied!=='1'){img.dataset.directRetryApplied='1';img.src=rawSource;return}if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
 }
