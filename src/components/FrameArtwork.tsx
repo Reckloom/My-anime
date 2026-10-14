@@ -111,7 +111,7 @@ async function resolve(p:Props):Promise<string>{
  // Existing saved artwork always wins. AniList is only a source for rows that
  // do not already have a trusted poster, preventing future imports/syncs from
  // silently replacing established library artwork.
- if(hasSavedPoster && await isPortraitSource(p.poster))return p.poster as string;
+ if(hasSavedPoster && (!p.parentPoster || p.poster !== p.parentPoster) && await isPortraitSource(p.poster))return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
   const existing=getArtworkCache(key);if(existing)return existing;
@@ -135,19 +135,10 @@ async function resolve(p:Props):Promise<string>{
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
  if(dedicatedHierarchyPoster && await isPortraitSource(dedicatedHierarchyPoster))return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
-  if(hasDistinctSavedPoster && await isPortraitSource(p.poster))return p.poster!;
-  if(p.parentAnilistId){
-   try{
-    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.parentAnilistId}})});
-    if(response.ok){
-     const json=await response.json() as {data?:{Media?:AniListMedia}};
-     const image=json.data?.Media?.coverImage?.extraLarge;
-     if(image)return image;
-    }
-   }catch{/* parent artwork can be unavailable */}
+   if(hasDistinctSavedPoster && await isPortraitSource(p.poster))return p.poster!;
+   // Arcs must use their own image; never reuse the parent anime poster.
+   return '';
   }
-  return p.parentPoster||'/frame-logo.svg';
- }
  if(isHierarchyNode(p)){
   if(hasDistinctSavedPoster && await isPortraitSource(p.poster))return p.poster as string;
   // First try to find artwork for the exact season/arc title. This keeps
@@ -162,22 +153,12 @@ async function resolve(p:Props):Promise<string>{
      const target=normal(p.title);
      const exact=results.find(m=>[m.title.english,m.title.romaji,m.title.native,m.title.userPreferred,...(m.synonyms||[])].some(v=>v&&normal(v)===target));
      const image=exact?.coverImage?.extraLarge;
-     if(image)return image;
+     if(image && await isPortraitSource(image))return image;
     }
    }catch{/* exact season/arc artwork can be unavailable */}
   }
-  if(p.parentAnilistId){
-   try{
-    const response=await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.parentAnilistId}})});
-    if(response.ok){
-     const json=await response.json() as {data?:{Media?:AniListMedia}};
-     const image=json.data?.Media?.coverImage?.extraLarge;
-     if(image)return image;
-    }
-   }catch{/* parent artwork can be unavailable */}
-  }
-  return p.parentPoster||'/frame-logo.svg';
- }
+  // A missing exact season/arc image is not permission to inherit the root poster.
+  return '';
  if(!isSeriesMedia){if(p.medium==='anime')return (p.poster && await isPortraitSource(p.poster))?p.poster:'';return p.poster||p.parentPoster||svgFallback(p.title,p.medium);}
  const type=p.medium==='anime'?'ANIME':'MANGA';
  const key=type+':'+(p.anilistId?'id:'+p.anilistId+':' : 'title:')+normal(p.title)+':poster:'+(p.poster||'')+':parent:'+(p.parentPoster||'')+':source:'+(p.posterSource||'');
@@ -202,8 +183,9 @@ async function resolve(p:Props):Promise<string>{
   if(image&&media?.type===type&&titleMatches&&await isPortraitSource(image))return image;
   if(media&&!titleMatches)return hasSavedPoster&&p.poster&&await isPortraitSource(p.poster)?p.poster:'';
   }catch{/* external metadata can be unavailable */}
-  if(isSeriesMedia){if(hasSavedPoster&&p.poster)return p.poster as string;return p.parentPoster||'/frame-logo.svg';}
-  return p.poster||p.parentPoster||(p.medium==='anime'?'/frame-logo.svg':svgFallback(p.title,p.medium));
+  if(isSeriesMedia){if(hasSavedPoster && p.poster && (!p.parentPoster || p.poster !== p.parentPoster) && await isPortraitSource(p.poster))return p.poster as string;return p.medium==='anime'?'':(p.parentPoster||'');}
+  if(p.medium==='anime')return p.poster && await isPortraitSource(p.poster)?p.poster:'';
+  return p.poster||p.parentPoster||svgFallback(p.title,p.medium);
  });
  setArtworkCache(key,request);
  void request.then(value=>{if(value.startsWith('data:image/svg+xml')&&getArtworkCache(key)===request)cache.delete(key)}).catch(()=>{if(cache.get(key)===request)cache.delete(key)});
@@ -232,7 +214,8 @@ export function FrameArtwork(p:Props){
  const [resolved,setResolved]=useState<{identity:string;src:string}|null>(null);
  const [failedIdentity,setFailedIdentity]=useState('');
  useEffect(()=>{let active=true;setFailedIdentity('');void resolve(p).then(value=>{if(active)setResolved({identity,src:value})});return()=>{active=false}},[identity]);
- const base=resolved&&resolved.identity===identity?resolved.src:fallback;
- const src=failedIdentity===identity?svgFallback(p.title,p.medium):base;
- return <img className={p.className} src={posterImageSrc(src)} alt={p.alt??p.title} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
+ const base=resolved&&resolved.identity===identity?resolved.src:(p.medium==='anime'?'':fallback);
+ const src=failedIdentity===identity?(p.medium==='anime'?'':svgFallback(p.title,p.medium)):base;
+ const displaySrc=src?posterImageSrc(src):undefined;
+ return <img className={p.className} {...(displaySrc?{src:displaySrc}:{})} alt={displaySrc?(p.alt??p.title):''} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;const rawSource=resolved&&resolved.identity===identity?resolved.src:'';if(p.medium==='anime'&&rawSource&&failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.directRetryApplied!=='1'){img.dataset.directRetryApplied='1';img.src=rawSource;return}if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
 }
