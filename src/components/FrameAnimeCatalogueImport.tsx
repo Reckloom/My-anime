@@ -1064,7 +1064,7 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
 
   useEffect(() => {
     if (!enabled || !userId || running || autoStartedRef.current) return;
-    const remaining = TASKS.some(task => !completedKeys.includes(task.key));
+    const remaining = BATCH_TASKS.some(task => !completedKeys.includes(task.key));
     // Never run the full catalogue importer automatically on page load. It is a
     // heavy network/database job and must not compete with the library UI.
     // Release totals are handled by the server-side release tracker instead.
