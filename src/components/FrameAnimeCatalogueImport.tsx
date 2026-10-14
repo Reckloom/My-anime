@@ -1084,7 +1084,18 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
 
   useEffect(() => {
     if (!enabled || !userId || running || autoStartedRef.current) return;
-    const remaining = BATCH_TASKS.some(task => !completedKeys.includes(task.key));
+    const normalizeTaskTitle = (value: string) => value.toLowerCase().replace(/[’‘]/g, "'").replace(/[^a-z0-9]+/g, ' ').trim();
+    const remaining = BATCH_TASKS.some(task => {
+      const wanted = normalizeTaskTitle(task.title);
+      const exists = library.some(item => {
+        if (item.medium !== 'anime' || item.parentId) return false;
+        const actual = normalizeTaskTitle(item.title);
+        return actual === wanted ||
+          (task.key === 'spy-family' && actual.includes('spy') && actual.includes('family')) ||
+          (task.key === 'one-punch-man' && actual.includes('one punch man'));
+      });
+      return !completedKeys.includes(task.key) || !exists;
+    });
     if (!remaining) return;
     autoStartedRef.current = true;
     void runCatalogue(false);
