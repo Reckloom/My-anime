@@ -1065,14 +1065,6 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
   useEffect(() => {
     if (!enabled || !userId || running || autoStartedRef.current) return;
     const remaining = TASKS.some(task => !completedKeys.includes(task.key));
-    let stale = false;
-    try {
-      const raw = localStorage.getItem('frame-anime-catalogue:v2:' + userId);
-      const parsed = raw ? JSON.parse(raw) as StoredProgress : null;
-      stale = !parsed?.updatedAt || (Date.now() - Date.parse(parsed.updatedAt)) >= 6 * 60 * 60 * 1000;
-    } catch {
-      stale = true;
-    }
     // Never run the full catalogue importer automatically on page load. It is a
     // heavy network/database job and must not compete with the library UI.
     // Release totals are handled by the server-side release tracker instead.
