@@ -83,6 +83,39 @@ const svgFallback=(title:string,medium:Medium)=>{
  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
 };
 const escapeXml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+const FORCED_REPLACEMENT_ARTWORK:Record<string,string>={
+  'welcome to demon school iruma kun':'https://image.tmdb.org/t/p/original/tm6JNOQvkNyjHmqvKHM89PLqSTe.jpg',
+  'sentenced to be a hero':'https://images.plex.tv/photo?scale=1&size=large-1920&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2Fk8bh5mvHDx3czHSF56v9lRyulLC.jpg',
+  'i parry everything':'https://fr.web.img2.acsta.net/img/a8/da/a8dabd07ee11431241d0284cfcdf7514.jpg',
+  'the ossan newbie adventurer trained to death by the most powerful party became invincible':'https://fr.web.img5.acsta.net/img/d8/59/d8591ab6aa3a53dd6cec9c540b50ce8a.jpg',
+  'mushoku tensei jobless reincarnation':'https://peliculas.lavanguardia.com/imagenes/w1280/jp3nrI6D8h3mwsCLIgv6MFQvV6Q.jpg',
+  'that time i reincarnated as a slime':'https://www.manga-news.com/public/images/dvd/Moi_quand_je_me_re_incarne_en_slime_anime.webp',
+  'konosuba god s blessing on this wonderful world':'https://pics.filmaffinity.com/konosuba_kono_subarashii_sekai_ni_shukufuku_o-548726764-large.jpg',
+  'overlord':'https://image.tmdb.org/t/p/original/7VCM0JezWRdt0sgaBNrv2eibg3t.jpg'
+};
+const FORCED_HIERARCHY_ARTWORK:Record<string,string>={
+  'welcome to demon school iruma kun|season 1':'https://image.tmdb.org/t/p/original/rW5q9ezyHkkn8qtJjgnQa6fz4n1.jpg',
+  'welcome to demon school iruma kun|season 2':'https://es.web.img3.acsta.net/pictures/20/09/24/14/43/4753851.jpg',
+  'welcome to demon school iruma kun|season 4':'https://cdn.anime-planet.com/anime/primary/welcome-to-demon-school-iruma-kun-4-1.webp?t=1731866418',
+  'sentenced to be a hero|season 1':'https://images.justwatch.com/poster/340658927/s718/Staffel-1.jpg',
+  'i parry everything|season 1':'https://pics.filmaffinity.com/I_Parry_Everything_What_Do_You_Mean_I_m_the_Strongest_I_m_Not_Even_an_Adventurer_Yet_Serie_de_TV-928640450-large.jpg',
+  'the ossan newbie adventurer trained to death by the most powerful party became invincible|season 1':'https://media.kg-portal.ru/anime/s/shinmaiossanbkenshasaikypartynishinuhodokitaeraretemutekininaru/posters/shinmaiossanbkenshasaikypartynishinuhodokitaeraretemutekininaru_1.jpg',
+  'mushoku tensei jobless reincarnation|season 1':'https://images.theposterdb.com/prod/public/images/posters/optimized/shows/224306/season_1/nthGib77NbZOjVXa8nJidsnKjA66AfWQDUFAYUgV.jpg',
+  'mushoku tensei jobless reincarnation|season 2 part 1':'https://contents.oricon.co.jp/upimg/news/2327000/2326717/20240512_220930_p_o_79991880.jpg',
+  'mushoku tensei jobless reincarnation|season 2 part 2':'https://img1.daumcdn.net/thumb/R800x0/?fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdna%2FMjfxr%2FbtsKFhKwW5F%2FAAAAAAAAAAAAAAAAAAAAALxSwGfjZ3EHfnhgz6lMLYtFuxb1LjAfazNY0TbXN5fS%2Fimg.webp',
+  'mushoku tensei jobless reincarnation|season 3':'https://repotama.com/2023/07/177742/%E3%82%AD%E3%83%BC%E3%83%93%E3%82%B8%E3%83%A5%E3%82%A2%E3%83%ABs/',
+  'that time i reincarnated as a slime|season 1':'https://images.plex.tv/photo?scale=1&size=large-1920&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2FbQlHgqXFpZ1xpiiBEzncSpXYIwF.jpg',
+  'that time i reincarnated as a slime|season 2 part 1':'https://image.zeta-ai.io/plot-intro-image/51cdc7a8-32d3-4f66-b722-53c4a699ff46/65ffcb36-3d97-4fab-9e92-46ebd4c68328.png',
+  'that time i reincarnated as a slime|season 2 part 2':'https://cdn.xlsbox.com/poster/small/1782735600/5232.jpg',
+  'that time i reincarnated as a slime|season 3':'https://m.media-amazon.com/images/M/MV5BNWU3OTRlNWMtZGQyOC00YzJhLWIyNjctYmI2YzgyZTQ3ZDNmXkEyXkFqcGc%40._V1_.jpg',
+  'konosuba god s blessing on this wonderful world|season 1':'https://image.tmdb.org/t/p/original/2bMFArvxTtgjN5CiNbnPG0rMmk5.jpg',
+  'konosuba god s blessing on this wonderful world|season 2':'https://a.storyblok.com/f/178900/1500x2250/27783f4314/732987e919526f2d19cab429cec069fb1676298898_main.jpg/m/filters%3Aquality%2895%29format%28webp%29',
+  'konosuba god s blessing on this wonderful world|season 3':'https://media.animationdigitalnetwork.com/images/show/0aefd89b-9fcd-4c17-9e9f-99ac01008734/portrait-with-logo',
+  'overlord|season 1':'https://images.justwatch.com/poster/181525333/s718/season-1.jpg',
+  'overlord|season 2':'https://otaku-ism.com/assets/entries/animation/overlord-season-2/cover-c5f0dd49b613452233d2af3ce4cfdf2b93ed6731a98f6b1ba4e5302fd1de44bb.jpg',
+  'overlord|season 3':'https://images.plex.tv/photo?scale=1&size=large-1920&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2Fcvb5TA54NT6yL6eoS95zCB6lVcH.jpg',
+  'overlord|season 4':'https://img1.ak.crunchyroll.com/i/spire4/1acc358362ffcf6a12023267c2eef75d1656870625_main.jpg'
+};
 const dedicatedHierarchyArtwork=(title:string)=>{
  const t=normal(title);
  // Explicit poster map for Link Click and To Be Hero X, plus Dragon Ball hierarchy.
@@ -111,7 +144,7 @@ async function resolve(p:Props):Promise<string>{
  // Existing saved artwork always wins. AniList is only a source for rows that
  // do not already have a trusted poster, preventing future imports/syncs from
  // silently replacing established library artwork.
- if(hasSavedPoster && (!p.parentPoster || p.poster !== p.parentPoster) && await isPortraitSource(p.poster))return p.poster as string;
+ if(!forcedRoot && hasSavedPoster && (!p.parentPoster || p.poster !== p.parentPoster) && await isPortraitSource(p.poster))return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
   const existing=getArtworkCache(key);if(existing)return existing;
