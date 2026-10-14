@@ -252,8 +252,8 @@ function safeInitialArtwork(p:Props){
  if(forcedHierarchy)return forcedHierarchy;
  if(p.medium==='anime')return dedicatedHierarchyArtwork(p.title)||'';
  if(isNarutoHierarchy(p)||isHierarchyNode(p))return dedicatedHierarchyArtwork(p.title)||p.parentPoster||'';
-  if(['manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||'/frame-logo.svg';
- return p.parentPoster||'/frame-logo.svg';
+  if(['manga','manhwa','light-novel'].includes(p.medium))return p.parentPoster||(import.meta.env.BASE_URL+'frame-logo.svg');
+ return p.parentPoster||(import.meta.env.BASE_URL+'frame-logo.svg');
 }
 export function FrameArtwork(p:Props){
  const identity=[p.title,p.medium,p.anilistId??'',p.sourceProvider??'',p.externalId??'',p.poster??'',p.posterSource??'',p.parentPoster??''].join('|');
