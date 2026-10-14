@@ -976,7 +976,9 @@ export function FrameAnimeCatalogueImport({ userId, enabled, library, onImportBa
     } catch { /* Import still works when browser storage is unavailable. */ }
   };
 
-  const BATCH_TASKS = TASKS.filter(task => USER_COMPLETED_TASKS.has(task.key));\n\n  const runCatalogue = async (force = false) => {
+  const BATCH_TASKS = TASKS.filter(task => USER_COMPLETED_TASKS.has(task.key));
+
+  const runCatalogue = async (force = false) => {
     if (running) return;
     if (!enabled || !userId || !supabase) {
       setError('Sign in to FRAME before importing the anime catalogue.');
