@@ -221,7 +221,8 @@ const ROOT_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + ' 
 const RELATED_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + '}}';
 // Franchise hierarchy must contain only direct released TV/TV_SHORT story entries.
 // Side stories, spin-offs, character links, movies, OVAs and specials are not
-// seasons/parts of the main anime and must never be pulled into the hierarchy.\nconst ALLOWED_RELATIONS = new Set(['PREQUEL', 'SEQUEL']);
+// seasons/parts of the main anime and must never be pulled into the hierarchy.
+const ALLOWED_RELATIONS = new Set(['PREQUEL', 'SEQUEL']);
 const STEINS_GATE_EXTRA_RELATIONS = new Set(['SIDE_STORY', 'SPIN_OFF']);
 const ALLOWED_FORMATS = new Set(['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL']);
 const MOVIE_FORMATS = new Set(['MOVIE']);
@@ -993,7 +994,8 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       : undefined;
     const duplicatedParentArtwork = Boolean(item.parentId && parent?.poster && item.poster && parent.poster === item.poster);
     const portrait = item.sourceProvider === 'frame-story-arc' || item.sourceProvider === 'frame-bleach-part'
-      ? Boolean(String(item.poster || '').trim())\n      : !duplicatedParentArtwork && await verifyPortraitArtwork(item.poster);
+      ? Boolean(String(item.poster || '').trim())
+      : !duplicatedParentArtwork && await verifyPortraitArtwork(item.poster);
     if (!portrait) {
       warnings.push(item.title + ': poster failed natural portrait/deduplication verification; no fallback poster was saved.');
       checkedItems.push({ ...item, poster: '' });
