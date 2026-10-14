@@ -1041,8 +1041,9 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    return;
   }
   if(!client||!cloudUserId)return;
-  const existingChildren=itemsRef.current.some(x=>x.parentId===rootId);
-  if(existingChildren)return;
+  // Never treat one existing child as proof that the hierarchy is complete.
+  // A previous partial hydration could leave Season 1 cached while Season 2+
+  // is still in the database. Always reconcile the full descendant tree.
   const loadedIds=new Set<string>([rootId]);
   let frontier=[rootId];
   const rows:any[]=[];
@@ -1088,6 +1089,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   if(history.state?.frameDetailId)history.replaceState(state,'',window.location.href);
   else history.pushState(state,'',window.location.href);
   setSelected(item);
+  void hydrateDescendants(item.id);
  };
  const closeDetail=()=>{
   const hasHistoryDetail=Boolean(history.state?.frameDetailId);
