@@ -48,9 +48,12 @@ async function loadAnimeCharacters(anilistId: number | undefined, expectedTitle:
       // Use the public AniList endpoint as a fallback if the server proxy is unavailable.
     }
   }
-  const pages = await Promise.all(
-    [1, 2, 3, 4].map(page => aniList<AniListCharacterResponse>(CHARACTERS_QUERY, { id: anilistId, page }))
-  );
+  // Render the first page quickly. The server proxy is preferred above; this
+  // public fallback should not fire four large GraphQL requests before the
+  // character panel can paint.
+  const pages = await Promise.all([
+    aniList<AniListCharacterResponse>(CHARACTERS_QUERY, { id: anilistId, page: 1 })
+  ]);
   const media = pages[0].Media;
   const normalizeTitle = (value: string) => value.toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
   const expected = normalizeTitle(expectedTitle);
@@ -94,10 +97,10 @@ async function fetchAnimeCharacters(anilistId: number, expectedTitle: string, pr
   }
 }
 
-function CharacterPortrait({character}:{character:AnimeCharacterProfile}) {
+function CharacterPortrait({character,priority=false}:{character:AnimeCharacterProfile;priority?:boolean}) {
   const [failed,setFailed]=useState(false);
   useEffect(()=>setFailed(false),[character.image,character.name]);
-  if(character.image&&!failed)return <img src={posterImageSrc(character.image)} alt={character.name + ' portrait'} loading="lazy" onError={()=>setFailed(true)} />;
+  if(character.image&&!failed)return <img src={posterImageSrc(character.image)} alt={character.name + ' portrait'} loading={priority?'eager':'lazy'} decoding="async" fetchPriority={priority?'high':'auto'} onError={()=>setFailed(true)} />;
   return <span aria-label={character.name + ' portrait unavailable'}><Users size={21}/></span>;
 }
 
@@ -441,7 +444,7 @@ export function FrameAnimeCharacters({ title, characters, anilistId, medium = 'a
           {isLinkClickTitle && <span className="frame-one-piece-poster-label">TIME PHOTO STUDIO</span>}
           {isToBeHeroXTitle && <span className="frame-one-piece-poster-label">HERO</span>}\n          {isFullmetalAlchemistTitle && <span className="frame-one-piece-poster-label">ALCHEMIST</span>}
           {isRichArchive && <span className="frame-one-piece-rank">#{index + 1}</span>}
-          <div className="frame-anime-character-portrait"><CharacterPortrait character={character} /></div>
+          <div className="frame-anime-character-portrait"><CharacterPortrait character={character} priority={index<12} /></div>
           <div className="frame-anime-character-copy">
             <b>{character.name}</b>
             <span>{marine ? 'Marine' : character.role ? character.role.charAt(0).toUpperCase() + character.role.slice(1).toLowerCase() : 'Character'}</span>
