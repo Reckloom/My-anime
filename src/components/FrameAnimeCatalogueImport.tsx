@@ -72,7 +72,9 @@ const TASKS: Task[] = [
   { key: 'campfire-cooking', title: 'Campfire Cooking in Another World with My Absurd Skill', search: 'Tondemo Skill de Isekai Hourou Meshi', aliases: ['Campfire Cooking in Another World with My Absurd Skill', 'Tondemo Skill de Isekai Hourou Meshi'], relatedLimit: 8, relationDepth: 2 },
   { key: 'parallel-world-pharmacy', title: 'Parallel World Pharmacy', search: 'Isekai Yakkyoku', aliases: ['Parallel World Pharmacy', 'Isekai Yakkyoku'], relatedLimit: 5, relationDepth: 1 },
 ];
-// This release batch is intentionally scoped to the 21 anime requested for this import.\n// The importer must not silently re-run unrelated legacy catalogue tasks.\nconst USER_COMPLETED_TASKS = new Set([
+// This release batch is intentionally scoped to the 21 anime requested for this import.
+// The importer must not silently re-run unrelated legacy catalogue tasks.
+const USER_COMPLETED_TASKS = new Set([
   'haikyu', 'one-punch-man', 'spy-family', 'classroom-of-the-elite',
   'assassination-classroom', 'rent-a-girlfriend', 'greatest-demon-lord',
   'worthless-appraiser', 'failure-frame', 'dandadan', 'kaiju-no-8',
@@ -217,7 +219,9 @@ const SEARCH_QUERY = 'query ($search:String!,$page:Int!,$perPage:Int!,$type:Medi
 const DETAIL_FIELDS = 'id idMal type format status title{romaji english native userPreferred} synonyms description coverImage{extraLarge} bannerImage genres tags{name} season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day} nextAiringEpisode{episode airingAt} relations{edges{relationType node{id idMal type format status title{romaji english native userPreferred} synonyms coverImage{extraLarge} bannerImage genres season seasonYear averageScore studios{nodes{name}} source episodes duration startDate{year month day} endDate{year month day}}}}';
 const ROOT_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + ' characters(sort:ROLE,perPage:20){edges{role node{id name{full native} image{large} description siteUrl}}}}}';
 const RELATED_DETAIL_QUERY = 'query ($id:Int!){Media(id:$id){' + DETAIL_FIELDS + '}}';
-// Franchise hierarchy must contain only direct released TV/TV_SHORT story entries.\n// Side stories, spin-offs, character links, movies, OVAs and specials are not\n// seasons/parts of the main anime and must never be pulled into the hierarchy.\nconst ALLOWED_RELATIONS = new Set(['PREQUEL', 'SEQUEL']);
+// Franchise hierarchy must contain only direct released TV/TV_SHORT story entries.
+// Side stories, spin-offs, character links, movies, OVAs and specials are not
+// seasons/parts of the main anime and must never be pulled into the hierarchy.\nconst ALLOWED_RELATIONS = new Set(['PREQUEL', 'SEQUEL']);
 const STEINS_GATE_EXTRA_RELATIONS = new Set(['SIDE_STORY', 'SPIN_OFF']);
 const ALLOWED_FORMATS = new Set(['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL']);
 const MOVIE_FORMATS = new Set(['MOVIE']);
@@ -230,7 +234,7 @@ const sleep = (ms: number) => new Promise<void>(resolve => window.setTimeout(res
 const portraitCheckCache = new Map<string, Promise<boolean>>();
 async function verifyPortraitArtwork(url?: string): Promise<boolean> {
   const value = String(url || '').trim();
-  if (!/^https?:\\/\\//i.test(value)) return false;
+  if (!/^https?:\/\//i.test(value)) return false;
   const cached = portraitCheckCache.get(value);
   if (cached) return cached;
   const check = new Promise<boolean>(resolve => {
@@ -821,10 +825,10 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     const mediaTitle = normalizeText(preferredTitle(media));
     const candidates = curated.filter(arc => {
       const s = normalizeText(arc.season);
-      const arcSeasonNumber = Number(s.match(/season (\\d+)/)?.[1] || 0);
+      const arcSeasonNumber = Number(s.match(/season (\d+)/)?.[1] || 0);
       const mediaSeasonNumber = Number(
-        mediaTitle.match(/(?:season|series|s) (\\d+)/)?.[1] ||
-        mediaTitle.match(/(\\d+)(?:st|nd|rd|th) season/)?.[1] || 0
+        mediaTitle.match(/(?:season|series|s) (\d+)/)?.[1] ||
+        mediaTitle.match(/(\d+)(?:st|nd|rd|th) season/)?.[1] || 0
       );
       const finalSeason = s === 'final season' && (mediaTitle.includes('final season') || mediaTitle.includes('8th season') || mediaTitle.includes('8th season'));
       const firstChosenIsSeasonOne = Number(media.id) === Number(chosen[0]?.id) && arcSeasonNumber === 1;
@@ -988,7 +992,8 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       ? (itemsById.get(item.parentId) || library.find(existing => existing.id === item.parentId))
       : undefined;
     const duplicatedParentArtwork = Boolean(item.parentId && parent?.poster && item.poster && parent.poster === item.poster);
-    const portrait = item.sourceProvider === 'frame-story-arc' || item.sourceProvider === 'frame-bleach-part'\n      ? Boolean(String(item.poster || '').trim())\n      : !duplicatedParentArtwork && await verifyPortraitArtwork(item.poster);
+    const portrait = item.sourceProvider === 'frame-story-arc' || item.sourceProvider === 'frame-bleach-part'
+      ? Boolean(String(item.poster || '').trim())\n      : !duplicatedParentArtwork && await verifyPortraitArtwork(item.poster);
     if (!portrait) {
       warnings.push(item.title + ': poster failed natural portrait/deduplication verification; no fallback poster was saved.');
       checkedItems.push({ ...item, poster: '' });
@@ -1010,7 +1015,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
     }
   }
   finalItems = checkedItems;
-  const verified = !warnings.some(w => /reports \\d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|missing episode posters|Main poster URL is missing|added \\d+ numbered episode entries|portrait verification/i.test(w));
+  const verified = !warnings.some(w => /reports \d+ episodes|upcoming AniList episode|no MyAnimeList ID|source problem|could not be read|could not be verified|missing episode posters|Main poster URL is missing|added \d+ numbered episode entries|portrait verification/i.test(w));
   return {
     items: finalItems,
     warnings: [...new Set(warnings)],
