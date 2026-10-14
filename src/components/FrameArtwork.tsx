@@ -167,13 +167,7 @@ async function resolve(p:Props):Promise<string>{
  if(forcedHierarchy) return forcedHierarchy;
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
  const freshHierarchyPoster = isHierarchyNode(p) && p.medium==='anime' && p.anilistId
-   ? await fetch(ANILIST_URL,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({query:DETAIL_QUERY,variables:{id:p.anilistId}})})
-     .then(async response => {
-       if(!response.ok)return '';
-       const json=await response.json() as {data?:{Media?:AniListMedia}};
-       const image=json.data?.Media?.coverImage?.extraLarge;
-       return image && await isPortraitSource(image) ? image : '';
-     }).catch(()=> '')
+   ? `https://s4.anilist.co/file/anilistcdn/media/anime/cover/extraLarge/b${p.anilistId}.jpg`
    : '';
  const hasDistinctSavedPoster=hasSavedPoster&&(!p.parentPoster||p.poster!==p.parentPoster);
  // DATABASE ARTWORK IS AUTHORITATIVE.
