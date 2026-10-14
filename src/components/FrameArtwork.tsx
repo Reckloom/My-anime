@@ -177,8 +177,8 @@ async function resolve(p:Props):Promise<string>{
  const hasSavedPoster=Boolean(p.poster&&!isPlaceholderArtwork(p.poster)&&!/(?:not-available|not-supplied-by-source)/i.test(p.posterSource||'')&&!(p.poster===sharedOnePiecePoster&&!isOnePiece));
  const replaceableHierarchyPoster=Boolean(
    !hasSavedPoster
-   || /img\\.anili\\.st\\/media\\//i.test(currentPoster)
-   || /s\\d+\\.anilist\\.co\\/file\\/anilistcdn\\/media\\/anime\\/cover\\/large\\//i.test(currentPoster)
+   || currentPoster.toLowerCase().includes('img.anili.st/media/')
+   || currentPoster.toLowerCase().includes('/file/anilistcdn/media/anime/cover/large/')
    || /(?:not-available|not-supplied-by-source)/i.test(String(p.posterSource||''))
  );
  // Never fabricate an AniList cover URL from b<ID>.jpg. AniList assets can
