@@ -778,10 +778,13 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       const arcId = 'frame-story-arc-bleach-' + String(order).padStart(2, '0') + '-' + scope;
       bleachArcIds.set(order, arcId);
       const existingArc = library.find(item => item.id === arcId);
-      const poster = arcEpisodes.find(episode => episode.poster)?.poster || '';
+      // Never downgrade a curated/persisted arc poster during a re-import.
+      // Episode catalogue images are only a last resort because they are usually
+      // landscape thumbnails and can change between provider refreshes.
+      const poster = existingArc?.poster || BLEACH_ARC_POSTERS[order - 1] || arcEpisodes.find(episode => episode.poster)?.poster || '';
       incoming.push({
         id: arcId,
-        parentId: rootId,
+        parentId: bleachOriginalPartId,
         sourceProvider: 'frame-story-arc',
         externalId: 'frame-story-arc-bleach-' + String(order).padStart(2, '0'),
         title: name,
