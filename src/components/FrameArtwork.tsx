@@ -150,7 +150,7 @@ async function resolve(p:Props):Promise<string>{
  // Existing saved artwork always wins. AniList is only a source for rows that
  // do not already have a trusted poster, preventing future imports/syncs from
  // silently replacing established library artwork.
- if(!forcedRoot && hasSavedPoster && (!isHierarchyNode(p) || !p.parentPoster || p.poster !== p.parentPoster || isHierarchyNode(p)) && await isPortraitSource(p.poster))return p.poster as string;
+ if(!forcedRoot && hasSavedPoster)return p.poster as string;
  if(p.anilistId&&p.medium==='anime'){
   const key='anilist-exact:'+p.anilistId;
   const existing=getArtworkCache(key);if(existing)return existing;
