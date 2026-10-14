@@ -542,8 +542,8 @@ function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: 
   // AniList poster URL contains the exact media ID. Reuse those rows on refresh.
   const idFromPoster = (value: string) => {
     const url = String(value || '');
-    const match = url.match(/img\\.anili\\.st\\/media\\/(\\d+)/i)
-      || url.match(/\\/media\\/anime\\/cover\\/(?:large|medium)\\/bx?(\\d+)[-.]/i);
+    const match = url.match(/img\.anili\.st\/media\/(\d+)/i)
+      || url.match(/\/media\/anime\/cover\/(?:large|medium)\/bx?(\d+)[-.]/i);
     return match ? Number(match[1]) : undefined;
   };
   const existingChild = library.find(x =>
