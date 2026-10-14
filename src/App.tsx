@@ -352,6 +352,23 @@ export default function App(){
       ?mergeMediaLists(cloudItems,latestGuestItems)
       :cloudItems;
     setItems(merged);setCloudLibraryReady(true);
+    // Warm direct seasons/parts after the first screen settles so detail pages
+    // do not visibly wait on a second database round-trip.
+    if(!guestMode){
+     const rootIds=cloudItems.filter(x=>!x.parentId).map(x=>x.id).filter(Boolean);
+     if(rootIds.length){
+      const warm=async()=>{try{
+       const {data:warmRows,error:warmError}=await client.from('media_items')
+        .select('id,user_id,parent_id,metadata_id,anilist_id,title,description,poster,backdrop,medium,status,progress,total,year,score,genres,themes,studio,source,favorite,notes,next_release,next_release_number,data')
+        .eq('user_id',cloudUserId).in('parent_id',rootIds).order('id',{ascending:true});
+       if(warmError||!Array.isArray(warmRows)||!warmRows.length)return;
+       const next=mergeMediaLists(itemsRef.current,dedupeMediaItems(warmRows.map(dbToMedia)));
+       itemsRef.current=next;setItems(next);
+      }catch(error){console.warn('[FRAME season warmup]',error)}};
+      if(typeof window!=='undefined'&&'requestIdleCallback' in window)(window as any).requestIdleCallback(warm,{timeout:1200});
+      else if(typeof window!=='undefined')window.setTimeout(warm,120);
+     }
+    }
     try{
      localStorage.setItem(`frame-library:roots:${cloudUserId}`,JSON.stringify(merged.filter(x=>!x.parentId)));
     }catch{}
@@ -1134,17 +1151,6 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   {!guest && cloudLibraryReady && <div hidden aria-hidden="true">
     <FrameAnimeCatalogueImport userId={user?.id} enabled={Boolean(user?.id)} library={items} onImportBatch={importAnimeBatch}/>
   </div>}
-  {/* Repair incomplete One Piece and Naruto character archives in the background.
-      The same validated AniList loader powers the visible character page. */}
-  {cloudLibraryReady && !guest && items.filter(item =>
-    item.medium==='anime' && Boolean(item.anilistId) &&
-    ((!item.parentId && /^(?:one piece|naruto)$/i.test(item.title.trim())) ||
-     item.id==='frame-naruto-part-shippuden') &&
-    (item.characters?.length||0)<45
-   ).map(item=><div key={'character-prefetch-'+item.id} hidden aria-hidden="true">
-    <FrameAnimeCharacters title={item.title} characters={item.characters||[]} anilistId={item.anilistId}
-      onCharactersLoaded={async profiles=>{await persistCharacterProfiles(item.id,profiles);}}/>
-   </div>)}
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
   <header className="frame-topbar" role="banner">
    <button className="frame-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
