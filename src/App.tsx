@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {CalendarDays,ChevronRight,CirclePlus,Compass,Gamepad2,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Radio,RefreshCw,Search,Star,Users,X} from 'lucide-react';
 import {useAuth} from './auth/Auth';
-import type {AnimeCharacterProfile,MediaItem,Medium} from './types';
+import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
 import {FrameGlobalChat} from './components/FrameGlobalChat';
 import {FrameDetail} from './components/FrameDetail';
@@ -14,7 +14,6 @@ import {FrameCommandPalette} from './components/FrameCommandPalette';
 import {FrameDataTools} from './components/FrameDataTools';
 import {FrameLibraryImport} from './components/FrameLibraryImport';
 import {FrameAnimeCatalogueImport} from './components/FrameAnimeCatalogueImport';
-import {FrameAnimeCharacters} from './components/FrameAnimeCharacters';
 import {aniList,DETAIL_QUERY,SEARCH_QUERY,cleanDescription,titleOf} from './anilist';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
@@ -1155,7 +1154,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   <header className="frame-topbar" role="banner">
    <button className="frame-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
    <nav className="frame-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
+    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['anime','Anime'],Compass],[['manga','Manga'],Library],[['manhwa','Manhwa'],Library]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
    </nav>
    <div className="frame-actions">
     <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
@@ -1170,10 +1169,13 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <button className="top-icon mobile-only" aria-label={menu?'Close navigation menu':'Open navigation menu'} title={menu?'Close navigation menu':'Open navigation menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['friends','Friends'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['anime','Anime'],['manga','Manga'],['manhwa','Manhwa'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="frame-main">
    {page==='home'&&<Home items={sortMedia(items,sortMode).filter(x=>!x.parentId)} total={items.filter(x=>!x.parentId).length} open={openDetail} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
    {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={openDetail} add={()=>setFinder(true)} />}
+   {page==='anime'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='anime'),sortMode)} library={items} filters={['anime']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
+   {page==='manga'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manga'),sortMode)} library={items} filters={['manga']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
+   {page==='manhwa'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manhwa'),sortMode)} library={items} filters={['manhwa']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
    {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);go('friend-library')}} onCall={setDirectCall}/>}
@@ -1202,17 +1204,29 @@ function ManualEntryForm({close,onCreate,library}:{close:()=>void;onCreate:(item
  return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><aside className="detail-drawer manual-entry-drawer" onMouseDown={e=>e.stopPropagation()}><button className="close-btn" onClick={close} aria-label="Close"><X/></button><div className="manual-entry-head"><small>MANUAL ENTRY</small><h2>Add anything to FRAME.</h2><p>Use this for media that no catalogue can identify. You can edit all of it later.</p></div><div className="call-form manual-entry-form"><label>Title<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. a local series, book, game…" /></label><label>Media type<select value={medium} onChange={e=>setMedium(e.target.value as Medium)}>{Object.entries(types).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><label>Status<select value={status} onChange={e=>setStatus(e.target.value as MediaItem['status'])}>{[['planned','Planned'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['paused','Paused'],['dropped','Dropped']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><div className="manual-two-col"><label>Progress<input type="number" min="0" max="2000" value={progress} onChange={e=>setProgress(Number(e.target.value)||0)}/></label><label>Total<input type="number" min="0" max="2000" value={total||''} onChange={e=>setTotal(Number(e.target.value)||0)} placeholder="Optional" /></label></div><label>Poster URL<input value={posterUrl} onChange={e=>setPosterUrl(e.target.value)} placeholder="https://…" /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional description…" /></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={personalRating??''} onChange={e=>setPersonalRating(e.target.value===''?undefined:Number(e.target.value)||0)} /></label><label>Parent entry<select value={parentId} onChange={e=>setParentId(e.target.value)}><option value="">None — top level</option>{library.slice().sort((a,b)=>a.title.localeCompare(b.title)).map(x=><option key={x.id} value={x.id}>{x.parentId?'↳ ':''}{x.title}</option>)}</select></label><label>Favorite<select value={favorite?'yes':'no'} onChange={e=>setFavorite(e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label><label>Notes<textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything you want to remember…" /></label><button className="primary" disabled={!title.trim()||busy} onClick={()=>void submit()}>{busy?<RefreshCw size={16} className="spin"/>:<CirclePlus size={16}/>} {busy?'Adding…':'Add to my library'}</button></div></aside></div>;
 }
 function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
- const active=items.filter(x=>['watching','reading','playing'].includes(x.status));
- const favorites=items.filter(x=>x.favorite);
- const topRated=[...items].sort((a,b)=>(b.popularity??-1)-(a.popularity??-1)||(b.score??0)-(a.score??0));
- return <div className="page home-page">
-  <section className="home-intro"><div className="home-intro-copy"><small>FRAME HOME</small><h1>{'Welcome back'+(name?', '+name:'')+'.'}</h1><p>{total?'You have '+total+' '+(total===1?'title':'titles')+' in your library.':'Your library is empty. Add your first title to get started.'}</p></div><div className="home-intro-actions"><button className="primary" onClick={finder}><Search size={16}/>Add media</button><button className="secondary" onClick={()=>go('library')}><Library size={16}/>Open library</button><button className="secondary" onClick={()=>go('calls')}><Radio size={16}/>Global Call</button></div></section>
-<section className="home-overview" aria-label="Library overview"><div><b>{total}</b><span>Library</span></div><div><b>{active.length}</b><span>In progress</span></div><div><b>{items.filter(x=>x.status==='completed').length}</b><span>Completed</span></div><div><b>{favorites.length}</b><span>Favorites</span></div></section>
-  {active.length>0&&<section className="home-shelf home-continue"><div className="section-title"><div><small>KEEP GOING</small><h2>Continue</h2></div><button className="text-action" onClick={()=>go('library')}>View library <ChevronRight size={14}/></button></div><div className="media-grid">{active.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
-  {favorites.length>0&&<section className="home-shelf home-favorites"><div className="section-title"><div><small>PINNED</small><h2>Favorites</h2></div><span>{favorites.length}</span></div><div className="media-grid">{favorites.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
-  <section className="home-tools"><div className="home-tools-head"><small>SHORTCUTS</small><h2>Go somewhere</h2></div><div className="home-tool-grid"><button onClick={finder}><Search size={19}/><span><b>Find media</b><small>Search every connected catalogue</small></span><ChevronRight size={15}/></button><button onClick={()=>go('discover')}><Compass size={19}/><span><b>Discover</b><small>Explore new titles and sources</small></span><ChevronRight size={15}/></button><button onClick={()=>go('radar')}><CalendarDays size={19}/><span><b>Release Radar</b><small>See tracked releases</small></span><ChevronRight size={15}/></button><button onClick={()=>go('calls')}><Radio size={19}/><span><b>Global Call</b><small>Join or start the public FRAME voice room</small></span><ChevronRight size={15}/></button></div></section>
-  {total>0&&<section className="home-shelf home-top-rated"><div className="section-title"><div><small>YOUR SCORES</small><h2>Top rated</h2></div><span>{topRated.length}</span></div><div className="media-grid">{topRated.slice(0,6).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
-  {!total&&<section className="home-empty"><div className="home-empty-mark"><img src={import.meta.env.BASE_URL+"frame-logo.svg"} alt=""/></div><div><small>NO TITLES YET</small><h2>Start with something you already watch, read or play.</h2><p>Use the finder to pull in metadata, then set the status and progress you want.</p><button className="primary" onClick={finder}><Search size={15}/>Find your first title</button></div></section>}
+ const anime=items.filter(x=>x.medium==='anime'||x.medium==='movie'||x.medium==='series');
+ const active=anime.filter(x=>['watching'].includes(x.status));
+ const completed=anime.filter(x=>x.status==='completed');
+ const favorites=anime.filter(x=>x.favorite);
+ const hero=active[0]||favorites[0]||anime[0];
+ const popular=[...anime].sort((a,b)=>(b.popularity??-1)-(a.popularity??-1)||(b.score??0)-(a.score??0));
+ const longRunning=anime.filter(x=>(x.total||0)>=50).sort((a,b)=>(b.total||0)-(a.total||0));
+ const movies=anime.filter(x=>x.medium==='movie');
+ const Shelf=({eyebrow,title,data}:{eyebrow:string;title:string;data:MediaItem[]})=>data.length?<section className="cinema-shelf"><div className="cinema-shelf-head"><div><small>{eyebrow}</small><h2>{title}</h2></div><button className="text-action" onClick={()=>go('library')}>View all <ChevronRight size={14}/></button></div><div className="cinema-rail">{data.slice(0,12).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>:null;
+ return <div className="premium-home">
+  {hero?<section className="cinema-hero" style={{backgroundImage:`linear-gradient(90deg,rgba(5,5,8,.97) 0%,rgba(5,5,8,.72) 42%,rgba(5,5,8,.12) 75%),linear-gradient(0deg,#07070a 0%,transparent 55%),url("${hero.backdrop||hero.poster}")`}}>
+   <div className="cinema-hero-copy"><span className="frame-kicker">FRAME ORIGINAL LIBRARY</span><h1>{hero.title}</h1><div className="cinema-meta">{hero.year&&<span>{hero.year}</span>}{hero.score!=null&&<span><Star size={13} fill="currentColor"/>{hero.score.toFixed(1)}</span>}<span>{hero.total?hero.total+' episodes':'Anime'}</span><span>{hero.status}</span></div><p>{hero.description||'Your anime library, presented with the artwork and detail it deserves.'}</p><div className="hero-genres">{hero.genres?.slice(0,4).map(g=><span key={g}>{g}</span>)}</div><div className="cinema-hero-actions"><button className="primary" onClick={()=>open(hero)}>View details <ChevronRight size={16}/></button><button className="secondary" onClick={finder}><CirclePlus size={16}/>Add to library</button></div></div>
+  </section>:<section className="cinema-hero cinema-hero-empty"><div className="cinema-hero-copy"><span className="frame-kicker">FRAME</span><h1>Your anime deserves a better library.</h1><p>Build a cinematic collection with real metadata, progress and episode catalogues.</p><button className="primary" onClick={finder}><Search size={16}/>Find anime</button></div></section>}
+  <div className="cinema-content">
+   {name&&<div className="cinema-welcome">Welcome back, {name}. <span>{total} titles in FRAME.</span></div>}
+   <Shelf eyebrow="PICK UP WHERE YOU LEFT OFF" title="Continue Watching" data={active}/>
+   <Shelf eyebrow="YOUR COLLECTION" title="My Library" data={anime}/>
+   <Shelf eyebrow="TRENDING IN YOUR CATALOGUE" title="Popular Anime" data={popular}/>
+   <Shelf eyebrow="FINISHED" title="Completed" data={completed}/>
+   <Shelf eyebrow="LONG JOURNEYS" title="Long Running" data={longRunning}/>
+   <Shelf eyebrow="FILMS" title="Movies" data={movies}/>
+   <Shelf eyebrow="PINNED" title="Favorites" data={favorites}/>
+  </div>
  </div>;
 }
 function Stat({value,label}:{value:number;label:string}){return <div className="stat-card"><b>{value}</b><span>{label}</span></div>}
