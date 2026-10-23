@@ -5746,3 +5746,18 @@ body{overflow-x:hidden!important}
  .frame-detail-controls button{justify-content:center}
  .frame-detail-relations{grid-template-columns:1fr}
 }
+
+
+/* FRAME episode experience V2 */
+.frame-episode-quickbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:12px 0 15px;padding:10px;border:1px solid #202024;background:#101013;border-radius:6px}
+.frame-episode-progress-chip{display:flex;align-items:center;gap:6px;margin-right:auto;color:#a8a8b0;font-size:9px;text-transform:uppercase;letter-spacing:.08em}
+.frame-episode-progress-chip b{color:#f0f0f2}
+.frame-episode-quickbar button{height:32px;display:flex;align-items:center;gap:5px}
+.frame-episode-jump-control{display:flex;align-items:center;gap:5px;color:#777780;font-size:9px;text-transform:uppercase;font-weight:700}
+.frame-episode-jump-control input{width:62px;height:32px;border:1px solid #29292e;background:#0b0b0e;color:#fff;border-radius:4px;padding:0 7px}
+@media(max-width:600px){
+ .frame-episode-progress-chip{width:100%;margin-right:0}
+ .frame-episode-quickbar button{flex:1;justify-content:center}
+ .frame-episode-jump-control{flex:1}
+ .frame-episode-jump-control input{flex:1;width:auto}
+}
