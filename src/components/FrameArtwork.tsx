@@ -221,7 +221,14 @@ async function resolve(p:Props):Promise<string>{
  }
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return hasSavedPoster && await isPortraitSource(p.poster)?p.poster as string:'';
+ if(isEpisode){
+  // Episode stills may be landscape. Prefer the stored episode image as-is;
+  // if it is missing, use the verified parent anime artwork rather than
+  // searching by the episode title and risking unrelated artwork.
+  if(p.poster && !isPlaceholderArtwork(p.poster))return p.poster as string;
+  if(p.parentPoster && !isPlaceholderArtwork(p.parentPoster))return p.parentPoster as string;
+  return '';
+}
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
  if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
