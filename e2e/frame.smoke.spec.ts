@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 test.describe('FRAME core smoke flow', () => {
   test('loads the app and exposes the main navigation', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('banner')).toBeVisible();
+    await expect(page.locator('header[role="banner"]').first()).toBeVisible();
     for (const label of ['Home', 'Library', 'Anime']) {
       const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});
       if(await primary.isVisible().catch(()=>false))continue;
