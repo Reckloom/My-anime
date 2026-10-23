@@ -5163,3 +5163,28 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   z-index:9999!important;
   overflow:hidden!important;
 }
+
+
+/* FRAME async route fallback — quiet, cinematic, and layout-safe. */
+.frame-route-fallback{
+  min-height:180px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:28px 16px;
+  color:#777983;
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.frame-route-spinner{
+  width:14px;
+  height:14px;
+  border:1px solid rgba(255,255,255,.14);
+  border-top-color:rgba(255,255,255,.68);
+  border-radius:50%;
+  animation:frame-route-spin .7s linear infinite;
+}
+@keyframes frame-route-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.frame-route-spinner{animation:none}}
