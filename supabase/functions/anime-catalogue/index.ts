@@ -227,6 +227,8 @@ Deno.serve(async (request: Request) => {
     if (action === 'characters') return json(await characters(body?.names));
     if (action === 'anime-characters') return json(await animeCharacters(body?.anilistId, body?.title));
     if (action === 'search') return json(await searchAnime(String(body?.query || '')));
+    if (action === 'browse') return json(await browseAnime(body));
+    if (action === 'upcoming') return json(await upcomingAnime(body));
     if (action === 'episode-page') return json(await episodePage(body?.malId, body?.page));
     if (action === 'episodes') return json(await episodes(String(body?.anime || '')));
     return json({ error: 'Unsupported anime catalogue action.' }, 400);
