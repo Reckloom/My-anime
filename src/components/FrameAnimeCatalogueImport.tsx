@@ -573,28 +573,6 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
   return { rows: current, verified: !countMismatch && !airingMismatch && missingPosterCount === 0 && (!expected || current.length > 0), warnings };
 }
 
-function charactersFrom(media: CatalogueMedia): AnimeCharacterProfile[] {
-  const edges = Array.isArray(media.characters?.edges) ? media.characters!.edges! : [];
-  const result: AnimeCharacterProfile[] = [];
-  const seen = new Set<string>();
-  for (const edge of edges) {
-    const node = edge.node;
-    const name = String(node?.name?.full || '').trim();
-    if (!name || seen.has(normalizeText(name))) continue;
-    seen.add(normalizeText(name));
-    result.push({
-      id: Number(node?.id) || undefined,
-      name,
-      nativeName: String(node?.name?.native || '').trim() || undefined,
-      role: String(edge.role || 'SUPPORTING').toLowerCase(),
-      image: String(node?.image?.large || '').trim() || undefined,
-      description: clean(node?.description).slice(0, 900) || undefined,
-      sourceUrl: String(node?.siteUrl || '').trim() || undefined
-    });
-  }
-  return result.slice(0, 20);
-}
-
 function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: MediaItem[], isRoot: boolean, rootId: string) {
   const wantedMedium = MOVIE_FORMATS.has(String(media.format || '')) ? 'movie' : 'anime';
   const mediaNumber = Number(media.id);
