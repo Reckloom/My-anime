@@ -5690,3 +5690,8 @@ body{overflow-x:hidden!important}
  .frame-catalog-quick-progress{grid-template-columns:1fr}
  .frame-catalog-quick-progress button{width:100%;justify-content:center}
 }
+
+.frame-catalog-details{display:flex;gap:7px;flex-wrap:wrap;color:var(--muted,#8d939d);font-size:9px;margin-top:5px}
+.frame-catalog-details span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.frame-catalog-description{font-size:10px;line-height:1.45;color:var(--muted,#8d939d);margin:7px 0 0}
+.frame-catalog-plan-progress{margin-top:6px}
