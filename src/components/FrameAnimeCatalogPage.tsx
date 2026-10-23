@@ -186,7 +186,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
    <select value={season} onChange={e=>setSeason(e.target.value)}><option value="ALL">Any season</option><option value="WINTER">Winter</option><option value="SPRING">Spring</option><option value="SUMMER">Summer</option><option value="FALL">Fall</option></select>
   </div>}
   {tab==='mine'&&<div className="frame-catalog-tools"><select value={selectedMine} onChange={e=>setSelectedMine(e.target.value)}><option value="ALL">All my anime</option><option value="watching">Watching</option><option value="planned">Plan to Watch</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="dropped">Dropped</option></select><span className="frame-catalog-count">{visibleMine.length} titles</span></div>}
-  {error&&<div className="frame-catalog-error">{error}<button className="secondary" onClick={()=>void load()}>Retry</button></div>}
+  {error&&<div className="frame-catalog-error"><b>Catalogue temporarily unavailable</b><span>{error}</span><button className="secondary" onClick={()=>void load()}><RefreshCw size={14}/> Retry</button></div>}
   {loading&&tab!=='mine'?<div className="frame-catalog-grid">{Array.from({length:12},(_,i)=><div className="frame-catalog-skeleton" key={i}/>)}</div>:
    <div className="frame-catalog-grid">
     {(tab==='mine'?visibleMine:rows).map((row:any)=>{
