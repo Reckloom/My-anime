@@ -82,7 +82,12 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
           </button>)}
         </div>
       </details>
-    </div> : <p className="muted frame-anime-episode-empty">No episodes match that search.</p>}
+    </div> : <div className="frame-anime-episode-empty-state">
+      <p className="muted frame-anime-episode-empty">No episodes match those filters.</p>
+      <button type="button" className="secondary" onClick={() => { setQuery(''); setWatchFilter('all'); setMinEpisode(''); setMaxEpisode(''); setPage(1); }}>
+        Clear episode filters
+      </button>
+    </div>}
     {pageCount > 1 && <div className="frame-anime-episode-pagination">
       <button type="button" className="secondary" disabled={safePage <= 1} onClick={() => setPage(1)}>First</button>
       <button type="button" className="secondary" disabled={safePage <= 1} onClick={() => setPage(v => Math.max(1, v - 1))}><ChevronLeft size={14}/> Previous</button>
