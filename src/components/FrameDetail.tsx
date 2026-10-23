@@ -110,6 +110,7 @@ function normaliseAvailability(value?:MediaAvailability):MediaAvailability|undef
 
 export function FrameDetail({item,library,navigationItems,navigate,close,save,onRefreshMetadata,onDelete}:{item:MediaItem;library:MediaItem[];navigationItems?:MediaItem[];navigate?:(item:MediaItem)=>void;close:()=>void;save:(x:MediaItem)=>void|Promise<boolean>;onRefreshMetadata?: (item:MediaItem)=>Promise<MediaItem>;onDelete?: (id:string)=>Promise<void>}){
  const[d,setD]=useState(item),[note,setNote]=useState(item.notes||''),[refreshing,setRefreshing]=useState(false),[refreshMessage,setRefreshMessage]=useState('');
+ useEffect(()=>{const body=document.body;const previous=body.style.overflow;body.style.overflow='hidden';return()=>{body.style.overflow=previous}},[]);
  const artworkAncestor=artworkFallbackAncestor(d,library);
  const artworkParent=artworkAncestor.id!==d.id?artworkAncestor:undefined;
  const[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[saveMessage,setSaveMessage]=useState('');
