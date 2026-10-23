@@ -207,14 +207,16 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
         {tab!=='mine'&&row.description&&<p className="frame-catalog-description">{clean(row.description).slice(0,150)}{clean(row.description).length>150?'…':''}</p>}
         {tab!=='mine'&&row.nextAiringEpisode?.episode&&<small className="frame-catalog-next">Next: EP {row.nextAiringEpisode.episode}{row.nextAiringEpisode.airingAt?(' · '+new Date(Number(row.nextAiringEpisode.airingAt)*1000).toLocaleDateString()):''}</small>}
         {existing&&<div className="frame-catalog-progress"><i style={{width:pct+'%'}}/><span>{progress}/{total||'—'}</span></div>}
-        {existing&&update&&<div className="frame-catalog-quick-progress">
-          <label><span>Watched through</span><input type="number" min="0" max={total&&total>0?total:2000} inputMode="numeric" value={progressDraft[item.id]??String(progress)} onChange={e=>setProgressDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label>
-          <button className="secondary" type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}>{savingProgress===item.id?<RefreshCw size={13} className="spin"/>:<Save size={13}/>} Watched through</button>
-        </div>
-        <div className="frame-catalog-quick-progress frame-catalog-plan-progress">
-          <label><span>Next episode to watch</span><input type="number" min="1" max={total&&total>0?total+1:2000} inputMode="numeric" value={planDraft[item.id]??String(Math.max(1,progress+1))} onChange={e=>setPlanDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label>
-          <button className="secondary" type="button" disabled={savingProgress===item.id+'-next'} onClick={()=>void setNextToWatch(item)}>{savingProgress===item.id+'-next'?<RefreshCw size={13} className="spin"/>:<Clock3 size={13}/>} Set next</button>
-        </div>}
+        {existing&&update&&<>
+          <div className="frame-catalog-quick-progress">
+            <label><span>Watched through</span><input type="number" min="0" max={total&&total>0?total:2000} inputMode="numeric" value={progressDraft[item.id]??String(progress)} onChange={e=>setProgressDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label>
+            <button className="secondary" type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}>{savingProgress===item.id?<RefreshCw size={13} className="spin"/>:<Save size={13}/>} Watched through</button>
+          </div>
+          <div className="frame-catalog-quick-progress frame-catalog-plan-progress">
+            <label><span>Next episode to watch</span><input type="number" min="1" max={total&&total>0?total+1:2000} inputMode="numeric" value={planDraft[item.id]??String(Math.max(1,progress+1))} onChange={e=>setPlanDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label>
+            <button className="secondary" type="button" disabled={savingProgress===item.id+'-next'} onClick={()=>void setNextToWatch(item)}>{savingProgress===item.id+'-next'?<RefreshCw size={13} className="spin"/>:<Clock3 size={13}/>} Set next</button>
+          </div>
+        </>}
         {!existing&&<button className="secondary frame-catalog-add" disabled={busyId===row.id} onClick={()=>void addOrOpen(row)}>{busyId===row.id?'Adding…':<><Plus size={14}/> {upcoming?'Add to plan':'Add to FRAME'}</>}</button>}
        </div>
       </article>
