@@ -375,7 +375,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
 .section-title h2{font-size:22px;letter-spacing:-.035em;margin:7px 0 0}
 .section-title>span{color:#606572;font-size:10px}
 .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:13px}
-.media-card{min-width:0;border:0;background:none;text-align:left;color:#eee;padding:0}
+.media-card{min-width:0;border:0;background:none;text-align:left;color:#eee;padding:0;content-visibility:auto;contain-intrinsic-size:220px 330px}
 .media-poster{position:relative;aspect-ratio:2/3;border-radius:15px;overflow:hidden;background:#14161d;border:1px solid #ffffff08;box-shadow:0 12px 30px #0006;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
 .media-poster img{display:block;width:100%;height:100%;object-fit:cover}
 .media-card:hover .media-poster{transform:translateY(-5px);box-shadow:0 21px 44px #0009;border-color:#ffffff19}
