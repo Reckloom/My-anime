@@ -6,6 +6,7 @@ import {AniListSearch} from './components/AniListSearch';
 const FrameGlobalChat=lazy(()=>import('./components/FrameGlobalChat').then(m=>({default:m.FrameGlobalChat})));
 const FrameDetail=lazy(()=>import('./components/FrameDetail').then(m=>({default:m.FrameDetail})));
 const FrameAnimeCatalogPage=lazy(()=>import('./components/FrameAnimeCatalogPage').then(m=>({default:m.FrameAnimeCatalogPage})));
+const FrameMyAnimeDashboard=lazy(()=>import('./components/FrameMyAnimeDashboard').then(m=>({default:m.FrameMyAnimeDashboard})));
 const FrameSocial=lazy(()=>import('./components/FrameSocial').then(m=>({default:m.FrameSocial})));
 const CallsPage=lazy(()=>import('./components/FrameCalls').then(m=>({default:m.CallsPage})));
 const FrameDirectCall=lazy(()=>import('./components/FrameDirectCall').then(m=>({default:m.FrameDirectCall})));
@@ -1167,7 +1168,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   {menu&&<div className="miru-mobile-menu">{[['home','Home'],['library','Library'],['anime','Anime'],['radar','Schedule'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="miru-main">
    {page==='home'&&<Home items={sortMedia(items,sortMode).filter(x=>!x.parentId)} total={items.filter(x=>!x.parentId).length} open={openDetail} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
-   {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={openDetail} add={()=>setFinder(true)} />}
+   {page==='library'&&<Suspense fallback={<FrameRouteFallback/>}><FrameMyAnimeDashboard items={items} open={openDetail} add={()=>setFinder(true)} update={async x=>save(itemsRef.current.map(i=>i.id===x.id?x:i))}/></Suspense>}
    {page==='anime'&&<Suspense fallback={<FrameRouteFallback/>}><FrameAnimeCatalogPage library={items} open={openDetail} add={importItem} update={async x=>save(itemsRef.current.map(i=>i.id===x.id?x:i))} guest={guest}/></Suspense>}
    {page==='manga'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manga'),sortMode)} library={items} filters={['manga']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='manhwa'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manhwa'),sortMode)} library={items} filters={['manhwa']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
