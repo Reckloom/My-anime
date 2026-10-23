@@ -18,16 +18,12 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_g3pzBUEsZtPQ1sGJjrDxHw_ldR3dO49' }}
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-
       - run: npm install
-
       - name: Build FRAME
         run: npm run build
-
       - name: Normalize Cloudflare account ID
         shell: bash
         run: |
@@ -37,7 +33,6 @@ jobs:
             exit 1
           fi
           echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
-
       - name: Validate deployment configuration
         run: |
           missing=0
@@ -51,10 +46,9 @@ jobs:
             echo "::error::FRAME was not deployed. Configure the Cloudflare repository Actions secrets and rerun this workflow."
             exit 1
           fi
-
       - name: Deploy FRAME to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
-          command: pages deploy dist --project-name frame
+          command: pages deploy dist --project-name frame-anime
