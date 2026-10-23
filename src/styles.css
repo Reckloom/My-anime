@@ -5256,3 +5256,18 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   .frame-episode-filters label{min-width:0}
   .frame-episode-filters input,.frame-episode-filters select{width:100%;min-width:0}
 }
+
+
+/* FRAME keyboard navigation — visible without changing the cinematic visual language. */
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid rgba(255,255,255,.72);
+  outline-offset:3px;
+}
+:where(button,a):focus:not(:focus-visible){
+  outline:none;
+}
+@media(max-width:800px){
+  :where(button,a,input,select,textarea,[tabindex]):focus-visible{
+    outline-offset:2px;
+  }
+}
