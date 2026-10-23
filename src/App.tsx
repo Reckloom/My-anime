@@ -364,7 +364,7 @@ export default function App(){
        itemsRef.current=next;setItems(next);
       }catch(error){console.warn('[FRAME season warmup]',error)}};
       if(typeof window!=='undefined'&&'requestIdleCallback' in window)(window as any).requestIdleCallback(warm,{timeout:1200});
-      else if(typeof window!=='undefined')window.setTimeout(warm,120);
+      else setTimeout(warm,120);
      }
     }
     try{
@@ -490,14 +490,6 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   });
   saveQueue.current=operation.catch(()=>true);
   return operation;
- };
- const persistCharacterProfiles=async(itemId:string,profiles:AnimeCharacterProfile[])=>{
-  const current=itemsRef.current.find(item=>item.id===itemId);
-  if(!current)return false;
-  const signature=(rows:AnimeCharacterProfile[])=>rows.map(character=>[character.id||'',character.name,character.image||''].join(':')).join('|');
-  if(signature(current.characters||[])===signature(profiles))return true;
-  const next={...current,characters:profiles};
-  return await save(itemsRef.current.map(item=>item.id===itemId?next:item));
  };
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
