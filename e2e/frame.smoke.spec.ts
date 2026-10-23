@@ -53,9 +53,10 @@ test.describe('FRAME core smoke flow', () => {
     await page.evaluate(() => localStorage.setItem('frame-guest', '1'));
     await page.reload();
 
-    await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
     await expect(page.locator('html[data-frame-theme="ultra-movie"]')).toHaveCount(1);
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in to FRAME', exact: true })).toBeVisible();
     await expect(page.locator('.theme-picker')).toHaveCount(0);
   });
 
