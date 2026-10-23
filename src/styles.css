@@ -5146,3 +5146,12 @@ html,body,#root{max-width:100%;overflow-x:hidden}
   .cinema-rail .media-card:hover .media-poster img,.media-grid .media-card:hover .media-poster img{transform:none!important;filter:none!important}
   .frame-nav button:after,.global-search{transition:none!important}
 }
+
+/* FRAME detail visibility guard — the cinematic detail is a full-screen route, never a hidden drawer. */
+.frame-detail-overlay .detail-modal-shell,
+.frame-detail-overlay .detail-drawer,
+.frame-detail-overlay .detail-body{
+  opacity:1!important;
+  visibility:visible!important;
+  transform:none!important;
+}
