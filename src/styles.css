@@ -4067,3 +4067,19 @@ html,body,#root{background:var(--frame-bg);color:var(--frame-text)}
 .frame-detail-overlay .close-btn{top:18px!important;right:18px!important;z-index:20!important}
 .frame-detail-overlay .detail-nav-arrow{z-index:25!important}
 @media(max-width:800px){.frame-detail-overlay .detail-modal-shell{height:100dvh!important}.frame-detail-overlay .detail-body{padding-bottom:calc(42px + env(safe-area-inset-bottom))}.frame-detail-overlay .detail-back-bubble{top:12px!important;left:12px!important}.frame-detail-overlay .close-btn{top:12px!important;right:12px!important}}
+
+
+/* Episode catalogue filters */
+.frame-anime-episode-filters{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.frame-anime-episode-filters label{display:flex;align-items:center;gap:6px;min-width:auto!important;max-width:none!important;padding:6px 8px!important;background:#101015!important}
+.frame-anime-episode-filters label span{font-size:9px;color:#777;white-space:nowrap}
+.frame-anime-episode-filters select,.frame-anime-episode-filters input{font-size:10px!important;min-height:28px!important;width:auto!important;color:#eee!important}
+.frame-anime-episode-filters input{max-width:72px}
+.frame-anime-episode-range-separator{font-size:12px;color:#555}
+@media(max-width:800px){
+ .frame-anime-episode-filters{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+ .frame-anime-episode-filters label{width:100%}
+ .frame-anime-episode-filters label:first-child{grid-column:1 / -1}
+ .frame-anime-episode-filters select,.frame-anime-episode-filters input{flex:1;width:100%!important}
+ .frame-anime-episode-range-separator{display:none}
+}
