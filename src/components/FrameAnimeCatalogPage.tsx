@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {CalendarDays,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3} from 'lucide-react';
+import {CalendarDays,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3,Save} from 'lucide-react';
 import type {MediaItem} from '../types';
 import {FrameArtwork} from './FrameArtwork';
 import {supabase} from '../lib/supabase';
@@ -27,7 +27,19 @@ type CatalogRow={
  studios?:{nodes?:{name?:string|null}[]}|null;
  siteUrl?:string|null;
 };
-type Props={library:MediaItem[];open:(item:MediaItem)=>void;add:(item:MediaItem)=>Promise<boolean|void>;guest?:boolean};
+type Props={library:MediaItem[];open:(item:MediaItem)=>void;add:(item:MediaItem)=>Promise<boolean|void>;update?:(item:MediaItem)=>Promise<boolean|void>;guest?:boolean};
+
+type CatalogCache={savedAt:number;results:CatalogRow[];pageInfo?:Record<string,unknown>};
+const CATALOG_CACHE_TTL=5*60*1000;
+const UPCOMING_CACHE_TTL=15*60*1000;
+const cacheKey=(body:Record<string,unknown>)=>'frame-anime-catalog:'+btoa(unescape(encodeURIComponent(JSON.stringify(body))));
+function readCatalogCache(body:Record<string,unknown>,ttl:number){
+ try{const raw=sessionStorage.getItem(cacheKey(body));if(!raw)return null;const parsed=JSON.parse(raw) as CatalogCache;if(!parsed?.savedAt||Date.now()-parsed.savedAt>ttl)return null;return parsed}catch{return null}
+}
+function writeCatalogCache(body:Record<string,unknown>,value:{results:CatalogRow[];pageInfo?:Record<string,unknown>}){
+ try{sessionStorage.setItem(cacheKey(body),JSON.stringify({savedAt:Date.now(),...value}))}catch{}
+}
+
 const titleOf=(x:CatalogRow)=>x.title.userPreferred||x.title.english||x.title.romaji||x.title.native||'Untitled';
 const clean=(x?:string|null)=>(x||'').replace(/<br\s*\/?>(\s*)/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
 function toMedia(x:CatalogRow,existing?:MediaItem):MediaItem{
@@ -69,7 +81,7 @@ async function invoke(body:Record<string,unknown>){
  if(data?.error)throw new Error(String(data.error));
  return data;
 }
-export function FrameAnimeCatalogPage({library,open,add}:Props){
+export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  const [tab,setTab]=useState<'browse'|'upcoming'|'mine'>('browse');
  const [query,setQuery]=useState('');
  const [page,setPage]=useState(1);
@@ -83,24 +95,44 @@ export function FrameAnimeCatalogPage({library,open,add}:Props){
  const [busyId,setBusyId]=useState<number|null>(null);
  const [lastUpdated,setLastUpdated]=useState('');
  const [selectedMine,setSelectedMine]=useState('ALL');
+ const [pageInfo,setPageInfo]=useState<Record<string,unknown>>({});
+ const [savingProgress,setSavingProgress]=useState<string|null>(null);
+ const [progressDraft,setProgressDraft]=useState<Record<string,string>>({});
 
- const load=async()=>{
+ const load=async(force=false)=>{
   setLoading(true);setError('');
+  const body=tab==='upcoming'?{action:'upcoming',page,perPage:24}:{action:'browse',page,perPage:24,search:query.trim(),sort,status,format,season};
+  const cached=!force?readCatalogCache(body,tab==='upcoming'?UPCOMING_CACHE_TTL:CATALOG_CACHE_TTL):null;
+  if(cached){setRows(cached.results);setPageInfo(cached.pageInfo||{});setLastUpdated(new Date(cached.savedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));setLoading(false);return;}
   try{
-   const data=await invoke(tab==='upcoming'
-    ?{action:'upcoming',page,perPage:24}
-    :{action:'browse',page,perPage:24,search:query.trim(),sort,status,format,season});
-   setRows(Array.isArray(data?.results)?data.results:[]);
+   const data=await invoke(body);
+   const results=Array.isArray(data?.results)?data.results:[];
+   setRows(results);setPageInfo((data?.pageInfo&&typeof data.pageInfo==='object'?data.pageInfo:{}));
+   writeCatalogCache(body,{results,pageInfo:data?.pageInfo&&typeof data.pageInfo==='object'?data.pageInfo:undefined});
    setLastUpdated(new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
-  }catch(e){setError(e instanceof Error?e.message:'Could not load the anime catalogue.');}
-  finally{setLoading(false);}
+  }catch(e){
+   const stale=readCatalogCache(body,365*24*60*60*1000);
+   if(stale){setRows(stale.results);setPageInfo(stale.pageInfo||{});setLastUpdated('cached');setError('Live catalogue unavailable — showing cached results.');}
+   else setError(e instanceof Error?e.message:'Could not load the anime catalogue.');
+  }finally{setLoading(false);}
  };
  useEffect(()=>{setPage(1)},[query,sort,status,format,season,tab]);
  useEffect(()=>{if(tab==='mine')return;const timer=window.setTimeout(()=>void load(),query.trim()?300:0);return()=>window.clearTimeout(timer)},[page,query,sort,status,format,season,tab]);
+ useEffect(()=>{if(tab!=='upcoming')return;const timer=window.setInterval(()=>void load(true),15*60*1000);return()=>window.clearInterval(timer)},[tab,page]);
 
  const mine=useMemo(()=>library.filter(x=>x.medium==='anime'&&!x.parentId),[library]);
  const visibleMine=useMemo(()=>selectedMine==='ALL'?mine:mine.filter(x=>x.status===selectedMine),[mine,selectedMine]);
  const libraryMap=useMemo(()=>new Map(library.filter(x=>x.medium==='anime').map(x=>[x.anilistId||0,x])),[library]);
+
+ const saveProgress=async(item:MediaItem)=>{
+  if(!update)return;
+  const raw=progressDraft[item.id]??String(item.progress||0);
+  const max=item.total&&item.total>0?item.total:2000;
+  const next=Math.max(0,Math.min(max,Number(raw)||0));
+  setSavingProgress(item.id);
+  try{await update({...item,progress:next,status:next>0?(item.total&&next>=item.total?'completed':'watching'):item.status==='completed'?'watching':item.status});}
+  finally{setSavingProgress(null)}
+ };
 
  const addOrOpen=async(row:CatalogRow)=>{
   const existing=libraryMap.get(row.id);
@@ -153,7 +185,11 @@ export function FrameAnimeCatalogPage({library,open,add}:Props){
         <div className="frame-catalog-meta"><span>{row.format||'ANIME'}</span><span>{row.seasonYear||item.year||'—'}</span><span>{row.episodes||item.total||'—'} eps</span></div>
         <div className="frame-catalog-score">{row.averageScore?('★ '+(Number(row.averageScore)/10).toFixed(1)):item.score?('★ '+item.score.toFixed(1)):'No score'}{row.popularity?(' · '+Number(row.popularity).toLocaleString()+' popularity'):''}</div>
         {tab!=='mine'&&row.nextAiringEpisode?.episode&&<small className="frame-catalog-next">Next: EP {row.nextAiringEpisode.episode}{row.nextAiringEpisode.airingAt?(' · '+new Date(Number(row.nextAiringEpisode.airingAt)*1000).toLocaleDateString()):''}</small>}
-        {existing&&total&&<div className="frame-catalog-progress"><i style={{width:pct+'%'}}/><span>{progress}/{total}</span></div>}
+        {existing&&<div className="frame-catalog-progress"><i style={{width:pct+'%'}}/><span>{progress}/{total||'—'}</span></div>}
+        {existing&&update&&<div className="frame-catalog-quick-progress">
+          <label><span>Watched through</span><input type="number" min="0" max={total&&total>0?total:2000} inputMode="numeric" value={progressDraft[item.id]??String(progress)} onChange={e=>setProgressDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label>
+          <button className="secondary" type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}>{savingProgress===item.id?<RefreshCw size={13} className="spin"/>:<Save size={13}/>} Save</button>
+        </div>}
         {!existing&&<button className="secondary frame-catalog-add" disabled={busyId===row.id} onClick={()=>void addOrOpen(row)}>{busyId===row.id?'Adding…':<><Plus size={14}/> {upcoming?'Add to plan':'Add to FRAME'}</>}</button>}
        </div>
       </article>
