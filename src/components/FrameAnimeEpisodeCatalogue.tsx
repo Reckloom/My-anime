@@ -51,7 +51,7 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
   if (!episodes.length) return null;
   return <section className="frame-anime-episode-catalogue detail-section" aria-label={title + ' episode catalogue'}>
     <div className="detail-section-head">
-      <div><small>ARC EPISODES</small><h3>Episodes & details</h3></div>
+      <div><small>EPISODES</small><h3>Episodes & details</h3></div>
       <span>{episodes.length.toLocaleString()} stored</span>
     </div>
     <div className="frame-anime-episode-tools">
