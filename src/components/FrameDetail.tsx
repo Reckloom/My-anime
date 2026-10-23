@@ -296,7 +296,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const goNext=()=>{if(!navigate||navItems.length<2)return;navigate(navItems[(navIndex+1)%navItems.length])};
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='ArrowLeft'){e.preventDefault();goPrevious()}else if(e.key==='ArrowRight'){e.preventDefault();goNext()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[navIndex,navItems.length,navigate]);
 
- return <div className="overlay detail-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+ return <div className="overlay detail-overlay frame-detail-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
   <div className="detail-modal-shell">
    {hasPrevious&&<button className="detail-nav-arrow detail-nav-prev" aria-label="Previous media" title="Previous media" onClick={goPrevious}><ChevronLeft size={26}/></button>}
    <aside className="detail-drawer detail-modal" role="dialog" aria-modal="true" aria-labelledby="frame-detail-title">
@@ -342,7 +342,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
       </div>
      </section>}
      <div className="frame-detail-stats"><span><small>TYPE</small><b>{types[d.medium]}</b></span><span><small>YEAR</small><b>{d.year||'—'}</b></span><span><small>EPISODES</small><b>{d.total||'—'}</b></span><span><small>RUNTIME</small><b>{d.duration?d.duration+' min':'—'}</b></span><span><small>STUDIO</small><b>{d.studio||'—'}</b></span></div>
-     <div className="frame-subdub"><span>SUB {d.total||'—'}</span>{d.availability?.watch?.length?<span>WATCH LINKS {d.availability.watch.length}</span>:null}</div>
+     {d.availability?.watch?.length?<div className="frame-subdub"><span>WATCH LINKS {d.availability.watch.length}</span></div>:null}
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
     </div>
    </div>
@@ -351,7 +351,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
 
     
    {d.medium==='anime'&&(()=>{
-      const episodeRows=(libraryChildrenByParent.get(d.id)||[]).filter(x=>x.sourceProvider==='frame-anime-episode'||/^one-piece-episode-\\d+$/.test(String(x.externalId||''))||Boolean(x.episode?.episodeNumber));
+      const episodeRows=(libraryChildrenByParent.get(d.id)||[]).filter(x=>x.sourceProvider==='frame-anime-episode'||/^one-piece-episode-\d+$/.test(String(x.externalId||''))||Boolean(x.episode?.episodeNumber));
       return <>{episodeRows.length>0&&<FrameAnimeEpisodeCatalogue title={d.title} episodes={episodeRows} onOpen={openRelated}/>}<FrameEpisodeList title={d.title} malId={d.externalLinks?.malId} currentProgress={d.progress} onMarkThrough={async episode=>{progress(episode);}}/></>;
     })()}
 
