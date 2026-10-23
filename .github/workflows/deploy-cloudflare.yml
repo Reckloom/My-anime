@@ -1,8 +1,8 @@
-name: Deploy FRAME to Cloudflare Workers
+name: Deploy FRAME to Cloudflare Pages
 
 on:
   push:
-    branches: [main]
+    branches: [frame-premium-rebuild]
   workflow_dispatch:
 
 permissions:
@@ -52,9 +52,9 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy to Cloudflare Workers
+      - name: Deploy FRAME to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
-          command: deploy --config wrangler.jsonc
+          command: pages deploy dist --project-name frame
