@@ -1247,6 +1247,7 @@ function Home({items,open,finder,go}:{items:MediaItem[];total?:number;open:(x:Me
    {!anime.length&&<div className="frame-empty"><Library size={24}/><b>Your catalogue is empty</b><span>Search AniList and add your first title.</span><button onClick={finder}>SEARCH CATALOGUE</button></div>}
  </div>;
 }
+function Card({item,open}:{item:MediaItem;library:MediaItem[];open:(x:MediaItem)=>void}){return <button className="media-card" type="button" onClick={()=>open(item)}><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} alt="" loading="lazy"/></div><div className="media-copy"><b>{item.title}</b><small>{item.progress}{item.total?' / '+item.total:''} {item.progressUnit||unitFor(item.medium)}</small></div></button>}
 function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
  const mediaFilters:[string,string][]=[['all','All'],...Object.entries(types)];
  const statusFilters:[string,string][]=[['incomplete','In progress'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
