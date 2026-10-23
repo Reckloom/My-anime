@@ -61,7 +61,6 @@ function dbToMedia(raw:unknown):MediaItem{
   nextRelease:r.next_release?String(r.next_release):undefined,nextReleaseNumber:r.next_release_number==null?undefined:Number(r.next_release_number),
   availability:data.availability as MediaItem['availability'],externalLinks:data.externalLinks&&typeof data.externalLinks==='object'?data.externalLinks as MediaItem['externalLinks']:undefined,game:data.game as MediaItem['game'],notificationsEnabled:data.frameReleaseRadar?.enabled!==false,releaseRadarState:data.frameReleaseRadar&&typeof data.frameReleaseRadar==='object'?data.frameReleaseRadar:undefined,
   episode:data.episode&&typeof data.episode==='object'?data.episode as MediaItem['episode']:undefined,
-  characters:Array.isArray(data.characters)?data.characters as MediaItem['characters']:undefined
  });
 }
 const canonicalAnimePosterIds=new Set<number>([
@@ -87,7 +86,7 @@ function repairAnimePosters(items:MediaItem[]){
   });
 }
 function toRow(item:MediaItem,userId:string){
- return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,popularity:item.popularity??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,externalLinks:item.externalLinks??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false},episode:item.episode??null,characters:item.characters??null}};
+ return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,popularity:item.popularity??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,externalLinks:item.externalLinks??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false},episode:item.episode??null}};
 }
 function preservePersistedArtwork(next:MediaItem,current?:MediaItem):MediaItem{
  if(!current)return next;
@@ -125,7 +124,7 @@ function samePersistedMedia(a:MediaItem,b:MediaItem){
  }
  const nested:[unknown,unknown][]=[
   [a.availability,b.availability],[a.externalLinks,b.externalLinks],[a.game,b.game],
-  [a.releaseRadarState,b.releaseRadarState],[a.episode,b.episode],[a.characters,b.characters]
+  [a.releaseRadarState,b.releaseRadarState],[a.episode,b.episode]
  ];
  for(const [left,right] of nested){
   if(Object.is(left,right))continue;
@@ -531,7 +530,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     poster:item.poster&&item.poster!=='/frame-logo.svg'?item.poster:current.poster||item.poster,
     backdrop:item.backdrop||current.backdrop,description:item.description||current.description,
     genres:item.genres?.length?item.genres:current.genres,themes:item.themes?.length?item.themes:current.themes,
-    studio:item.studio||current.studio,characters:item.characters?.length?item.characters:current.characters,
+    studio:item.studio||current.studio,
     externalLinks:{...(current.externalLinks||{}),...(item.externalLinks||{})},game:current.game??item.game
    });
    merged[found]=next;changed.set(next.id,next);
