@@ -17,9 +17,12 @@ const episodeNumber = (item: MediaItem) => {
   return Number(titleNumber?.[1] || 0);
 };
 
-export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
+export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, parentTitle, parentAnilistId, onOpen }: {
   title: string;
   episodes: MediaItem[];
+  parentPoster?: string;
+  parentTitle?: string;
+  parentAnilistId?: number;
   onOpen: (item: MediaItem) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -64,14 +67,14 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
     {shown.length ? <div className="frame-anime-arc-groups">
       <details className="frame-anime-arc-group" open>
         <summary className="frame-anime-arc-heading">
-          <span className="frame-anime-arc-cover">{shown[0]&&<FrameArtwork title={shown[0].title} medium={shown[0].medium} poster={shown[0].poster} sourceProvider={shown[0].sourceProvider} externalId={shown[0].externalId} className="frame-episode-artwork" alt="" loading="lazy"/>}</span>
+          <span className="frame-anime-arc-cover">{shown[0]&&<FrameArtwork title={shown[0].title} medium={shown[0].medium} poster={shown[0].poster} parentPoster={parentPoster} parentTitle={parentTitle || title} parentMedium="anime" parentAnilistId={parentAnilistId} sourceProvider={shown[0].sourceProvider} externalId={shown[0].externalId} className="frame-episode-artwork" alt="" loading="lazy"/>}</span>
           <span className="frame-anime-arc-copy"><b>Episodes</b><small>Episode metadata and artwork from your stored catalogue.</small><small>{filtered.length.toLocaleString()} episode{filtered.length===1?'':'s'}</small></span>
           <ChevronRight size={17}/>
         </summary>
         <div className="frame-anime-episode-rows" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))',gap:12}}>
           {shown.map(item => <button type="button" className="frame-anime-episode-row" key={item.id} onClick={() => onOpen(item)} style={{display:'flex',flexDirection:'column',alignItems:'stretch',gap:8,textAlign:'left',padding:10,minWidth:0,height:'100%'}}>
             <span style={{position:'relative',display:'block',width:'100%',aspectRatio:'16 / 9',overflow:'hidden',borderRadius:10,background:'var(--surface, #171717)'}}>
-              <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
+              <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={parentPoster} parentTitle={parentTitle || title} parentMedium="anime" parentAnilistId={parentAnilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
               <span className="frame-anime-episode-number" style={{position:'absolute',left:8,top:8}}>{String(episodeNumber(item)).padStart(3, '0')}</span>
             </span>
             <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episode\s*\d+\s*[—–-]?\s*/i, '') || item.title}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
