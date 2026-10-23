@@ -9,7 +9,7 @@ type Props={library:MediaItem[];open:(item:MediaItem)=>void};
 
 const title=(r:Row)=>r.title?.userPreferred||r.title?.english||r.title?.romaji||r.title?.native||'Untitled';
 const poster=(r:Row)=>String(r.coverImage?.extraLarge||r.coverImage?.large||'');
-const media=(r:Row,existing?:MediaItem):MediaItem=>({...existing,id:existing?.id||'catalogue-'+r.id,anilistId:r.id,title:title(r),poster:poster(r),backdrop:String(r.bannerImage||''),medium:'anime',status:existing?.status||'planned',progress:existing?.progress||0,total:r.episodes||existing?.total,score:r.averageScore?Number(r.averageScore)/10:existing?.score});
+const media=(r:Row,existing?:MediaItem):MediaItem=>existing||({id:'catalogue-'+r.id,anilistId:r.id,title:title(r),poster:poster(r),backdrop:String(r.bannerImage||''),medium:'anime',status:'planned',progress:0,total:r.episodes||undefined,score:r.averageScore?Number(r.averageScore)/10:undefined} as MediaItem);
 
 export function FrameSchedulePage({library,open}:Props){
  const [mode,setMode]=useState<'tracked'|'upcoming'>('tracked');
