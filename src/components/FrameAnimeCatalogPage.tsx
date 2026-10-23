@@ -79,9 +79,8 @@ function toMedia(x:CatalogRow,existing?:MediaItem):MediaItem{
   duration:x.duration==null?undefined:Number(x.duration),
   airStart:x.startDate?.year?([x.startDate.year,x.startDate.month,x.startDate.day].filter(Boolean).join('-')):undefined,
   airEnd:x.endDate?.year?([x.endDate.year,x.endDate.month,x.endDate.day].filter(Boolean).join('-')):undefined,
-  favorite:existing?.favorite||false,
-  notes:existing?.notes||'',
-  data:{...(existing?.data||{}),catalogue:{countryOfOrigin:x.countryOfOrigin||undefined,source:x.source||undefined,favourites:x.favourites||0,hashtag:x.hashtag||undefined,isLicensed:x.isLicensed??undefined,relations:x.relations?.edges||[]}}
+  favorite:existing?.favorite||false ,
+  notes:existing?.notes||''
  };
 }
 async function invoke(body:Record<string,unknown>){
