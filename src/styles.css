@@ -4139,3 +4139,25 @@ html,body,#root{background:var(--frame-bg);color:var(--frame-text)}
   height:100%;
   object-fit:cover;
 }
+
+
+/* FRAME home hero safety: a poster is never stretched into a fake landscape backdrop. */
+.cinema-hero-with-backdrop{background-color:#07070a}
+.cinema-hero-no-backdrop{
+  background:
+    radial-gradient(620px 420px at 72% 22%,rgba(168,85,247,.13),transparent 66%),
+    radial-gradient(520px 360px at 15% 55%,rgba(99,102,241,.08),transparent 68%),
+    linear-gradient(180deg,#0b0b10,#07070a 78%);
+}
+.cinema-hero-no-backdrop:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,10,.18),transparent 55%);pointer-events:none}
+.cinema-hero-empty{background:radial-gradient(700px 460px at 65% 20%,rgba(168,85,247,.14),transparent 68%),#07070a}
+.cinema-hero-empty .cinema-hero-copy{max-width:620px}
+.cinema-meta:empty,.hero-genres:empty{display:none}
+.cinema-rail .media-card{min-width:0;display:block;text-align:left}
+.cinema-rail .media-card:focus-visible{outline:2px solid rgba(168,85,247,.75);outline-offset:3px}
+@media(max-width:800px){
+ .cinema-hero-no-backdrop{min-height:58vh;background:radial-gradient(420px 320px at 70% 18%,rgba(168,85,247,.13),transparent 70%),#07070a}
+ .cinema-hero-empty{min-height:58vh}
+ .cinema-hero-actions{margin-top:18px}
+ .cinema-hero-actions button{flex:1;justify-content:center}
+}
