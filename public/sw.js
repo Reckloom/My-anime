@@ -1,5 +1,5 @@
 const BASE=new URL('./',self.registration.scope).pathname;
-const CACHE='frame-shell-v7';
+const CACHE='frame-shell-v8';
 const SHELL=[BASE,BASE+'index.html',BASE+'manifest.webmanifest',BASE+'frame-logo.svg',BASE+'frame-ultra-instinct.svg'];
 const cacheKey=url=>new URL(url,self.location.origin).pathname;
 const isAsset=request=>/\.(?:js|css|woff2?|png|jpe?g|webp|svg|ico|json)$/i.test(new URL(request.url).pathname);
