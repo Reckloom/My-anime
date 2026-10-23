@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, CircleAlert, LoaderCircle, Play, RefreshCw } from 'lucide-react';
 import type { AniListMedia } from '../anilist';
 import { aniList, cleanDescription, titleOf } from '../anilist';
-import type { AnimeCharacterProfile, EpisodeMetadata, MediaItem } from '../types';
+import type { EpisodeMetadata, MediaItem } from '../types';
 import { supabase } from '../lib/supabase';
 
 type CatalogueStatus = 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS' | string;
@@ -621,7 +621,7 @@ function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: 
   return 'frame-anime-media-' + mediaNumber + '-' + scope;
 }
 function mapMediaItem(media: CatalogueMedia, opts: {
-  id: string; parentId?: string; progress: number; total: number; characters?: AnimeCharacterProfile[];
+  id: string; parentId?: string; progress: number; total: number;
 }): MediaItem {
   const movie = MOVIE_FORMATS.has(String(media.format || ''));
   const title = preferredTitle(media);
@@ -661,7 +661,6 @@ function mapMediaItem(media: CatalogueMedia, opts: {
     airStart: starts,
     airEnd: ends,
     favorite: false,
-    characters: opts.characters,
     externalLinks: {
       malId: mal,
       officialUrl: undefined,
@@ -932,8 +931,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
           ? undefined
           : (itemIds.get(parentByMediaId.get(Number(media.id)) ?? Number(rootDetails.id)) || rootId),
       progress,
-      total,
-      characters: index === 0 ? charactersFrom(rootDetails) : undefined
+      total
     });
     // Keep the 366-episode original BLEACH run as the curated Season 1 part.
     if (task.key === 'bleach' && index === 0) {
@@ -1001,19 +999,6 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       checkedItems.push({ ...item, poster: '' });
     } else {
       checkedItems.push(item);
-    }
-    if (Array.isArray(item.characters) && item.characters.length) {
-      const profiles = [];
-      for (const character of item.characters) {
-        const characterPortrait = character.image ? await verifyPortraitArtwork(character.image) : false;
-        if (character.image && !characterPortrait) {
-          warnings.push(item.title + ': character portrait failed natural portrait verification for ' + character.name + '.');
-          profiles.push({ ...character, image: undefined });
-        } else {
-          profiles.push(character);
-        }
-      }
-      checkedItems[checkedItems.length - 1] = { ...checkedItems[checkedItems.length - 1], characters: profiles };
     }
   }
   finalItems = checkedItems;
