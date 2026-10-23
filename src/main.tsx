@@ -22,7 +22,7 @@ function FrameNativeBackHandling(){
   let mounted=true;
   const listener=CapacitorApp.addListener('backButton',({canGoBack})=>{
    if(!mounted)return;
-   const close=document.querySelector<HTMLButtonElement>('.detail-overlay .close,.overlay .close');
+   const close=document.querySelector<HTMLButtonElement>('.detail-overlay .close-btn,.overlay .close-btn,.detail-overlay [aria-label="Close details"]');
    if(close){close.click();return;}
    if(window.history.length>1&&canGoBack){window.history.back();return;}
   });
