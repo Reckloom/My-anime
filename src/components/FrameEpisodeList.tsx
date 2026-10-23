@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {supabase} from '../lib/supabase';
-import {CalendarDays,ChevronLeft,ChevronRight,LoaderCircle,RefreshCw} from 'lucide-react';
+import {CalendarDays,ChevronLeft,ChevronRight,LoaderCircle,RefreshCw,Search} from 'lucide-react';
 
 type JikanEpisode={
   mal_id:number;
@@ -78,6 +78,10 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
   const [error,setError]=useState('');
   const [savingEpisode,setSavingEpisode]=useState<number|null>(null);
   const [attempt,setAttempt]=useState(0);
+  const [query,setQuery]=useState('');
+  const [watchFilter,setWatchFilter]=useState<'all'|'watched'|'unwatched'>('all');
+  const [minEpisode,setMinEpisode]=useState('');
+  const [maxEpisode,setMaxEpisode]=useState('');
 
   useEffect(()=>{
     let alive=true;const controller=new AbortController();
@@ -125,6 +129,13 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
       .finally(()=>{if(alive)setLoading(false)});
     return()=>{alive=false;controller.abort()};
   },[resolvedMalId,page,attempt]);
+
+  const visibleEpisodes=episodes.filter(ep=>{
+    const n=Number(ep.mal_id);
+    const min=minEpisode===''?null:Number(minEpisode), max=maxEpisode===''?null:Number(maxEpisode);
+    const hay=[ep.title||'',ep.title_japanese||'',String(n)].join(' ').toLocaleLowerCase();
+    return (!query.trim()||hay.includes(query.trim().toLocaleLowerCase())) && (watchFilter==='all'||(watchFilter==='watched'?n<=currentProgress:n>currentProgress)) && (min===null||(!Number.isNaN(min)&&n>=min)) && (max===null||(!Number.isNaN(max)&&n<=max));
+  });
 
   const markThrough=async(episode:number)=>{
     setSavingEpisode(episode);
