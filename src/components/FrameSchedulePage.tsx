@@ -27,7 +27,7 @@ export function FrameSchedulePage({library,open}:Props){
     const {data,error}=await supabase.functions.invoke('release-radar',{body:{action:'refresh'}});
     if(!error)setTracked(Array.isArray(data?.releases)?data.releases:[]);
    }catch(e){if(mode==='tracked')throw e;}
-   const q=`query($page:Int!,$perPage:Int!){Page(page:$page,perPage:$perPage,sort:START_DATE,status:NOT_YET_RELEASED){pageInfo{hasNextPage} media(type:ANIME){id title{userPreferred english romaji native} coverImage{large extraLarge} bannerImage averageScore popularity format status seasonYear startDate{year month day} episodes genres nextAiringEpisode{episode airingAt}}}}`;
+   const q=`query($page:Int!,$perPage:Int!){Page(page:$page,perPage:$perPage,sort:START_DATE,status:NOT_YET_RELEASED){pageInfo{hasNextPage} media(type:ANIME){id title{userPreferred english romaji native} coverImage{large extraLarge} bannerImage averageScore popularity format status seasonYear startDate{year month day} episodes genres nextAiringEpisode{episode airingAt}}}`;
    const r=await fetch('https://graphql.anilist.co',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,variables:{page:1,perPage:24}}));
    const j=await r.json();setUpcoming(Array.isArray(j?.data?.Page?.media)?j.data.Page.media:[]);
   }catch(e){setError(e instanceof Error?e.message:'Schedule unavailable.')}
