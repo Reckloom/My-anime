@@ -65,14 +65,14 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByText('Find anything for FRAME')).toBeVisible();
     await page.keyboard.press('Escape');
     await navigatePrimary(page,'Anime');
-    await expect(page.locator('h1').filter({ hasText: /^Anime$/ })).toBeVisible();
+    await expect(page.locator('h1').filter({ hasText: /^Library$/ })).toBeVisible();
   });
 
 
   test('logo returns Home and account bubble opens Settings', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Go to FRAME home', exact: true }).click();
-    await expect(page.locator('h1').filter({ hasText: /Welcome back/ })).toBeVisible();
+    await expect(page.locator('h1').filter({ hasText: /Your anime deserves a better library\./ })).toBeVisible();
     await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
     await expect(page.locator('h1').filter({ hasText: /^Settings$/ })).toBeVisible();
   });
@@ -418,6 +418,6 @@ test.describe('FRAME browser detail history', () => {
     await page.goBack();
     await expect(page.locator('.detail-overlay')).toHaveCount(0);
     await expect(page.locator('h1').filter({ hasText: /^Library$/ })).toBeVisible();
-    await expect(page.locator('h1').filter({ hasText: /Welcome back/ })).toHaveCount(0);
+    await expect(page.locator('h1').filter({ hasText: /Your anime deserves a better library\./ })).toHaveCount(0);
   });
 });
