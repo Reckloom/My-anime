@@ -1197,28 +1197,35 @@ function ManualEntryForm({close,onCreate,library}:{close:()=>void;onCreate:(item
 }
 function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
  const anime=items.filter(x=>x.medium==='anime'||x.medium==='movie'||x.medium==='series');
- const active=anime.filter(x=>['watching'].includes(x.status));
+ const watching=anime.filter(x=>x.status==='watching');
  const completed=anime.filter(x=>x.status==='completed');
  const favorites=anime.filter(x=>x.favorite);
- const hero=active[0]||favorites[0]||anime[0];
  const popular=[...anime].sort((a,b)=>(b.popularity??-1)-(a.popularity??-1)||(b.score??0)-(a.score??0));
- const longRunning=anime.filter(x=>(x.total||0)>=50).sort((a,b)=>(b.total||0)-(a.total||0));
- const movies=anime.filter(x=>x.medium==='movie');
- const Shelf=({eyebrow,title,data}:{eyebrow:string;title:string;data:MediaItem[]})=>data.length?<section className="cinema-shelf"><div className="cinema-shelf-head"><div><small>{eyebrow}</small><h2>{title}</h2></div><button className="text-action" onClick={()=>go('library')}>View all <ChevronRight size={14}/></button></div><div className="cinema-rail">{data.slice(0,12).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>:null;
- return <div className="premium-home">
-  {hero?<section className={`cinema-hero ${hero.backdrop?'cinema-hero-with-backdrop':'cinema-hero-no-backdrop'}`} style={hero.backdrop?{backgroundImage:`linear-gradient(90deg,rgba(5,5,8,.98) 0%,rgba(5,5,8,.76) 42%,rgba(5,5,8,.16) 78%),linear-gradient(0deg,#07070a 0%,transparent 58%),url("${hero.backdrop}")`}:undefined}>
-   <div className="cinema-hero-copy"><span className="frame-kicker">FRAME ORIGINAL LIBRARY</span><h1>{hero.title}</h1><div className="cinema-meta">{hero.year&&<span>{hero.year}</span>}{hero.score!=null&&<span><Star size={13} fill="currentColor"/>{hero.score.toFixed(1)}</span>}{hero.total!=null&&hero.total>0&&<span>{hero.total} episodes</span>}{hero.status&&<span>{hero.status}</span>}</div><p>{hero.description||'Your anime library, presented with the artwork and detail it deserves.'}</p>{hero.genres?.length>0&&<div className="hero-genres">{hero.genres.slice(0,4).map(g=><span key={g}>{g}</span>)}</div>}<div className="cinema-hero-actions"><button className="primary" onClick={()=>open(hero)}>View details <ChevronRight size={16}/></button><button className="secondary" onClick={finder}><CirclePlus size={16}/>Add to library</button></div></div>
-  </section>:<section className="cinema-hero cinema-hero-empty"><div className="cinema-hero-copy"><span className="frame-kicker">FRAME</span><h1>Your anime deserves a better library.</h1><p>Build a cinematic collection with real metadata, progress and episode catalogues.</p><button className="primary" onClick={finder}><Search size={16}/>Find anime</button></div></section>}
-  <div className="cinema-content">
-   {name&&<div className="cinema-welcome">Welcome back, {name}. <span>{total} titles in FRAME.</span></div>}
-   <Shelf eyebrow="PICK UP WHERE YOU LEFT OFF" title="Continue Watching" data={active}/>
-   <Shelf eyebrow="YOUR COLLECTION" title="My Library" data={anime}/>
-   <Shelf eyebrow="TRENDING IN YOUR CATALOGUE" title="Popular Anime" data={popular}/>
-   <Shelf eyebrow="FINISHED" title="Completed" data={completed}/>
-   <Shelf eyebrow="LONG JOURNEYS" title="Long Running" data={longRunning}/>
-   <Shelf eyebrow="FILMS" title="Movies" data={movies}/>
-   <Shelf eyebrow="PINNED" title="Favorites" data={favorites}/>
-  </div>
+ const hero=watching[0]||favorites[0]||popular[0]||anime[0];
+ const Shelf=({label,title,data,limit=12}:{label:string;title:string;data:MediaItem[];limit?:number})=>data.length?<section className="frame-shelf"><header><div><span>{label}</span><h2>{title}</h2></div><button onClick={()=>go('library')}>View all <ChevronRight size={15}/></button></header><div className="frame-shelf-rail">{data.slice(0,limit).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>:null;
+ const genres=[...new Set(anime.flatMap(x=>x.genres||[]))].slice(0,10);
+ return <div className="frame-home">
+  <section className="frame-hero-v2" style={hero?.backdrop?{backgroundImage:`linear-gradient(90deg,rgba(7,7,10,.98) 0%,rgba(7,7,10,.82) 34%,rgba(7,7,10,.28) 72%,rgba(7,7,10,.08) 100%),linear-gradient(0deg,#07070a 0%,transparent 48%),url("${hero.backdrop}")`}:undefined}>
+   <div className="frame-hero-vignette"/>
+   <div className="frame-hero-content">
+    <span className="frame-hero-eyebrow">YOUR LIBRARY · {total} TITLES</span>
+    <h1>{hero?.title||'Build your anime world.'}</h1>
+    {hero&&<div className="frame-hero-meta">{hero.year&&<span>{hero.year}</span>}{hero.score!=null&&<span>★ {hero.score.toFixed(1)}</span>}{hero.total&&<span>{hero.total} episodes</span>}{hero.status&&<span>{hero.status}</span>}</div>}
+    <p>{hero?.description||'A private anime library built around your collection, not a streaming catalogue.'}</p>
+    {hero?.genres?.length?<div className="frame-hero-tags">{hero.genres.slice(0,5).map(g=><span key={g}>{g}</span>)}</div>:null}
+    <div className="frame-hero-actions">{hero&&<button className="frame-hero-primary" onClick={()=>open(hero)}>View details <ChevronRight size={17}/></button>}<button className="frame-hero-secondary" onClick={finder}><Search size={16}/> Find anime</button></div>
+   </div>
+   {hero&&<div className="frame-hero-poster"><FrameArtwork title={hero.title} medium={hero.medium} poster={hero.poster} anilistId={hero.anilistId} alt="" loading="eager"/></div>}
+  </section>
+  {genres.length>0&&<div className="frame-genre-strip">{genres.map(g=><button key={g} onClick={finder}>{g}</button>)}</div>}
+  <main className="frame-home-content">
+   {name&&<div className="frame-home-welcome"><div><span>WELCOME BACK</span><b>{name}</b></div><button onClick={()=>go('library')}>Open library <ChevronRight size={15}/></button></div>}
+   <Shelf label="KEEP WATCHING" title="Continue watching" data={watching}/>
+   <Shelf label="FROM YOUR COLLECTION" title="My library" data={anime}/>
+   <Shelf label="MOST POPULAR" title="Popular anime" data={popular}/>
+   <Shelf label="YOUR PICKS" title="Favorites" data={favorites}/>
+   <Shelf label="FINISHED" title="Completed" data={completed}/>
+  </main>
  </div>;
 }
 function Stat({value,label}:{value:number;label:string}){return <div className="stat-card"><b>{value}</b><span>{label}</span></div>}
