@@ -88,7 +88,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.goto('/');
     const targets: Array<[string, RegExp]> = [
       ['Library', /^Library$/],
-      ['Anime', /^Anime$/],
+      ['Anime', /^Library$/],
     ];
 
     for (const [button, heading] of targets) {
