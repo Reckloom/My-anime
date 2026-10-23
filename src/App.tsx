@@ -1202,37 +1202,50 @@ function Home({items,open,finder,go}:{items:MediaItem[];total?:number;open:(x:Me
  const popular=[...anime].sort((a,b)=>(b.popularity??-1)-(a.popularity??-1)||(b.score??0)-(a.score??0));
  const hero=anime.find(x=>['watching','paused'].includes(x.status))||popular[0];
  const newest=[...anime].sort((a,b)=>(b.year??0)-(a.year??0));
- const trending=popular.slice(0,12);
- const genres=[...new Set(anime.flatMap(x=>x.genres||[]))].slice(0,12);
- const bg=hero?.backdrop?{backgroundImage:'linear-gradient(90deg,rgba(6,6,8,.98) 0%,rgba(6,6,8,.76) 34%,rgba(6,6,8,.15) 75%,rgba(6,6,8,.55) 100%),linear-gradient(0deg,#060608 0%,transparent 60%),url("'+hero.backdrop+'")'}:{};
- const shelf=(title:string,rows:MediaItem[])=> <section className="miru-shelf"><div className="miru-shelf-head"><div><span>CATALOGUE</span><h2>{title}</h2></div><button onClick={()=>go('library')}>VIEW ALL <ChevronRight size={14}/></button></div><div className="miru-poster-row">{rows.slice(0,10).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>;
- return <div className="miru-home-new">
-  <section className="miru-spotlight-new" style={bg}>
-   <div className="miru-spotlight-copy">
-    <span className="miru-kicker">SPOTLIGHT</span>
-    <h1>{hero?.title||'Your anime library'}</h1>
-    {hero&&<div className="miru-facts">{hero.score!=null&&<span>★ {hero.score.toFixed(1)}</span>}{hero.year&&<span>{hero.year}</span>}{hero.total&&<span>{hero.total} EPISODES</span>}<span>{hero.medium==='anime'?'TV':hero.medium.toUpperCase()}</span></div>}
-    <p>{hero?.description||'A private catalogue for the anime, manga and manhwa you actually care about.'}</p>
-    <div className="miru-spot-actions">{hero&&<button className="watch" onClick={()=>open(hero)}>VIEW DETAILS</button>}<button onClick={finder}><Search size={14}/> FIND ANIME</button></div>
-   </div>
-  </section>
-  <div className="miru-genre-strip">{genres.map(g=><button key={g} onClick={finder}>{g}</button>)}</div>
-  <div className="miru-tabs-new"><button className="active">NEWEST</button><button onClick={()=>go('library')}>TRENDING</button><button onClick={()=>go('library')}>POPULAR</button><button onClick={()=>go('library')}>TOP RATED</button></div>
-  {shelf('Newest additions',newest)}
-  {shelf('Trending in your library',trending)}
-  {!anime.length&&<div className="miru-empty-new"><Library size={22}/><b>Your catalogue is empty</b><span>Search AniList and add your first title.</span><button onClick={finder}>SEARCH ANIME</button></div>}
+ const trending=popular;
+ const continueWatching=anime.filter(x=>['watching','paused'].includes(x.status)).sort((a,b)=>progressPercent(b)-progressPercent(a));
+ const topRated=[...anime].sort((a,b)=>(b.score??0)-(a.score??0));
+ const genres=[...new Set(anime.flatMap(x=>x.genres||[]))].slice(0,10);
+ const Poster=({item}:{item:MediaItem})=>{
+   const parent=artworkFallbackAncestor(item,items);
+   const pct=progressPercent(item);
+   return <button className="frame-poster-card" onClick={()=>open(item)}>
+     <div className="frame-poster-art">
+       <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId}
+         parentPoster={parent.id!==item.id?parent.poster:undefined} parentTitle={parent.id!==item.id?parent.title:undefined}
+         parentMedium={parent.id!==item.id?parent.medium:undefined} parentAnilistId={parent.id!==item.id?parent.anilistId:undefined}
+         sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/>
+       {item.score!=null&&<span className="frame-score">★ {item.score.toFixed(1)}</span>}
+       {item.status==='watching'&&<span className="frame-now">WATCHING</span>}
+       {pct>0&&pct<100&&<span className="frame-poster-progress"><i style={{width:pct+'%'}}/></span>}
+     </div>
+     <strong>{item.title}</strong>
+     <small>{item.year||'—'}{item.total?' · '+item.total+' EP':''}</small>
+   </button>;
+ };
+ const shelf=(title:string,rows:MediaItem[],kicker='COLLECTION')=><section className="frame-shelf">
+   <div className="frame-shelf-head"><div><span>{kicker}</span><h2>{title}</h2></div><button onClick={()=>go('library')}>SEE ALL <ChevronRight size={13}/></button></div>
+   <div className="frame-poster-row">{rows.slice(0,10).map(x=><Poster key={x.id} item={x}/>)}</div>
+ </section>;
+ const bg=hero?.backdrop?{backgroundImage:`linear-gradient(90deg,#070708 0%,rgba(7,7,8,.82) 32%,rgba(7,7,8,.18) 72%,rgba(7,7,8,.52) 100%),linear-gradient(0deg,#070708 0%,transparent 55%),url("${hero.backdrop}")`}:{};
+ return <div className="frame-home-new">
+   <section className="frame-hero" style={bg}>
+     <div className="frame-hero-copy">
+       <span className="frame-eyebrow">FEATURED IN YOUR LIBRARY</span>
+       <h1>{hero?.title||'Build your anime library.'}</h1>
+       {hero&&<div className="frame-meta">{hero.score!=null&&<b>★ {hero.score.toFixed(1)}</b>}{hero.year&&<span>{hero.year}</span>}<span>{hero.medium==='anime'?'TV':hero.medium.toUpperCase()}</span>{hero.total&&<span>{hero.total} EPISODES</span>}</div>}
+       <p>{hero?.description||'Your private catalogue, built around the series you actually follow.'}</p>
+       <div className="frame-hero-actions">{hero&&<button className="primary" onClick={()=>open(hero)}>OPEN TITLE</button>}<button onClick={finder}><Search size={14}/> SEARCH CATALOGUE</button></div>
+     </div>
+   </section>
+   <div className="frame-genre-bar">{genres.map(g=><button key={g} onClick={finder}>{g}</button>)}</div>
+   {continueWatching.length>0&&shelf('Continue watching',continueWatching,'YOUR QUEUE')}
+   {shelf('Trending now',trending,'DISCOVER')}
+   {shelf('Top rated',topRated,'RATINGS')}
+   {shelf('Newest additions',newest,'RECENT')}
+   {!anime.length&&<div className="frame-empty"><Library size={24}/><b>Your catalogue is empty</b><span>Search AniList and add your first title.</span><button onClick={finder}>SEARCH CATALOGUE</button></div>}
  </div>;
 }
-function Stat({value,label}:{value:number;label:string}){return <div className="stat-card"><b>{value}</b><span>{label}</span></div>}
-function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;library?:MediaItem[]}){
- const pct=progressPercent(item);
- const indexes=getLibraryIndexes(library);
-  const parent=item.parentId?indexes.byId.get(item.parentId):undefined;
- const artworkParent=artworkFallbackAncestor(item,library);
- const childCount=indexes.childCounts.get(item.id)||0;
- return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={artworkParent.id!==item.id?artworkParent.poster:undefined} parentTitle={artworkParent.id!==item.id?artworkParent.title:undefined} parentMedium={artworkParent.id!==item.id?artworkParent.medium:undefined} parentAnilistId={artworkParent.id!==item.id?artworkParent.anilistId:undefined} sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total??'—')} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
-}
-
 function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
  const mediaFilters:[string,string][]=[['all','All'],...Object.entries(types)];
  const statusFilters:[string,string][]=[['incomplete','In progress'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
