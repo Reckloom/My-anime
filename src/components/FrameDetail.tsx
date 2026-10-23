@@ -5,6 +5,7 @@ import {aniList,DETAIL_QUERY,titleOf,cleanDescription} from '../anilist';
 import {supabase} from '../lib/supabase';
 import {FrameArtwork,artworkFallbackAncestor} from './FrameArtwork';
 import {FrameAnimeEpisodeCatalogue} from './FrameAnimeEpisodeCatalogue';
+import {FrameEpisodeList} from './FrameEpisodeList';
 
 const labels:Record<Status,string>={watching:'Watching',reading:'Reading',playing:'Playing',completed:'Completed',planned:'Planned',paused:'Paused',dropped:'Dropped'};
 const units={anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as const;
@@ -351,7 +352,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     
    {d.medium==='anime'&&(()=>{
       const episodeRows=(libraryChildrenByParent.get(d.id)||[]).filter(x=>x.sourceProvider==='frame-anime-episode'||/^one-piece-episode-\\d+$/.test(String(x.externalId||''))||Boolean(x.episode?.episodeNumber));
-      return <FrameAnimeEpisodeCatalogue title={d.title} episodes={episodeRows} onOpen={openRelated}/>;
+      return <>{episodeRows.length>0&&<FrameAnimeEpisodeCatalogue title={d.title} episodes={episodeRows} onOpen={openRelated}/>}<FrameEpisodeList title={d.title} malId={d.externalLinks?.malId} currentProgress={d.progress} onMarkThrough={async episode=>{progress(episode);}}/></>;
     })()}
 
 
