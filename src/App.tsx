@@ -1,17 +1,17 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {lazy,Suspense,useEffect,useMemo,useRef,useState} from 'react';
 import {CalendarDays,ChevronRight,CirclePlus,Compass,Gamepad2,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Radio,RefreshCw,Search,Star,Users,X} from 'lucide-react';
 import {useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
-import {FrameGlobalChat} from './components/FrameGlobalChat';
-import {FrameDetail} from './components/FrameDetail';
-import {FrameSocial} from './components/FrameSocial';
-import {CallsPage} from './components/FrameCalls';
-import {FrameDirectCall} from './components/FrameDirectCall';
-import {FramePopupHub} from './components/FramePopupHub';
+const FrameGlobalChat=lazy(()=>import('./components/FrameGlobalChat').then(m=>({default:m.FrameGlobalChat})));
+const FrameDetail=lazy(()=>import('./components/FrameDetail').then(m=>({default:m.FrameDetail})));
+const FrameSocial=lazy(()=>import('./components/FrameSocial').then(m=>({default:m.FrameSocial})));
+const CallsPage=lazy(()=>import('./components/FrameCalls').then(m=>({default:m.CallsPage})));
+const FrameDirectCall=lazy(()=>import('./components/FrameDirectCall').then(m=>({default:m.FrameDirectCall})));
+const FramePopupHub=lazy(()=>import('./components/FramePopupHub').then(m=>({default:m.FramePopupHub})));
 import {FrameNotifications} from './components/FrameNotifications';
-import {FrameCommandPalette} from './components/FrameCommandPalette';
-import {FrameDataTools} from './components/FrameDataTools';
+const FrameCommandPalette=lazy(()=>import('./components/FrameCommandPalette').then(m=>({default:m.FrameCommandPalette})));
+const FrameDataTools=lazy(()=>import('./components/FrameDataTools').then(m=>({default:m.FrameDataTools})));
 import {FrameLibraryImport} from './components/FrameLibraryImport';
 import {FrameAnimeCatalogueImport} from './components/FrameAnimeCatalogueImport';
 import {aniList,DETAIL_QUERY,SEARCH_QUERY,cleanDescription,titleOf} from './anilist';
@@ -20,6 +20,7 @@ import {supabase} from './lib/supabase';
 import {FrameArtwork,artworkFallbackAncestor} from './components/FrameArtwork';
 
 const poster=import.meta.env.BASE_URL+'frame-logo.svg';
+const FrameRouteFallback=()=> <div className="frame-route-fallback" aria-live="polite"><span className="frame-route-spinner"/>Loading FRAME…</div>;
 const FRAME_OWNER_ID='281a6fa2-a51f-4a50-9fea-213710a10876';
 const types:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
 const unitFor=(m:Medium)=>({anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as Record<Medium,string>)[m];
@@ -1169,8 +1170,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    {page==='manhwa'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manhwa'),sortMode)} library={items} filters={['manhwa']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
    {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
-   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);go('friend-library')}} onCall={setDirectCall}/>}
-   {page==='chat'&&<FrameGlobalChat uid={uid} guest={guest}/>} 
+   {page==='friends'&&<Suspense fallback={<FrameRouteFallback/>}><FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);go('friend-library')}} onCall={setDirectCall}/></Suspense>}
+   {page==='chat'&&<Suspense fallback={<FrameRouteFallback/>}><FrameGlobalChat uid={uid} guest={guest}/></Suspense>} 
    {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
    {page==='connections'&&<><Connections connections={connections} toggle={updateConnection} onImportSteamGame={addSteamGame}/><FrameLibraryImport onImport={mergeImported}/></>}
    {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}} appearanceMode={appearanceMode} setAppearanceMode={x=>{setAppearanceMode(x);void persist('appearance_mode',x)}} items={items} onImport={mergeImported} onImportAnimeBatch={importAnimeBatch} preferences={{default_sort:sortMode,density,theme,appearance_mode:appearanceMode,release_notifications_enabled:releaseNotificationsEnabled}} releaseNotificationsEnabled={releaseNotificationsEnabled} onReleaseNotificationsChange={updateReleaseNotifications} onSignOut={signOut}/>} 
@@ -1179,7 +1180,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   <nav className="mobile-bottom">
    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['chat','Chat'],MessageCircle],[['friends','Friends'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
-  {selected&&<FrameDetail item={selected} library={items} navigationItems={shown.length?shown:items.filter(x=>!x.parentId)} navigate={navigateDetail} close={closeDetail} onRefreshMetadata={refreshMetadata} onDelete={async id=>{const target=items.find(i=>i.id===id);const children=items.filter(i=>i.parentId===id);const next=items.filter(i=>i.id!==id).map(i=>i.parentId===id?{...i,parentId:undefined}:i);const client=supabase;if(client&&user?.id){const {error}=await client.from('media_items').delete().eq('id',id).eq('user_id',user.id);if(error){setAppMessage('Delete failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return}}closeDetail();await save(next);await removeOwnedArtwork(target?.poster);if(target?.backdrop&&target.backdrop!==target.poster)await removeOwnedArtwork(target.backdrop);if(children.length){setAppMessage('Entry deleted. Its child entries were kept and detached.');window.setTimeout(()=>setAppMessage(''),5000)}}} save={async x=>{const previous=items.find(i=>i.id===x.id);const ok=await save(items.map(i=>i.id===x.id?x:i));if(ok&&previous){if(previous.poster&&previous.poster!==x.poster)await removeOwnedArtwork(previous.poster);if(previous.backdrop&&previous.backdrop!==x.backdrop&&previous.backdrop!==previous.poster&&previous.backdrop!==x.poster)await removeOwnedArtwork(previous.backdrop)}return ok}}/>}
+  <Suspense fallback={<FrameRouteFallback/>}>{selected&&<FrameDetail item={selected} library={items} navigationItems={shown.length?shown:items.filter(x=>!x.parentId)} navigate={navigateDetail} close={closeDetail} onRefreshMetadata={refreshMetadata} onDelete={async id=>{const target=items.find(i=>i.id===id);const children=items.filter(i=>i.parentId===id);const next=items.filter(i=>i.id!==id).map(i=>i.parentId===id?{...i,parentId:undefined}:i);const client=supabase;if(client&&user?.id){const {error}=await client.from('media_items').delete().eq('id',id).eq('user_id',user.id);if(error){setAppMessage('Delete failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return}}closeDetail();await save(next);await removeOwnedArtwork(target?.poster);if(target?.backdrop&&target.backdrop!==target.poster)await removeOwnedArtwork(target.backdrop);if(children.length){setAppMessage('Entry deleted. Its child entries were kept and detached.');window.setTimeout(()=>setAppMessage(''),5000)}}} save={async x=>{const previous=items.find(i=>i.id===x.id);const ok=await save(items.map(i=>i.id===x.id?x:i));if(ok&&previous){if(previous.poster&&previous.poster!==x.poster)await removeOwnedArtwork(previous.poster);if(previous.backdrop&&previous.backdrop!==x.backdrop&&previous.backdrop!==previous.poster&&previous.backdrop!==x.poster)await removeOwnedArtwork(previous.backdrop)}return ok}}/>}</Suspense>
   {finder&&<AniListSearch initialQuery={query} guest={guest} library={items} close={()=>setFinder(false)} onImported={importItem} onManual={()=>{setFinder(false);setManualEntry(true)}} />}
   {manualEntry&&<ManualEntryForm library={items} close={()=>setManualEntry(false)} onCreate={async raw=>{const item=normalise({...raw,id:crypto.randomUUID()});const ok=await save([item,...items]);if(!ok)return;openDetail(item);setManualEntry(false);}}/>}
   {!guest&&<FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/>} 
