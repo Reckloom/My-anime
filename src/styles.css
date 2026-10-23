@@ -5677,3 +5677,16 @@ body{overflow-x:hidden!important}
  .frame-catalog-tools select{width:100%}
  .frame-catalog-pagination{padding-bottom:15px;flex-wrap:wrap}
 }
+
+
+/* FRAME anime catalogue V7 — fast cache + inline progress controls */
+.frame-catalog-quick-progress{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:end;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.07)}
+.frame-catalog-quick-progress label{display:flex;flex-direction:column;gap:4px;color:var(--muted,#8d939d);font-size:9px;font-weight:700}
+.frame-catalog-quick-progress input{width:100%;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);color:inherit;padding:0 8px;outline:none}
+.frame-catalog-quick-progress input:focus{border-color:rgba(255,255,255,.24)}
+.frame-catalog-quick-progress button{height:32px;padding:0 9px;display:flex;align-items:center;gap:5px}
+.frame-catalog-pagination small{color:var(--muted,#8d939d)}
+@media(max-width:700px){
+ .frame-catalog-quick-progress{grid-template-columns:1fr}
+ .frame-catalog-quick-progress button{width:100%;justify-content:center}
+}
