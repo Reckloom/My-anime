@@ -5121,3 +5121,28 @@ html,body,#root{background:var(--frame-bg);color:var(--frame-text)}
     grid-template-columns:1fr!important;
   }
 }
+
+/* FRAME final responsive safety pass */
+html,body,#root{max-width:100%;overflow-x:hidden}
+.mobile-bottom{padding-bottom:max(5px,env(safe-area-inset-bottom));height:calc(62px + env(safe-area-inset-bottom))}
+@media(max-width:800px){
+  .frame-main{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .frame-topbar{padding-top:env(safe-area-inset-top)}
+  .frame-detail-overlay .detail-hero{min-height:calc(600px + env(safe-area-inset-top))}
+  .frame-detail-overlay .detail-hero-content{padding-top:calc(72px + env(safe-area-inset-top))}
+  .frame-detail-overlay .detail-meta{gap:5px}
+  .frame-detail-overlay .detail-meta span{font-size:9px;padding:4px 6px}
+  .frame-detail-overlay .frame-anime-episode-row:hover{transform:none}
+}
+@media(max-width:390px){
+  .mobile-bottom{left:6px;right:6px}
+  .frame-detail-overlay .detail-hero-content{padding-inline:12px}
+  .frame-detail-overlay .detail-body{padding-inline:12px}
+  .frame-detail-overlay #frame-detail-title{font-size:38px;letter-spacing:-.055em}
+  .frame-detail-overlay .detail-poster{width:132px}
+}
+@media(prefers-reduced-motion:reduce){
+  .cinema-rail .media-poster img,.media-grid .media-poster img,.frame-anime-episode-row,.frame-detail-overlay .frame-anime-episode-row .frame-episode-artwork img{transition:none!important}
+  .cinema-rail .media-card:hover .media-poster img,.media-grid .media-card:hover .media-poster img{transform:none!important;filter:none!important}
+  .frame-nav button:after,.global-search{transition:none!important}
+}
