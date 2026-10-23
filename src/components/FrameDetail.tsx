@@ -303,12 +303,16 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     <button className="detail-back-bubble" aria-label="Go back" title="Go back" onClick={goBack}><ArrowLeft size={16}/></button>
     <button className="close-btn" aria-label="Close details" onClick={close}><X/></button>
    <div className="detail-body">
-    <section className="frame-cinematic-detail-hero" style={{backgroundImage:`linear-gradient(90deg,rgba(5,5,8,.98) 0%,rgba(5,5,8,.78) 40%,rgba(5,5,8,.2) 82%),linear-gradient(0deg,#09090c 0%,transparent 60%),url("${d.backdrop||d.poster}")`}}>
+    <section className="frame-cinematic-detail-hero" style={{backgroundImage:d.backdrop?`linear-gradient(90deg,rgba(5,5,8,.98) 0%,rgba(5,5,8,.76) 38%,rgba(5,5,8,.18) 82%),linear-gradient(0deg,#09090c 0%,rgba(9,9,12,.05) 58%),url("${d.backdrop}")`:`linear-gradient(90deg,rgba(5,5,8,.99) 0%,rgba(5,5,8,.94) 48%,rgba(5,5,8,.78) 100%),linear-gradient(0deg,#09090c 0%,#09090c 100%)`}}>
       <div className="frame-detail-hero-art"><FrameArtwork className="detail-poster" title={d.title} medium={d.medium} poster={d.poster} anilistId={d.anilistId} parentPoster={artworkParent?.poster} parentTitle={artworkParent?.title} parentMedium={artworkParent?.medium} parentAnilistId={artworkParent?.anilistId} sourceProvider={d.sourceProvider} externalId={d.externalId} posterSource={d.episode?.posterSource} alt={d.title} loading="eager"/></div>
     <div className="detail-main frame-detail-hero-copy">
-     <small>{types[d.medium]} · {labels[d.status]}</small>
+     <small>{types[d.medium]} · {labels[d.status]}{d.year?` · ${d.year}`:""}</small>
      <h2 id="frame-detail-title">{d.title}</h2>
-     <div className="detail-rating"><span><Star size={13} fill="currentColor"/> {d.episode?.ratingSource||((d.externalLinks?.imdbId||d.sourceProvider==='imdb')?'IMDb':'Source')} {d.score==null?'—':d.score.toFixed(1)}{d.episode?.ratingCount?` · ${d.episode.ratingCount.toLocaleString()} ratings`:''}</span><span>Your {d.personalRating==null?'—':d.personalRating.toFixed(1)}</span></div>
+     {d.alternativeTitles?.length&&<div className="frame-detail-alt-title">{d.alternativeTitles.find(x=>x!==d.title)||d.alternativeTitles[0]}</div>}
+     {(d.score!=null||d.personalRating!=null)&&<div className="detail-rating">
+      {d.score!=null&&<span><Star size={13} fill="currentColor"/> {d.episode?.ratingSource||"Source"} {d.score.toFixed(1)}{d.episode?.ratingCount?` · ${d.episode.ratingCount.toLocaleString()} ratings`:""}</span>}
+      {d.personalRating!=null&&<span>Your {d.personalRating.toFixed(1)}</span>}
+     </div>}
      <div className="detail-refresh-row">
       {(d.anilistId||d.sourceProvider==='anilist')&&<button className="secondary" disabled={refreshing} onClick={()=>void refresh()}>{refreshing?<RefreshCw size={13} className="spin"/>:<RefreshCw size={13}/>}Refresh metadata</button>}
       {refreshMessage&&<small>{refreshMessage}</small>}
@@ -341,7 +345,14 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
        {externalLinks.anilabId&&!externalLinks.anilabUrl&&<span className="detail-external-id">AniLab ID: {externalLinks.anilabId}</span>}
       </div>
      </section>}
-     <div className="frame-detail-stats"><span><small>TYPE</small><b>{types[d.medium]}</b></span><span><small>YEAR</small><b>{d.year||'—'}</b></span><span><small>EPISODES</small><b>{d.total||'—'}</b></span><span><small>RUNTIME</small><b>{d.duration?d.duration+' min':'—'}</b></span><span><small>STUDIO</small><b>{d.studio||'—'}</b></span></div>
+     <div className="frame-detail-stats">
+      <span><small>TYPE</small><b>{types[d.medium]}</b></span>
+      {d.year&&<span><small>YEAR</small><b>{d.year}</b></span>}
+      {d.total!=null&&<span><small>{d.medium==="anime"?"EPISODES":"TOTAL"}</small><b>{d.total}</b></span>}
+      {d.duration!=null&&<span><small>RUNTIME</small><b>{d.duration} min</b></span>}
+      {d.studio&&<span><small>STUDIO</small><b>{d.studio}</b></span>}
+      {d.season&&<span><small>SEASON</small><b>{d.season}</b></span>}
+     </div>
      {d.availability?.watch?.length?<div className="frame-subdub"><span>WATCH LINKS {d.availability.watch.length}</span></div>:null}
      <div className="detail-edit-cta"><button className={editing?'secondary active':'secondary'} type="button" onClick={()=>{setEditing(x=>!x);setSaveMessage('')}}>{editing?<X size={15}/>:<Edit3 size={15}/>} {editing?'Close editor':'Edit all details'}</button></div>
     </div>
