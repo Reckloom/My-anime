@@ -66,7 +66,7 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.getByText('Find anything for FRAME')).toBeVisible();
     await page.keyboard.press('Escape');
     await navigatePrimary(page,'Anime');
-    await expect(page.locator('h1').filter({ hasText: /^Library$/ })).toBeVisible();
+    await expect(page.locator('h1').filter({ hasText: /Every anime\. One place\./ })).toBeVisible();
   });
 
 
