@@ -5188,3 +5188,30 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 }
 @keyframes frame-route-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.frame-route-spinner{animation:none}}
+
+/* Episode catalogue: keep filtered-empty states intentional and compact. */
+.frame-anime-episode-empty-state{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+  min-height:120px;
+  padding:24px 16px;
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:14px;
+  background:rgba(255,255,255,.015);
+}
+.frame-anime-episode-empty-state .frame-anime-episode-empty{
+  margin:0;
+}
+@media(max-width:560px){
+  .frame-anime-episode-empty-state{
+    align-items:stretch;
+    flex-direction:column;
+    text-align:center;
+  }
+  .frame-anime-episode-empty-state .secondary{
+    width:100%;
+  }
+}
