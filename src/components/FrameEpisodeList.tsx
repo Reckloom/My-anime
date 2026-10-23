@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {supabase} from '../lib/supabase';
-import {CalendarDays,ChevronLeft,ChevronRight,LoaderCircle,RefreshCw,Search} from 'lucide-react';
+import {CalendarDays,ChevronLeft,ChevronRight,LoaderCircle,RefreshCw,Search,Check,Plus,SkipForward} from 'lucide-react';
 
 type JikanEpisode={
   mal_id:number;
@@ -82,6 +82,7 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
   const [watchFilter,setWatchFilter]=useState<'all'|'watched'|'unwatched'>('all');
   const [minEpisode,setMinEpisode]=useState('');
   const [maxEpisode,setMaxEpisode]=useState('');
+  const [jumpEpisode,setJumpEpisode]=useState(String(Math.max(1,currentProgress+1)));
 
   useEffect(()=>{setPage(1)},[query,watchFilter,minEpisode,maxEpisode]);
 
@@ -150,6 +151,14 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
       {resolvedMalId&&<a href={'https://myanimelist.net/anime/'+encodeURIComponent(resolvedMalId)+'/'} target="_blank" rel="noreferrer">Source <RefreshCw size={12}/></a>}
     </div>
     <p className="frame-episode-list-summary">{title} · Watched through episode {currentProgress}. Episode titles and air dates load page by page from the MyAnimeList catalogue.</p>
+    <div className="frame-episode-quickbar">
+      <div className="frame-episode-progress-chip"><Check size={14}/><span>Watched through <b>EP {currentProgress}</b></span></div>
+      <button type="button" className="secondary" disabled={savingEpisode!==null} onClick={()=>void markThrough(Math.max(0,currentProgress-1))}><ChevronLeft size={14}/> Undo 1</button>
+      <button type="button" className="primary" disabled={savingEpisode!==null} onClick={()=>void markThrough(currentProgress+1)}><Plus size={14}/> Mark EP {currentProgress+1}</button>
+      <label className="frame-episode-jump-control"><span>Jump to</span><input type="number" min="1" inputMode="numeric" value={jumpEpisode} onChange={e=>setJumpEpisode(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){const n=Math.max(1,Number(jumpEpisode)||1);setPage(Math.max(1,Math.min(lastPage,Math.ceil(n/100))))}}}/></label>
+      <button type="button" className="secondary" onClick={()=>{const n=Math.max(1,Number(jumpEpisode)||1);setPage(Math.max(1,Math.min(lastPage,Math.ceil(n/100))))}}><SkipForward size={14}/> Go</button>
+    </div>
+
     <div className="frame-episode-tools">
       <label className="frame-episode-search"><Search size={15}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search episode number or title…" aria-label="Search episode number or title"/></label>
       <div className="frame-episode-filters" aria-label="Episode filters">
