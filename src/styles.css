@@ -5621,3 +5621,59 @@ body{overflow-x:hidden!important}
 @media(max-width:1200px){.frame-poster-row{grid-template-columns:repeat(7,minmax(0,1fr))}}
 @media(max-width:900px){.frame-home-new{padding:0 18px 80px}.frame-hero{margin:0 -18px;height:470px}.frame-hero-copy{left:28px;bottom:38px;width:min(620px,72vw)}.frame-poster-row{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px 9px}}
 @media(max-width:600px){.frame-home-new{padding:0 10px 70px}.frame-hero{margin:0 -10px;height:430px}.frame-hero-copy{left:18px;bottom:30px;width:auto;right:18px}.frame-hero h1{font-size:36px}.frame-hero-copy p{font-size:11px}.frame-genre-bar{margin:0 -10px;padding:0 10px}.frame-poster-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px 8px}.frame-shelf{padding-top:25px}.frame-shelf-head h2{font-size:16px}.frame-poster-card>strong{font-size:9px}.frame-poster-card>small{font-size:7px}}
+
+
+/* FRAME global anime catalogue */
+.frame-anime-catalog-page{max-width:1500px;margin:0 auto;padding:34px 34px 80px}
+.frame-catalog-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:22px}
+.frame-catalog-head small{letter-spacing:.16em;font-size:11px;color:var(--muted,#8d939d);font-weight:800}
+.frame-catalog-head h1{margin:7px 0 8px;font-size:clamp(28px,4vw,46px);letter-spacing:-.035em}
+.frame-catalog-head p{margin:0;max-width:720px;color:var(--muted,#8d939d);line-height:1.55}
+.frame-catalog-tabs{display:flex;gap:7px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:18px}
+.frame-catalog-tabs button{border:0;background:transparent;color:var(--muted,#8d939d);padding:11px 14px;cursor:pointer;border-bottom:2px solid transparent;font-weight:750;display:flex;align-items:center;gap:7px}
+.frame-catalog-tabs button.active{color:#fff;border-bottom-color:currentColor}
+.frame-catalog-tabs span{font-size:11px;opacity:.7}
+.frame-catalog-tools{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.frame-catalog-search{min-width:260px;flex:1;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:0 12px;height:42px}
+.frame-catalog-search input{width:100%;border:0;outline:0;background:transparent;color:inherit;height:100%}
+.frame-catalog-tools select{height:42px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:inherit;padding:0 10px}
+.frame-catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:17px}
+.frame-catalog-card{min-width:0;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden;transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.frame-catalog-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.04)}
+.frame-catalog-poster{position:relative;display:block;width:100%;aspect-ratio:2/3;border:0;padding:0;background:#101216;overflow:hidden;cursor:pointer}
+.frame-catalog-poster img{width:100%;height:100%;object-fit:cover;display:block}
+.frame-catalog-badge,.frame-catalog-owned{position:absolute;top:9px;padding:5px 7px;border-radius:7px;background:rgba(7,9,12,.86);backdrop-filter:blur(8px);font-size:9px;font-weight:850;letter-spacing:.07em}
+.frame-catalog-badge{left:9px}
+.frame-catalog-owned{right:9px;display:flex;gap:4px;align-items:center}
+.frame-catalog-copy{padding:11px 12px 13px}
+.frame-catalog-title{border:0;background:none;color:#fff;text-align:left;font-weight:800;font-size:14px;line-height:1.25;padding:0;cursor:pointer;width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:35px}
+.frame-catalog-meta,.frame-catalog-score{display:flex;gap:7px;color:var(--muted,#8d939d);font-size:10px;margin-top:8px;white-space:nowrap;overflow:hidden}
+.frame-catalog-meta span+span:before{content:'·';margin-right:7px}
+.frame-catalog-score{color:#b8bdc6}
+.frame-catalog-next{display:block;margin-top:7px;color:#aeb4bd;font-size:10px}
+.frame-catalog-progress{height:4px;background:rgba(255,255,255,.09);border-radius:5px;overflow:hidden;margin-top:10px;position:relative}
+.frame-catalog-progress i{display:block;height:100%;background:currentColor}
+.frame-catalog-progress span{display:block;margin-top:6px;font-size:10px;color:var(--muted,#8d939d)}
+.frame-catalog-add{margin-top:10px;width:100%;justify-content:center}
+.frame-catalog-pagination{display:flex;align-items:center;justify-content:center;gap:12px;padding:24px 0 5px}
+.frame-catalog-pagination small{color:var(--muted,#8d939d);margin-left:6px}
+.frame-catalog-count{color:var(--muted,#8d939d);font-size:12px}
+.frame-catalog-error{display:flex;align-items:center;justify-content:center;gap:10px;padding:20px;border:1px solid rgba(255,90,90,.22);border-radius:12px;margin-bottom:18px}
+.frame-catalog-empty{text-align:center;padding:70px 20px;color:var(--muted,#8d939d)}
+.frame-catalog-empty h3{color:#fff}
+.frame-catalog-skeleton{aspect-ratio:2/3;border-radius:14px;background:linear-gradient(100deg,rgba(255,255,255,.035),rgba(255,255,255,.075),rgba(255,255,255,.035));background-size:200% 100%;animation:frameCatalogShimmer 1.4s linear infinite}
+@keyframes frameCatalogShimmer{to{background-position:-200% 0}}
+@media(max-width:700px){
+ .frame-anime-catalog-page{padding:22px 14px 90px}
+ .frame-catalog-head{align-items:flex-start}
+ .frame-catalog-head .secondary{flex:none}
+ .frame-catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .frame-catalog-card{border-radius:11px}
+ .frame-catalog-copy{padding:9px 9px 11px}
+ .frame-catalog-title{font-size:12px;min-height:30px}
+ .frame-catalog-meta,.frame-catalog-score,.frame-catalog-next{font-size:9px}
+ .frame-catalog-tools{display:grid;grid-template-columns:1fr 1fr}
+ .frame-catalog-search{grid-column:1/-1;min-width:0}
+ .frame-catalog-tools select{width:100%}
+ .frame-catalog-pagination{padding-bottom:15px;flex-wrap:wrap}
+}
