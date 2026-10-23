@@ -175,6 +175,15 @@ const browseQuery = `query ($page:Int!,$perPage:Int!,$search:String,$sort:[Media
       nextAiringEpisode{episode airingAt}
       studios{nodes{name}}
       siteUrl
+      countryOfOrigin
+      source
+      hashtag
+      favourites
+      isLicensed
+      isAdult
+      rankings { rank type allTime context season year } 
+      nextAiringEpisode { episode airingAt timeUntilAiring }
+      relations { edges { relationType node { id type format status title { userPreferred english romaji native } coverImage { large } } } }
     }
   }
 }`;
