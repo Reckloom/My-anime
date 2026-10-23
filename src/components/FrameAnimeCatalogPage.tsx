@@ -1,0 +1,165 @@
+import {useEffect,useMemo,useState} from 'react';
+import {CalendarDays,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3} from 'lucide-react';
+import type {MediaItem} from '../types';
+import {FrameArtwork} from './FrameArtwork';
+import {supabase} from '../lib/supabase';
+
+type CatalogRow={
+ id:number;
+ title:{romaji?:string|null;english?:string|null;native?:string|null;userPreferred?:string|null};
+ synonyms?:string[];
+ description?:string|null;
+ coverImage?:{extraLarge?:string|null;large?:string|null}|null;
+ bannerImage?:string|null;
+ genres?:string[];
+ tags?:{name?:string|null}[];
+ season?:string|null;
+ seasonYear?:number|null;
+ averageScore?:number|null;
+ popularity?:number|null;
+ episodes?:number|null;
+ duration?:number|null;
+ status?:string|null;
+ format?:string|null;
+ startDate?:{year?:number|null;month?:number|null;day?:number|null}|null;
+ endDate?:{year?:number|null;month?:number|null;day?:number|null}|null;
+ nextAiringEpisode?:{episode?:number|null;airingAt?:number|null}|null;
+ studios?:{nodes?:{name?:string|null}[]}|null;
+ siteUrl?:string|null;
+};
+type Props={library:MediaItem[];open:(item:MediaItem)=>void;add:(item:MediaItem)=>Promise<boolean|void>;guest?:boolean};
+const titleOf=(x:CatalogRow)=>x.title.userPreferred||x.title.english||x.title.romaji||x.title.native||'Untitled';
+const clean=(x?:string|null)=>(x||'').replace(/<br\s*\/?>(\s*)/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+function toMedia(x:CatalogRow,existing?:MediaItem):MediaItem{
+ const title=titleOf(x);
+ const total=x.episodes==null?undefined:Number(x.episodes);
+ return {
+  ...(existing||{}),
+  id:existing?.id||crypto.randomUUID(),
+  anilistId:x.id,
+  sourceProvider:'anilist',
+  externalId:String(x.id),
+  title,
+  alternativeTitles:[x.title.english,x.title.romaji,x.title.native,...(x.synonyms||[])].filter((v,i,a)=>Boolean(v)&&v!==title&&a.indexOf(v)===i) as string[],
+  description:clean(x.description),
+  poster:String(x.coverImage?.extraLarge||x.coverImage?.large||''),
+  backdrop:String(x.bannerImage||''),
+  medium:'anime',
+  status:existing?.status||'planned',
+  progress:existing?.progress||0,
+  total,
+  year:x.seasonYear==null?undefined:Number(x.seasonYear),
+  score:x.averageScore==null?undefined:Number(x.averageScore)/10,
+  popularity:x.popularity==null?undefined:Number(x.popularity),
+  genres:x.genres||[],
+  themes:(x.tags||[]).map(t=>String(t.name||'')).filter(Boolean),
+  studio:x.studios?.nodes?.map(s=>s.name).filter(Boolean).join(', ')||undefined,
+  source:'AniList',
+  season:x.season||undefined,
+  duration:x.duration==null?undefined:Number(x.duration),
+  airStart:x.startDate?.year?([x.startDate.year,x.startDate.month,x.startDate.day].filter(Boolean).join('-')):undefined,
+  airEnd:x.endDate?.year?([x.endDate.year,x.endDate.month,x.endDate.day].filter(Boolean).join('-')):undefined,
+  favorite:existing?.favorite||false
+ };
+}
+async function invoke(body:Record<string,unknown>){
+ if(!supabase)throw new Error('FRAME data connection is not configured.');
+ const {data,error}=await supabase.functions.invoke('anime-catalogue',{body});
+ if(error)throw error;
+ if(data?.error)throw new Error(String(data.error));
+ return data;
+}
+export function FrameAnimeCatalogPage({library,open,add}:Props){
+ const [tab,setTab]=useState<'browse'|'upcoming'|'mine'>('browse');
+ const [query,setQuery]=useState('');
+ const [page,setPage]=useState(1);
+ const [rows,setRows]=useState<CatalogRow[]>([]);
+ const [loading,setLoading]=useState(false);
+ const [error,setError]=useState('');
+ const [sort,setSort]=useState('POPULARITY_DESC');
+ const [status,setStatus]=useState('ALL');
+ const [format,setFormat]=useState('ALL');
+ const [season,setSeason]=useState('ALL');
+ const [busyId,setBusyId]=useState<number|null>(null);
+ const [lastUpdated,setLastUpdated]=useState('');
+ const [selectedMine,setSelectedMine]=useState('ALL');
+
+ const load=async()=>{
+  setLoading(true);setError('');
+  try{
+   const data=await invoke(tab==='upcoming'
+    ?{action:'upcoming',page,perPage:24}
+    :{action:'browse',page,perPage:24,search:query.trim(),sort,status,format,season});
+   setRows(Array.isArray(data?.results)?data.results:[]);
+   setLastUpdated(new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+  }catch(e){setError(e instanceof Error?e.message:'Could not load the anime catalogue.');}
+  finally{setLoading(false);}
+ };
+ useEffect(()=>{setPage(1)},[query,sort,status,format,season,tab]);
+ useEffect(()=>{if(tab==='mine')return;const timer=window.setTimeout(()=>void load(),query.trim()?300:0);return()=>window.clearTimeout(timer)},[page,query,sort,status,format,season,tab]);
+
+ const mine=useMemo(()=>library.filter(x=>x.medium==='anime'&&!x.parentId),[library]);
+ const visibleMine=useMemo(()=>selectedMine==='ALL'?mine:mine.filter(x=>x.status===selectedMine),[mine,selectedMine]);
+ const libraryMap=useMemo(()=>new Map(library.filter(x=>x.medium==='anime').map(x=>[x.anilistId||0,x])),[library]);
+
+ const addOrOpen=async(row:CatalogRow)=>{
+  const existing=libraryMap.get(row.id);
+  if(existing){open(existing);return;}
+  const item=toMedia(row);
+  setBusyId(row.id);
+  try{
+   const ok=await add(item);
+   if(ok!==false)open(item);
+  }finally{setBusyId(null);}
+ };
+
+ return <section className="frame-anime-catalog-page">
+  <div className="frame-catalog-head">
+   <div><small>FRAME ANIME CATALOGUE</small><h1>Every anime. One place.</h1><p>Browse the live catalogue without loading thousands of cards into your phone at once. Your watch state stays in FRAME.</p></div>
+   <button className="secondary" type="button" onClick={()=>tab==='mine'?setTab('browse'):void load()} disabled={loading}><RefreshCw size={15} className={loading?'spin':''}/> {loading?'Updating…':'Refresh'}</button>
+  </div>
+  <div className="frame-catalog-tabs">
+   <button className={tab==='browse'?'active':''} onClick={()=>setTab('browse')}>Browse</button>
+   <button className={tab==='upcoming'?'active':''} onClick={()=>setTab('upcoming')}><CalendarDays size={15}/> Upcoming</button>
+   <button className={tab==='mine'?'active':''} onClick={()=>setTab('mine')}>My Anime <span>{mine.length}</span></button>
+  </div>
+  {tab!=='mine'&&<div className="frame-catalog-tools">
+   <label className="frame-catalog-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search every anime…" aria-label="Search every anime"/></label>
+   <select value={sort} onChange={e=>setSort(e.target.value)}><option value="POPULARITY_DESC">Most popular</option><option value="SCORE_DESC">Top rated</option><option value="START_DATE_DESC">Newest</option><option value="UPDATED_AT_DESC">Recently updated</option><option value="EPISODES_DESC">Most episodes</option></select>
+   <select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Any status</option><option value="RELEASING">Airing</option><option value="FINISHED">Finished</option><option value="NOT_YET_RELEASED">Upcoming</option><option value="HIATUS">Hiatus</option></select>
+   <select value={format} onChange={e=>setFormat(e.target.value)}><option value="ALL">Any format</option><option value="TV">TV</option><option value="TV_SHORT">TV Short</option><option value="MOVIE">Movie</option><option value="ONA">ONA</option><option value="OVA">OVA</option><option value="SPECIAL">Special</option></select>
+   <select value={season} onChange={e=>setSeason(e.target.value)}><option value="ALL">Any season</option><option value="WINTER">Winter</option><option value="SPRING">Spring</option><option value="SUMMER">Summer</option><option value="FALL">Fall</option></select>
+  </div>}
+  {tab==='mine'&&<div className="frame-catalog-tools"><select value={selectedMine} onChange={e=>setSelectedMine(e.target.value)}><option value="ALL">All my anime</option><option value="watching">Watching</option><option value="planned">Plan to Watch</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="dropped">Dropped</option></select><span className="frame-catalog-count">{visibleMine.length} titles</span></div>}
+  {error&&<div className="frame-catalog-error">{error}<button className="secondary" onClick={()=>void load()}>Retry</button></div>}
+  {loading&&tab!=='mine'?<div className="frame-catalog-grid">{Array.from({length:12},(_,i)=><div className="frame-catalog-skeleton" key={i}/>)}</div>:
+   <div className="frame-catalog-grid">
+    {(tab==='mine'?visibleMine:rows).map((row:any)=>{
+      const source=tab==='mine'?row as MediaItem:row as CatalogRow;
+      const existing=tab==='mine'?row as MediaItem:libraryMap.get(row.id);
+      const item=tab==='mine'?row as MediaItem:toMedia(row as CatalogRow,existing);
+      const title=tab==='mine'?item.title:titleOf(row as CatalogRow);
+      const progress=Number(item.progress||0),total=item.total;
+      const pct=total&&total>0?Math.min(100,Math.round(progress/total*100)):0;
+      const upcoming=tab!=='mine'&&((row as CatalogRow).status==='NOT_YET_RELEASED');
+      return <article className="frame-catalog-card" key={item.anilistId||item.id}>
+       <button className="frame-catalog-poster" onClick={()=>open(item)}>
+        <FrameArtwork title={title} medium="anime" poster={item.poster} anilistId={item.anilistId} alt={title} loading="lazy"/>
+        {upcoming&&<span className="frame-catalog-badge">UPCOMING</span>}
+        {existing&&<span className="frame-catalog-owned">{item.status==='completed'?<Check size={12}/>:<Clock3 size={12}/>} {item.status==='planned'?'PLAN':item.status.toUpperCase()}</span>}
+       </button>
+       <div className="frame-catalog-copy">
+        <button className="frame-catalog-title" onClick={()=>open(item)}>{title}</button>
+        <div className="frame-catalog-meta"><span>{row.format||'ANIME'}</span><span>{row.seasonYear||item.year||'—'}</span><span>{row.episodes||item.total||'—'} eps</span></div>
+        <div className="frame-catalog-score">{row.averageScore?('★ '+(Number(row.averageScore)/10).toFixed(1)):item.score?('★ '+item.score.toFixed(1)):'No score'}{row.popularity?(' · '+Number(row.popularity).toLocaleString()+' popularity'):''}</div>
+        {tab!=='mine'&&row.nextAiringEpisode?.episode&&<small className="frame-catalog-next">Next: EP {row.nextAiringEpisode.episode}{row.nextAiringEpisode.airingAt?(' · '+new Date(Number(row.nextAiringEpisode.airingAt)*1000).toLocaleDateString()):''}</small>}
+        {existing&&total&&<div className="frame-catalog-progress"><i style={{width:pct+'%'}}/><span>{progress}/{total}</span></div>}
+        {!existing&&<button className="secondary frame-catalog-add" disabled={busyId===row.id} onClick={()=>void addOrOpen(row)}>{busyId===row.id?'Adding…':<><Plus size={14}/> {upcoming?'Add to plan':'Add to FRAME'}</>}</button>}
+       </div>
+      </article>
+    })}
+   </div>}
+  {!loading&&tab!=='mine'&&!rows.length&&<div className="frame-catalog-empty"><h3>No anime found.</h3><p>Try another title or remove a filter.</p></div>}
+  {tab!=='mine'&&<div className="frame-catalog-pagination"><button className="secondary" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page}</span><button className="secondary" disabled={loading||rows.length<24} onClick={()=>setPage(p=>p+1)}>Next <ChevronRight size={15}/></button>{lastUpdated&&<small>Updated {lastUpdated}</small>}</div>}
+ </section>;
+}
