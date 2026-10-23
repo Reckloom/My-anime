@@ -149,6 +149,74 @@ async function episodes(anime: string) {
   if (!clean.length) throw new Error('The anime provider returned no episode records.');
   return { anime, episodes: clean, total: clean.length, source: 'Jikan / MyAnimeList' };
 }
+
+const browseQuery = `query ($page:Int!,$perPage:Int!,$search:String,$sort:[MediaSort!],$status:MediaStatus,$format:MediaFormat,$season:MediaSeason){
+  Page(page:$page,perPage:$perPage){
+    pageInfo{currentPage lastPage hasNextPage}
+    media(type:ANIME,search:$search,sort:$sort,status:$status,format:$format,season:$season){
+      id
+      title{romaji english native userPreferred}
+      synonyms
+      description(asHtml:false)
+      coverImage{large extraLarge}
+      bannerImage
+      genres
+      tags{name}
+      season
+      seasonYear
+      averageScore
+      popularity
+      episodes
+      duration
+      status
+      format
+      startDate{year month day}
+      endDate{year month day}
+      nextAiringEpisode{episode airingAt}
+      studios{nodes{name}}
+      siteUrl
+    }
+  }
+}`;
+
+async function browseAnime(body:any){
+  const page=Math.max(1,Math.min(500,Number(body?.page)||1));
+  const perPage=Math.max(1,Math.min(24,Number(body?.perPage)||24));
+  const search=String(body?.search||'').trim().slice(0,100)||undefined;
+  const allowedSort=new Set(['POPULARITY_DESC','SCORE_DESC','START_DATE_DESC','UPDATED_AT_DESC','EPISODES_DESC']);
+  const sortName=String(body?.sort||'POPULARITY_DESC');
+  const sort=[allowedSort.has(sortName)?sortName:'POPULARITY_DESC'];
+  const allowedStatus=new Set(['RELEASING','FINISHED','NOT_YET_RELEASED','HIATUS','CANCELLED']);
+  const statusName=String(body?.status||'ALL');
+  const allowedFormat=new Set(['TV','TV_SHORT','MOVIE','SPECIAL','OVA','ONA','MUSIC']);
+  const formatName=String(body?.format||'ALL');
+  const allowedSeason=new Set(['WINTER','SPRING','SUMMER','FALL']);
+  const seasonName=String(body?.season||'ALL');
+  const variables:any={page,perPage,search,sort};
+  if(allowedStatus.has(statusName))variables.status=statusName;
+  if(allowedFormat.has(formatName))variables.format=formatName;
+  if(allowedSeason.has(seasonName))variables.season=seasonName;
+  const data=await fetchJson('https://graphql.anilist.co',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({query:browseQuery,variables})
+  });
+  const pageData=data?.data?.Page;
+  return {results:Array.isArray(pageData?.media)?pageData.media:[],pageInfo:pageData?.pageInfo||{},source:'AniList'};
+}
+
+async function upcomingAnime(body:any){
+  const page=Math.max(1,Math.min(50,Number(body?.page)||1));
+  const perPage=Math.max(1,Math.min(24,Number(body?.perPage)||24));
+  const data=await fetchJson('https://graphql.anilist.co',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({query:browseQuery,variables:{page,perPage,sort:['START_DATE'],status:'NOT_YET_RELEASED'}})
+  });
+  const pageData=data?.data?.Page;
+  return {results:Array.isArray(pageData?.media)?pageData.media:[],pageInfo:pageData?.pageInfo||{},source:'AniList'};
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: HEADERS });
   if (request.method !== 'POST') return json({ error: 'POST required.' }, 405);
