@@ -1,4 +1,4 @@
-async function navigatePrimary(page:any,label:string){const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}await page.getByRole('button',{name:/Open navigation menu/}).click();await page.locator('.frame-mobile-menu').getByRole('button',{name:label,exact:true}).click();}
+async function navigatePrimary(page:any,label:string){const primary=page.locator('.miru-nav').getByRole('button',{name:label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}await page.getByRole('button',{name:/Open navigation menu/}).click();await page.locator('.frame-mobile-menu').getByRole('button',{name:label,exact:true}).click();}
 
 import { test, expect } from '@playwright/test';
 
@@ -7,7 +7,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.goto('/');
     await expect(page.locator('header[role="banner"]').first()).toBeVisible();
     for (const label of ['Home', 'Library', 'Anime']) {
-      const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});
+      const primary=page.locator('.miru-nav').getByRole('button',{name:label,exact:true});
       if(await primary.isVisible().catch(()=>false))continue;
       const mobile=page.locator('.mobile-bottom').getByRole('button',{name:label,exact:true});
       if(await mobile.isVisible().catch(()=>false))continue;
@@ -252,12 +252,12 @@ test.describe('FRAME discovery integration', () => {
 test.describe('FRAME quick actions', () => {
   test('keeps Chat and Call in the floating action hub, not primary nav', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.frame-nav').getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
-    await expect(page.locator('.frame-nav').getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
+    await expect(page.locator('.miru-nav').getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
+    await expect(page.locator('.miru-nav').getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
     const signIn=page.getByRole('button',{name:'Sign in',exact:true}).first();
     if(await signIn.isVisible().catch(()=>false)){
-      await expect(page.locator('.frame-nav').getByRole('button',{name:'Chat',exact:true})).toHaveCount(0);
-      await expect(page.locator('.frame-nav').getByRole('button',{name:'Call',exact:true})).toHaveCount(0);
+      await expect(page.locator('.miru-nav').getByRole('button',{name:'Chat',exact:true})).toHaveCount(0);
+      await expect(page.locator('.miru-nav').getByRole('button',{name:'Call',exact:true})).toHaveCount(0);
       return;
     }
     await page.getByTitle('Open quick actions').click();
