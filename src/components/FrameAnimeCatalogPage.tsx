@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
+import type {Dispatch,SetStateAction} from 'react';
 import {CalendarDays,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3,Save,X,ExternalLink,Play,Star,Users,Heart,Globe2,Building2,Timer,Tag} from 'lucide-react';
 import type {MediaItem} from '../types';
 import {FrameArtwork} from './FrameArtwork';
@@ -231,7 +232,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  </section>;
 }
 
-function AnimeDetailPanel({detail,update,savingProgress,progressDraft,planDraft,setProgressDraft,setPlanDraft,saveProgress,setNextToWatch,close,openEpisodeList}:{detail:{row:CatalogRow;item:MediaItem};update?:Props['update'];savingProgress:string|null;progressDraft:Record<string,string>;planDraft:Record<string,string>;setProgressDraft:React.Dispatch<React.SetStateAction<Record<string,string>>>;setPlanDraft:React.Dispatch<React.SetStateAction<Record<string,string>>>;saveProgress:(item:MediaItem)=>Promise<void>;setNextToWatch:(item:MediaItem)=>Promise<void>;close:()=>void;openEpisodeList:()=>void}){
+function AnimeDetailPanel({detail,update,savingProgress,progressDraft,planDraft,setProgressDraft,setPlanDraft,saveProgress,setNextToWatch,close,openEpisodeList}:{detail:{row:CatalogRow;item:MediaItem};update?:Props['update'];savingProgress:string|null;progressDraft:Record<string,string>;planDraft:Record<string,string>;setProgressDraft:Dispatch<SetStateAction<Record<string,string>>>;setPlanDraft:React.Dispatch<React.SetStateAction<Record<string,string>>>;saveProgress:(item:MediaItem)=>Promise<void>;setNextToWatch:(item:MediaItem)=>Promise<void>;close:()=>void;openEpisodeList:()=>void}){
  const {row,item}=detail;
  const title=titleOf(row);
  const description=clean(row.description);
