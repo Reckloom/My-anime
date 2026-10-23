@@ -24,12 +24,24 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
 }) {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [watchFilter, setWatchFilter] = useState<'all' | 'watched' | 'unwatched'>('all');
+  const [minEpisode, setMinEpisode] = useState('');
+  const [maxEpisode, setMaxEpisode] = useState('');
   const sorted = useMemo(() => [...episodes].sort((a, b) => episodeNumber(a) - episodeNumber(b)), [episodes]);
   const filtered = useMemo(() => {
     const q = query.trim().toLocaleLowerCase();
-    if (!q) return sorted;
-    return sorted.filter(item => [item.title, item.description, item.externalId, item.episode?.episodeCode, String(episodeNumber(item))].join(' ').toLocaleLowerCase().includes(q));
-  }, [query, sorted]);
+    const min = minEpisode === '' ? null : Number(minEpisode);
+    const max = maxEpisode === '' ? null : Number(maxEpisode);
+    return sorted.filter(item => {
+      const number = episodeNumber(item);
+      const watched = item.status === 'completed';
+      const matchesQuery = !q || [item.title, item.description, item.externalId, item.episode?.episodeCode, String(number)].join(' ').toLocaleLowerCase().includes(q);
+      const matchesWatch = watchFilter === 'all' || (watchFilter === 'watched' ? watched : !watched);
+      const matchesMin = min === null || (!Number.isNaN(min) && number >= min);
+      const matchesMax = max === null || (!Number.isNaN(max) && number <= max);
+      return matchesQuery && matchesWatch && matchesMin && matchesMax;
+    });
+  }, [maxEpisode, minEpisode, query, sorted, watchFilter]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const shown = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -41,6 +53,12 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
     </div>
     <div className="frame-anime-episode-tools">
       <label><Search size={15}/><input type="search" value={query} onChange={e => { setQuery(e.target.value); setPage(1); }} placeholder="Search episode number or title…" aria-label="Search episode number or title"/></label>
+      <div className="frame-anime-episode-filters" aria-label="Episode filters">
+        <label><span>Watch</span><select value={watchFilter} onChange={e => { setWatchFilter(e.target.value as typeof watchFilter); setPage(1); }}><option value="all">All</option><option value="watched">Watched</option><option value="unwatched">Unwatched</option></select></label>
+        <label><span>From</span><input type="number" min="1" inputMode="numeric" value={minEpisode} onChange={e => { setMinEpisode(e.target.value); setPage(1); }} placeholder="1" aria-label="Minimum episode number"/></label>
+        <span className="frame-anime-episode-range-separator">–</span>
+        <label><span>To</span><input type="number" min="1" inputMode="numeric" value={maxEpisode} onChange={e => { setMaxEpisode(e.target.value); setPage(1); }} placeholder="∞" aria-label="Maximum episode number"/></label>
+      </div>
       <span>Showing {shown.length ? ((safePage - 1) * PAGE_SIZE + 1).toLocaleString() : '0'}–{Math.min(safePage * PAGE_SIZE, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}</span>
     </div>
     {shown.length ? <div className="frame-anime-arc-groups">
@@ -56,8 +74,8 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, onOpen }: {
               <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
               <span className="frame-anime-episode-number" style={{position:'absolute',left:8,top:8}}>{String(episodeNumber(item)).padStart(3, '0')}</span>
             </span>
-            <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episodes+d+s*[—–-]s*/i, '')}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
-            <span className="frame-anime-episode-status">{item.status === 'completed' ? 'Watched' : 'Released'} <ChevronRight size={13}/></span>
+            <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episode\s*\d+\s*[—–-]?\s*/i, '') || item.title}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
+            <span className="frame-anime-episode-status">{item.status === 'completed' ? 'Watched' : 'Unwatched'} <ChevronRight size={13}/></span>
           </button>)}
         </div>
       </details>
