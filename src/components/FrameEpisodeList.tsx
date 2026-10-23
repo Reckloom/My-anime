@@ -83,6 +83,8 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
   const [minEpisode,setMinEpisode]=useState('');
   const [maxEpisode,setMaxEpisode]=useState('');
 
+  useEffect(()=>{setPage(1)},[query,watchFilter,minEpisode,maxEpisode]);
+
   useEffect(()=>{
     let alive=true;const controller=new AbortController();
     setResolvedMalId(malId||'');setResolving(!malId);setPage(1);setEpisodes([]);setError('');
