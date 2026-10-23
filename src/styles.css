@@ -5148,10 +5148,18 @@ html,body,#root{max-width:100%;overflow-x:hidden}
 }
 
 /* FRAME detail visibility guard — the cinematic detail is a full-screen route, never a hidden drawer. */
+.frame-detail-overlay,
 .frame-detail-overlay .detail-modal-shell,
 .frame-detail-overlay .detail-drawer,
 .frame-detail-overlay .detail-body{
+  display:block!important;
   opacity:1!important;
   visibility:visible!important;
   transform:none!important;
+}
+.frame-detail-overlay{
+  position:fixed!important;
+  inset:0!important;
+  z-index:9999!important;
+  overflow:hidden!important;
 }
