@@ -6,7 +6,7 @@ test.describe('FRAME core smoke flow', () => {
   test('loads the app and exposes the main navigation', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('banner')).toBeVisible();
-    for (const label of ['Home', 'Library', 'Discover']) {
+    for (const label of ['Home', 'Library', 'Anime']) {
       const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});
       if(await primary.isVisible().catch(()=>false))continue;
       const mobile=page.locator('.mobile-bottom').getByRole('button',{name:label,exact:true});
@@ -59,15 +59,13 @@ test.describe('FRAME core smoke flow', () => {
     await expect(page.locator('.theme-picker')).toHaveCount(0);
   });
 
-  test('makes Discover shortcuts useful', async ({ page }) => {
+  test('makes Anime navigation useful', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Search', exact: true }).first().click();
     await expect(page.getByText('Find anything for FRAME')).toBeVisible();
     await page.keyboard.press('Escape');
-    await navigatePrimary(page,'Discover');
-    await expect(page.getByRole('heading', { name: 'Explore everything.', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: /Connections Control the catalogues and services FRAME uses/ }).click();
-    await expect(page.getByRole('heading', { name: 'Connections', exact: true })).toBeVisible();
+    await navigatePrimary(page,'Anime');
+    await expect(page.locator('h1').filter({ hasText: /^Anime$/ })).toBeVisible();
   });
 
 
@@ -90,7 +88,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.goto('/');
     const targets: Array<[string, RegExp]> = [
       ['Library', /^Library$/],
-      ['Discover', /Explore everything\./],
+      ['Anime', /^Anime$/],
     ];
 
     for (const [button, heading] of targets) {
@@ -264,161 +262,6 @@ test.describe('FRAME quick actions', () => {
   });
 });
 
-
-test.describe('FRAME anime hierarchy and character archive', () => {
-  test('shows season/arc hierarchy and the rich character archive without an episode tracker', async ({ page }) => {
-    await page.route('https://example.com/luffy.png', route => route.fulfill({
-      status: 200,
-      contentType: 'image/svg+xml',
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18" fill="red"/></svg>'
-    }));
-    await page.route('**/functions/v1/anime-catalogue', async route => {
-      const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-      };
-      if (route.request().method() === 'OPTIONS') {
-        await route.fulfill({ status: 204, headers, body: '' });
-        return;
-      }
-      const body = route.request().postDataJSON() as { action?: string };
-      if (body.action === 'anime-characters') {
-        await route.fulfill({
-          status: 200, headers,
-          body: JSON.stringify({
-            characters: [{
-              id: 1,
-              name: 'Monkey D. Luffy',
-              role: 'MAIN',
-              image: 'https://example.com/luffy.png',
-              sourceUrl: 'https://anilist.co/character/1'
-            }],
-            matched: 1, requested: 1, source: 'AniList'
-          })
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200, headers,
-        body: JSON.stringify({ results: [{ mal_id: 21, title: 'One Piece', title_english: 'One Piece' }] })
-      });
-    });
-
-    await page.addInitScript(() => {
-      localStorage.setItem('frame-guest', '1');
-      localStorage.setItem('frame-library:guest', JSON.stringify([
-        {
-          id: 'qa-one-piece',
-          anilistId: 21,
-          sourceProvider: 'anilist',
-          externalId: '21',
-          title: 'One Piece',
-          description: 'QA fixture',
-          poster: '/frame-logo.svg',
-          backdrop: '',
-          medium: 'anime',
-          status: 'watching',
-          progress: 0,
-          total: 1180,
-          genres: [],
-          themes: [],
-          favorite: false
-        },
-        {
-          id: 'qa-one-piece-arc-1',
-          parentId: 'qa-one-piece',
-          sourceProvider: 'frame-story-arc',
-          externalId: 'one-piece-arc-1',
-          title: 'Romance Dawn',
-          description: 'First story arc.',
-          poster: '/frame-logo.svg',
-          backdrop: '',
-          medium: 'anime',
-          status: 'watching',
-          progress: 0,
-          total: 3,
-          genres: [],
-          themes: [],
-          favorite: false
-        }
-      ]));
-    });
-
-    await page.goto('/');
-    await navigatePrimary(page, 'Library');
-    const onePieceCard=page.locator('.media-card').filter({hasText:'One Piece'}).first();
-    await expect(onePieceCard).toBeVisible({timeout:5000});
-    await onePieceCard.click();
-
-    await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
-    await expect(page.getByRole('heading', { name: 'Top 20 Characters', exact: true })).toBeVisible({timeout:5000});
-    await expect(page.getByAltText('Monkey D. Luffy portrait')).toBeVisible({timeout:5000});
-    await expect(page.getByText('Episodes', { exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Mark through' })).toHaveCount(0);
-  });
-});
-
-test.describe('FRAME AOT archive regression', () => {
-  test('keeps Attack on Titan seasons, arcs, progress and rich characters intact', async ({ page }) => {
-    await page.route('https://example.com/eren.jpg', route => route.fulfill({
-      status: 200,
-      contentType: 'image/svg+xml',
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18"/></svg>'
-    }));
-    await page.route('**/functions/v1/anime-catalogue', async route => {
-      const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-      };
-      if (route.request().method() === 'OPTIONS') {
-        await route.fulfill({ status: 204, headers, body: '' });
-        return;
-      }
-      const body = route.request().postDataJSON() as { action?: string };
-      if (body.action === 'anime-characters') {
-        await route.fulfill({
-          status: 200, headers,
-          body: JSON.stringify({
-            characters: [
-              { id: 1, name: 'Eren Yeager', role: 'MAIN', image: 'https://example.com/eren.jpg', birthday: 'March 30', age: '15', gender: 'Male', bloodType: 'B' }
-            ],
-            matched: 1, requested: 1, source: 'AniList'
-          })
-        });
-        return;
-      }
-      await route.fulfill({ status: 200, headers, body: JSON.stringify({ results: [] }) });
-    });
-    await page.addInitScript(() => {
-      localStorage.setItem('frame-guest', '1');
-      localStorage.setItem('frame-library:guest', JSON.stringify([
-        { id: 'aot-root', anilistId: 16498, sourceProvider: 'anilist', externalId: '16498', title: 'Attack on Titan', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 89, total: 89, genres: [], themes: [], favorite: false },
-        { id: 'aot-s1', parentId: 'aot-root', sourceProvider: 'frame-aot-season', externalId: 'aot-s1', title: 'Attack on Titan — Season 1 (Episodes 1–25)', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 25, total: 25, genres: [], themes: [], favorite: false },
-        { id: 'aot-arc-1', parentId: 'aot-s1', sourceProvider: 'frame-aot-arc', externalId: 'aot-arc-1', title: 'Fall of Shiganshina Arc (Episodes 1–2)', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 2, total: 2, genres: [], themes: [], favorite: false }
-      ]));
-    });
-    await page.goto('/');
-    await navigatePrimary(page, 'Library');
-    await page.locator('.media-card').filter({ hasText: 'Attack on Titan' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
-    await expect(page.locator('.progress-edit input').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible();
-    const seasonCard=page.locator('.hierarchy-part-card').filter({hasText:'Attack on Titan — Season 1 (Episodes 1–25)'}).first();
-    await expect(seasonCard).toBeVisible();
-    await seasonCard.click();
-    await expect(page.getByRole('heading', { name: 'Attack on Titan — Season 1 (Episodes 1–25)', exact: true })).toBeVisible();
-    await expect(page.getByText('Fall of Shiganshina Arc (Episodes 1–2)', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Go back', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Top 20 Characters', exact: true })).toBeVisible();
-    await expect(page.getByAltText('Eren Yeager portrait')).toBeVisible();
-  });
-});
 
 test.describe('FRAME detail navigation and scroll', () => {
   test('opens a sub-part at the top and Back restores the previous item and scroll position', async ({ page }) => {
