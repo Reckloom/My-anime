@@ -1239,41 +1239,18 @@ function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;li
 }
 
 function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
- const statusFilters:[string,string][]=[['incomplete','Not 100%'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
- const mediaFilters:[string,string][]=[['all','All Media'],...Object.entries(types)];
- const toggleMedia=(id:string)=>{
-  const mediaIds=mediaFilters.slice(1).map(([key])=>key);
-  const statusOnly=filters.filter(x=>x!=='all'&&!mediaIds.includes(x));
-  if(id==='all'){setFilters(statusOnly.length?['all',...statusOnly]:['all']);return}
-  const base=filters.filter(x=>x!=='all');
-  const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];
-  const nextHasMedia=next.some(x=>mediaIds.includes(x));
-  setFilters(nextHasMedia?next:['all',...statusOnly]);
- };
- const toggleStatus=(id:string)=>{
-  const mediaIds=mediaFilters.slice(1).map(([key])=>key);
-  const base=filters.filter(x=>x!=='all');
-  const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];
-  const hasMedia=next.some(x=>mediaIds.includes(x));
-  setFilters(next.length?(hasMedia?next:['all',...next]):['all']);
- };
- const allMediaActive=!mediaFilters.slice(1).some(([key])=>filters.includes(key));
- return <div className="page library-page">
-  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><div className="library-heading-actions"><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div></div>
-  <div className="library-controls">
-   <div className="filter-groups">
-    <div className="filter-group">
-     <span className="filter-group-label">Media</span>
-     <div className="filter-scroll media-filter-scroll">{mediaFilters.map(([id,label])=><button type="button" className={(id==='all'?allMediaActive:filters.includes(id))?'active':''} key={id} onClick={()=>toggleMedia(id)} aria-pressed={id==='all'?allMediaActive:filters.includes(id)}>{label}</button>)}</div>
-    </div>
-    <div className="filter-group">
-     <span className="filter-group-label">Status</span>
-     <div className="filter-scroll status-filter-scroll">{statusFilters.map(([id,label])=><button type="button" className={filters.includes(id)?'active':''} key={id} onClick={()=>toggleStatus(id)} aria-pressed={filters.includes(id)}>{label}</button>)}</div>
-    </div>
-   </div>
-   <label className="sort-select"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="popularity">Popularity</option><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label>
-  </div>
-  <div className="media-grid">{items.map(x=><Card key={x.id} item={x} library={library} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/>}
+ const mediaFilters:[string,string][]=[['all','All'],...Object.entries(types)];
+ const statusFilters:[string,string][]=[['incomplete','In progress'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
+ const mediaIds=mediaFilters.slice(1).map(x=>x[0]); const activeMedia=filters.filter(x=>mediaIds.includes(x)); const allMedia=!activeMedia.length;
+ const toggle=(id:string)=>{if(id==='all'){setFilters(['all']);return} const next=activeMedia.includes(id)?activeMedia.filter(x=>x!==id):[...activeMedia,id]; const statuses=filters.filter(x=>!mediaIds.includes(x)&&x!=='all'); setFilters([...(next.length?next:['all']),...statuses]);};
+ const toggleStatus=(id:string)=>{const base=filters.filter(x=>x!=='all'); const next=base.includes(id)?base.filter(x=>x!==id):[...base,id]; setFilters(next.length?next:['all']);};
+ const watching=items.filter(x=>['watching','reading','playing'].includes(x.status)); const completed=items.filter(x=>x.status==='completed');
+ return <div className="frame-library-v3">
+  <div className="library-v3-head"><div><span className="library-kicker">COLLECTION / {items.length} TITLES</span><h1>Library</h1><p>Everything you keep in FRAME, arranged for browsing rather than administration.</p></div><button className="library-add-v3" onClick={add}><CirclePlus size={17}/> Add title</button></div>
+  <div className="library-v3-strip"><div className="library-v3-tabs"><button className={allMedia?'active':''} onClick={()=>toggle('all')}>Everything</button>{mediaFilters.slice(1).map(([id,label])=><button key={id} className={activeMedia.includes(id)?'active':''} onClick={()=>toggle(id)}>{label}</button>)}</div><label className="library-v3-sort"><span>Sort by</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="popularity">Popularity</option><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label></div>
+  <div className="library-v3-status">{statusFilters.map(([id,label])=><button key={id} className={filters.includes(id)?'active':''} onClick={()=>toggleStatus(id)}>{label}</button>)}</div>
+  {(watching.length>0&&allMedia)&&<section className="library-v3-focus"><div><span>ACTIVE NOW</span><h2>Pick up where you left off</h2></div><div className="library-v3-focus-list">{watching.slice(0,4).map(x=><button key={x.id} onClick={()=>open(x)}><FrameArtwork title={x.title} medium={x.medium} poster={x.poster} anilistId={x.anilistId} alt="" loading="lazy"/><span><b>{x.title}</b><small>{x.progress}{x.total?' / '+x.total:''} {x.progressUnit||unitFor(x.medium)}</small></span></button>)}</div></section>}
+  <section className="library-v3-grid-wrap"><div className="library-v3-grid-head"><span>{items.length} results</span>{completed.length>0&&<small>{completed.length} completed</small>}</div><div className="media-grid library-v3-grid">{items.map(x=><Card key={x.id} item={x} library={library} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/>}</section>
  </div>;
 }
 function Discover({finder,go}:{finder:()=>void;go:(x:string)=>void}){return <div className="page"><div className="page-heading"><div><small>UNIVERSAL DISCOVERY</small><h1>Explore everything.</h1><p>One consistent interface for media, metadata and connected services.</p></div></div><div className="feature-grid"><button className="feature-card" onClick={finder}><Search size={22}/><h3>Universal search</h3><p>AniList + Jikan, IGDB + RAWG, TMDB, VNDB, Open Library + Google Books and more.</p><ChevronRight/></button><button className="feature-card" onClick={()=>go('connections')}><Link2 size={22}/><h3>Connections</h3><p>Control the catalogues and services FRAME uses.</p><ChevronRight/></button></div></div>}
