@@ -1143,26 +1143,28 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <FrameAnimeCatalogueImport userId={user?.id} enabled={Boolean(user?.id)} library={items} onImportBatch={importAnimeBatch}/>
   </div>}
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
-  <header className="frame-topbar" role="banner">
-   <button className="frame-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
-   <nav className="frame-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['anime','Anime'],Compass],[['manga','Manga'],Library],[['manhwa','Manhwa'],Library]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
+  <header className="miru-sidebar" role="banner">
+   <button className="miru-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><span>FRAME</span></button>
+   <div className="miru-side-label">MENU</div>
+   <nav className="miru-nav">
+    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['anime','Anime'],Compass],[['radar','Schedule'],CalendarDays],[['connections','Connections'],Link2],[['settings','Settings'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={17}/><span>{label}</span></button>})}
    </nav>
-   <div className="frame-actions">
-    <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
-    <button className="primary top-find" onClick={()=>setFinder(true)}><Search size={16}/>Search</button>
-    <button className="top-icon" title="Connections" aria-label="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
+   <div className="miru-side-foot"><span>PRIVATE LIBRARY</span><small>FRAME catalogue</small></div>
+  </header>
+  <header className="miru-topbar">
+   <div className="miru-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search anime, manga, manhwa…"/></div>
+   <div className="miru-top-actions">
+    <button className="miru-search-btn" onClick={()=>setFinder(true)}>SEARCH</button>
     <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>{if(!href)return;if(href.startsWith('media:')){const match=items.find(x=>x.id===href.slice(6));if(match){openDetail(match);return}}go(href)}}/>
-    {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
-    <button className="top-account" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
-      <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt={(profile.display_name||user?.email||'Account')+' avatar'} onError={e=>{e.currentTarget.src=import.meta.env.BASE_URL+'frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
-      <span className="top-account-name">{profile?.display_name||user?.email?.split('@')[0]||'Account'}</span>
+    {guest&&<button className="miru-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>SIGN IN</button>}
+    <button className="miru-avatar" type="button" title="Open profile" aria-label="Open profile" onClick={()=>go('settings')}>
+      {profile?.avatar_url?<img src={profile.avatar_url} alt="" onError={e=>{e.currentTarget.src=import.meta.env.BASE_URL+'frame-logo.svg'}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}
     </button>
-    <button className="top-icon mobile-only" aria-label={menu?'Close navigation menu':'Open navigation menu'} title={menu?'Close navigation menu':'Open navigation menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
+    <button className="miru-menu-mobile" aria-label={menu?'Close menu':'Open menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['anime','Anime'],['manga','Manga'],['manhwa','Manhwa'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
-  <main className="frame-main">
+  {menu&&<div className="miru-mobile-menu">{[['home','Home'],['library','Library'],['anime','Anime'],['radar','Schedule'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  <main className="miru-main">
    {page==='home'&&<Home items={sortMedia(items,sortMode).filter(x=>!x.parentId)} total={items.filter(x=>!x.parentId).length} open={openDetail} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
    {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={openDetail} add={()=>setFinder(true)} />}
    {page==='anime'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='anime'),sortMode)} library={items} filters={['anime']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
@@ -1195,22 +1197,30 @@ function ManualEntryForm({close,onCreate,library}:{close:()=>void;onCreate:(item
  const submit=async()=>{if(!title.trim()||busy)return;const t=total>0?Math.min(2000,total):undefined;const max=medium==='movie'?1:(medium==='game'||medium==='visual-novel'?100:(t||2000));setBusy(true);try{await onCreate({id:crypto.randomUUID(),title:title.trim(),description,poster:posterUrl.trim(),backdrop:'',medium,status,progress:status==='completed'?(t||max):Math.max(0,Math.min(max,progress)),total:t,progressUnit:units[medium],genres:[],themes:[],favorite,personalRating,notes:notes.trim()||undefined,parentId:parentId||undefined})}finally{setBusy(false)}};
  return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><aside className="detail-drawer manual-entry-drawer" onMouseDown={e=>e.stopPropagation()}><button className="close-btn" onClick={close} aria-label="Close"><X/></button><div className="manual-entry-head"><small>MANUAL ENTRY</small><h2>Add anything to FRAME.</h2><p>Use this for media that no catalogue can identify. You can edit all of it later.</p></div><div className="call-form manual-entry-form"><label>Title<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. a local series, book, game…" /></label><label>Media type<select value={medium} onChange={e=>setMedium(e.target.value as Medium)}>{Object.entries(types).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><label>Status<select value={status} onChange={e=>setStatus(e.target.value as MediaItem['status'])}>{[['planned','Planned'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['paused','Paused'],['dropped','Dropped']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><div className="manual-two-col"><label>Progress<input type="number" min="0" max="2000" value={progress} onChange={e=>setProgress(Number(e.target.value)||0)}/></label><label>Total<input type="number" min="0" max="2000" value={total||''} onChange={e=>setTotal(Number(e.target.value)||0)} placeholder="Optional" /></label></div><label>Poster URL<input value={posterUrl} onChange={e=>setPosterUrl(e.target.value)} placeholder="https://…" /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional description…" /></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={personalRating??''} onChange={e=>setPersonalRating(e.target.value===''?undefined:Number(e.target.value)||0)} /></label><label>Parent entry<select value={parentId} onChange={e=>setParentId(e.target.value)}><option value="">None — top level</option>{library.slice().sort((a,b)=>a.title.localeCompare(b.title)).map(x=><option key={x.id} value={x.id}>{x.parentId?'↳ ':''}{x.title}</option>)}</select></label><label>Favorite<select value={favorite?'yes':'no'} onChange={e=>setFavorite(e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label><label>Notes<textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything you want to remember…" /></label><button className="primary" disabled={!title.trim()||busy} onClick={()=>void submit()}>{busy?<RefreshCw size={16} className="spin"/>:<CirclePlus size={16}/>} {busy?'Adding…':'Add to my library'}</button></div></aside></div>;
 }
-function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
+function Home({items,open,finder,go}:{items:MediaItem[];total?:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
  const anime=items.filter(x=>x.medium==='anime'||x.medium==='movie'||x.medium==='series');
- const watching=anime.filter(x=>['watching','paused'].includes(x.status));
  const popular=[...anime].sort((a,b)=>(b.popularity??-1)-(a.popularity??-1)||(b.score??0)-(a.score??0));
- const hero=watching[0]||popular[0]||anime[0];
- const genres=[...new Set(anime.flatMap(x=>x.genres||[]))].slice(0,14);
+ const hero=anime.find(x=>['watching','paused'].includes(x.status))||popular[0];
  const newest=[...anime].sort((a,b)=>(b.year??0)-(a.year??0));
- const recent=[...watching,...newest].filter((x,i,self)=>self.findIndex(y=>y.id===x.id)===i).slice(0,7);
- const bg=hero?.backdrop?{backgroundImage:'linear-gradient(90deg,rgba(7,7,8,.98) 0%,rgba(7,7,8,.78) 38%,rgba(7,7,8,.2) 78%,rgba(7,7,8,.5) 100%),linear-gradient(0deg,#070708 0%,transparent 55%),url("'+hero.backdrop+'")'}:{};
- return <div className="miruro-home">
-  <section className="miruro-hero" style={bg}><div className="miruro-hero-copy"><span className="miruro-spotlight">SPOTLIGHT · {hero?.medium==='movie'?'MOVIE':'TV'}</span><h1>{hero?.title||'Your anime library'}</h1>{hero&&<div className="miruro-meta">{hero.medium==='anime'&&<span>TV</span>}{hero.score!=null&&<span>★ {hero.score.toFixed(1)}</span>}{hero.total&&<span>{hero.total} eps</span>}{hero.year&&<span>{hero.year}</span>}</div>}<p>{hero?.description||'Your personal anime collection, presented like a modern anime catalogue.'}</p><div className="miruro-hero-actions">{hero&&<button onClick={()=>open(hero)}>Details</button>}<button onClick={finder}><Search size={15}/> Search Anime</button></div></div></section>
-  {genres.length>0&&<div className="miruro-genres">{genres.map(g=><button key={g} onClick={finder}>{g}</button>)}</div>}
-  <div className="miruro-section-tabs"><button className="active">NEWEST</button><button onClick={()=>go('library')}>TRENDING</button><button onClick={()=>go('library')}>POPULAR</button><button onClick={()=>go('library')}>TOP RATED</button></div>
-  <div className="miruro-content-layout"><main><div className="miruro-grid">{(newest.length?newest:popular).slice(0,24).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div>{!anime.length&&<Empty text="Add anime to build your catalogue."/>}</main>
-   <aside className="miruro-right-rail"><section><header><b>RECENT EPISODES</b><button onClick={()=>go('library')}>›</button></header>{recent.map(x=><button className="miruro-mini" key={x.id} onClick={()=>open(x)}><FrameArtwork title={x.title} medium={x.medium} poster={x.poster} anilistId={x.anilistId} alt="" loading="lazy"/><span><b>{x.title}</b><small>{x.progress?'Episode '+x.progress:'Not started'}</small></span></button>)}</section><section><header><b>TOP AIRING</b></header>{popular.slice(0,5).map(x=><button className="miruro-mini" key={'top-'+x.id} onClick={()=>open(x)}><FrameArtwork title={x.title} medium={x.medium} poster={x.poster} anilistId={x.anilistId} alt="" loading="lazy"/><span><b>{x.title}</b><small>{x.year||'—'} · ★ {x.score?.toFixed(1)||'—'}</small></span></button>)}</section></aside>
-  </div>
+ const trending=popular.slice(0,12);
+ const genres=[...new Set(anime.flatMap(x=>x.genres||[]))].slice(0,12);
+ const bg=hero?.backdrop?{backgroundImage:'linear-gradient(90deg,rgba(6,6,8,.98) 0%,rgba(6,6,8,.76) 34%,rgba(6,6,8,.15) 75%,rgba(6,6,8,.55) 100%),linear-gradient(0deg,#060608 0%,transparent 60%),url("'+hero.backdrop+'")'}:{};
+ const shelf=(title:string,rows:MediaItem[])=> <section className="miru-shelf"><div className="miru-shelf-head"><div><span>CATALOGUE</span><h2>{title}</h2></div><button onClick={()=>go('library')}>VIEW ALL <ChevronRight size={14}/></button></div><div className="miru-poster-row">{rows.slice(0,10).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>;
+ return <div className="miru-home-new">
+  <section className="miru-spotlight-new" style={bg}>
+   <div className="miru-spotlight-copy">
+    <span className="miru-kicker">SPOTLIGHT</span>
+    <h1>{hero?.title||'Your anime library'}</h1>
+    {hero&&<div className="miru-facts">{hero.score!=null&&<span>★ {hero.score.toFixed(1)}</span>}{hero.year&&<span>{hero.year}</span>}{hero.total&&<span>{hero.total} EPISODES</span>}<span>{hero.medium==='anime'?'TV':hero.medium.toUpperCase()}</span></div>}
+    <p>{hero?.description||'A private catalogue for the anime, manga and manhwa you actually care about.'}</p>
+    <div className="miru-spot-actions">{hero&&<button className="watch" onClick={()=>open(hero)}>VIEW DETAILS</button>}<button onClick={finder}><Search size={14}/> FIND ANIME</button></div>
+   </div>
+  </section>
+  <div className="miru-genre-strip">{genres.map(g=><button key={g} onClick={finder}>{g}</button>)}</div>
+  <div className="miru-tabs-new"><button className="active">NEWEST</button><button onClick={()=>go('library')}>TRENDING</button><button onClick={()=>go('library')}>POPULAR</button><button onClick={()=>go('library')}>TOP RATED</button></div>
+  {shelf('Newest additions',newest)}
+  {shelf('Trending in your library',trending)}
+  {!anime.length&&<div className="miru-empty-new"><Library size={22}/><b>Your catalogue is empty</b><span>Search AniList and add your first title.</span><button onClick={finder}>SEARCH ANIME</button></div>}
  </div>;
 }
 function Stat({value,label}:{value:number;label:string}){return <div className="stat-card"><b>{value}</b><span>{label}</span></div>}
