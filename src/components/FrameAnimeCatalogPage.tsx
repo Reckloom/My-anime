@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useState} from 'react';
-import {CalendarDays,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3,Save} from 'lucide-react';
+import {CalendarDays,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3,Save,X,ExternalLink,Play,Star,Users,Heart,Globe2,Building2,Timer,Tag} from 'lucide-react';
 import type {MediaItem} from '../types';
 import {FrameArtwork} from './FrameArtwork';
 import {supabase} from '../lib/supabase';
@@ -108,6 +108,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  const [savingProgress,setSavingProgress]=useState<string|null>(null);
  const [progressDraft,setProgressDraft]=useState<Record<string,string>>({});
  const [planDraft,setPlanDraft]=useState<Record<string,string>>({});
+ const [detail,setDetail]=useState<{row:CatalogRow;item:MediaItem}|null>(null);
 
  const load=async(force=false)=>{
   setLoading(true);setError('');
@@ -153,6 +154,8 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
   finally{setSavingProgress(null)}
  };
 
+ const showDetail=(row:CatalogRow,existing?:MediaItem)=>setDetail({row,item:toMedia(row,existing)});
+
  const addOrOpen=async(row:CatalogRow)=>{
   const existing=libraryMap.get(row.id);
   if(existing){open(existing);return;}
@@ -194,13 +197,13 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
       const pct=total&&total>0?Math.min(100,Math.round(progress/total*100)):0;
       const upcoming=tab!=='mine'&&((row as CatalogRow).status==='NOT_YET_RELEASED');
       return <article className="frame-catalog-card" key={item.anilistId||item.id}>
-       <button className="frame-catalog-poster" onClick={()=>open(item)}>
+       <button className="frame-catalog-poster" onClick={()=>showDetail(row as CatalogRow,existing)}>
         <FrameArtwork title={title} medium="anime" poster={item.poster} anilistId={item.anilistId} alt={title} loading="lazy"/>
         {upcoming&&<span className="frame-catalog-badge">UPCOMING</span>}
         {existing&&<span className="frame-catalog-owned">{item.status==='completed'?<Check size={12}/>:<Clock3 size={12}/>} {item.status==='planned'?'PLAN':item.status.toUpperCase()}</span>}
        </button>
        <div className="frame-catalog-copy">
-        <button className="frame-catalog-title" onClick={()=>open(item)}>{title}</button>
+        <button className="frame-catalog-title" onClick={()=>showDetail(row as CatalogRow,existing)}>{title}</button>
         <div className="frame-catalog-meta"><span>{row.format||'ANIME'}</span><span>{row.seasonYear||item.year||'—'}</span><span>{row.episodes||item.total||'—'} eps</span></div>
         <div className="frame-catalog-score">{row.averageScore?('★ '+(Number(row.averageScore)/10).toFixed(1)):item.score?('★ '+item.score.toFixed(1)):'No score'}{row.popularity?(' · '+Number(row.popularity).toLocaleString()+' popularity'):''}{row.favourites?(' · '+Number(row.favourites).toLocaleString()+' favourites'):''}</div>
         {tab!=='mine'&&<div className="frame-catalog-details">{row.countryOfOrigin&&<span>{row.countryOfOrigin}</span>}{row.studios?.nodes?.length&&<span>{row.studios.nodes.slice(0,2).map((s:{name?:string|null})=>s.name).filter(Boolean).join(' · ')}</span>}{row.duration&&<span>{row.duration} min/ep</span>}</div>}
@@ -222,7 +225,46 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
       </article>
     })}
    </div>}
+  {detail&&<AnimeDetailPanel detail={detail} update={update} savingProgress={savingProgress} progressDraft={progressDraft} planDraft={planDraft} setProgressDraft={setProgressDraft} setPlanDraft={setPlanDraft} saveProgress={saveProgress} setNextToWatch={setNextToWatch} close={()=>setDetail(null)} openEpisodeList={()=>{setDetail(null);open(detail.item)}}/>}
   {!loading&&tab!=='mine'&&!rows.length&&<div className="frame-catalog-empty"><h3>No anime found.</h3><p>Try another title or remove a filter.</p></div>}
   {tab!=='mine'&&<div className="frame-catalog-pagination"><button className="secondary" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page}</span><button className="secondary" disabled={loading||rows.length<24} onClick={()=>setPage(p=>p+1)}>Next <ChevronRight size={15}/></button>{lastUpdated&&<small>Updated {lastUpdated}</small>}</div>}
  </section>;
+}
+
+function AnimeDetailPanel({detail,update,savingProgress,progressDraft,planDraft,setProgressDraft,setPlanDraft,saveProgress,setNextToWatch,close,openEpisodeList}:{detail:{row:CatalogRow;item:MediaItem};update?:Props['update'];savingProgress:string|null;progressDraft:Record<string,string>;planDraft:Record<string,string>;setProgressDraft:React.Dispatch<React.SetStateAction<Record<string,string>>>;setPlanDraft:React.Dispatch<React.SetStateAction<Record<string,string>>>;saveProgress:(item:MediaItem)=>Promise<void>;setNextToWatch:(item:MediaItem)=>Promise<void>;close:()=>void;openEpisodeList:()=>void}){
+ const {row,item}=detail;
+ const title=titleOf(row);
+ const description=clean(row.description);
+ const progress=Number(item.progress||0);
+ const total=item.total;
+ const pct=total&&total>0?Math.min(100,Math.round(progress/total*100)):0;
+ const studios=(row.studios?.nodes||[]).map(s=>s.name).filter(Boolean) as string[];
+ const tags=(row.tags||[]).map(t=>t.name).filter(Boolean) as string[];
+ const relations=(row.relations?.edges||[]).filter(e=>e.node?.id);
+ const rank=(row.rankings||[]).find(r=>r.type==='RATED'&&r.allTime)?.rank;
+ return <div className="frame-detail-backdrop" role="dialog" aria-modal="true" aria-label={title} onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
+  <aside className="frame-detail-panel">
+   <button className="frame-detail-close" type="button" onClick={close} aria-label="Close details"><X size={18}/></button>
+   <div className="frame-detail-hero" style={row.bannerImage?{backgroundImage:'linear-gradient(90deg,rgba(7,7,8,.98),rgba(7,7,8,.75) 48%,rgba(7,7,8,.25)),linear-gradient(0deg,#070708,transparent 60%),url("'+row.bannerImage+'")'}:undefined}>
+    <div className="frame-detail-hero-copy">
+     <div className="frame-detail-kicker">{row.format||'ANIME'} {row.seasonYear?'· '+row.seasonYear:''} {row.status?'· '+row.status.replaceAll('_',' '):''}</div>
+     <h2>{title}</h2>
+     <div className="frame-detail-alt">{[row.title.english,row.title.romaji,row.title.native].filter(Boolean).filter(v=>v!==title).slice(0,2).join(' · ')}</div>
+     <div className="frame-detail-actions"><button className="primary" type="button" onClick={openEpisodeList}><Play size={15}/> Open episodes</button><button type="button" onClick={openEpisodeList}>Open in FRAME</button></div>
+    </div>
+    <div className="frame-detail-poster"><FrameArtwork title={title} medium="anime" poster={item.poster} anilistId={item.anilistId} alt={title}/></div>
+   </div>
+   <div className="frame-detail-body">
+    <div className="frame-detail-stats"><span><Star size={14}/> {row.averageScore?(Number(row.averageScore)/10).toFixed(1)+'/10':'—'}</span><span><Users size={14}/> {row.popularity?Number(row.popularity).toLocaleString():'—'}</span><span><Heart size={14}/> {row.favourites?Number(row.favourites).toLocaleString():'—'}</span>{rank&&<span># {rank} all-time</span>}</div>
+    {description&&<section className="frame-detail-section"><h3>Synopsis</h3><p>{description}</p></section>}
+    <section className="frame-detail-section"><h3>Anime details</h3><div className="frame-detail-facts"><span><Globe2 size={13}/> {row.countryOfOrigin||'Unknown origin'}</span><span><Timer size={13}/> {row.duration?row.duration+' min / episode':'Duration unknown'}</span><span><Tag size={13}/> {row.episodes?row.episodes+' episodes':'Episode count unknown'}</span><span><Building2 size={13}/> {studios.length?studios.join(', '):'Studio unknown'}</span><span>Source: {row.source||'Unknown'}</span>{row.startDate?.year&&<span>Started: {[row.startDate.year,row.startDate.month,row.startDate.day].filter(Boolean).join('-')}</span>}{row.endDate?.year&&<span>Ended: {[row.endDate.year,row.endDate.month,row.endDate.day].filter(Boolean).join('-')}</span>}</div></section>
+    {row.genres?.length&&<section className="frame-detail-section"><h3>Genres</h3><div className="frame-detail-chips">{row.genres.map(g=><span key={g}>{g}</span>)}</div></section>}
+    {tags.length>0&&<section className="frame-detail-section"><h3>Tags</h3><div className="frame-detail-chips muted">{tags.slice(0,18).map(t=><span key={t}>{t}</span>)}</div></section>}
+    {row.nextAiringEpisode?.episode&&<section className="frame-detail-airing"><div><small>NEXT EPISODE</small><b>Episode {row.nextAiringEpisode.episode}</b></div><span>{row.nextAiringEpisode.airingAt?new Date(Number(row.nextAiringEpisode.airingAt)*1000).toLocaleString():''}</span></section>}
+    {update&&<section className="frame-detail-section"><div className="frame-detail-progress-head"><h3>My progress</h3><strong>{progress}/{total||'—'} {pct?'· '+pct+'%':''}</strong></div><div className="frame-detail-progress"><i style={{width:pct+'%'}}/></div><div className="frame-detail-controls"><label>Watched through<input type="number" min="0" max={total||2000} inputMode="numeric" value={progressDraft[item.id]??String(progress)} onChange={e=>setProgressDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}><Save size={14}/> Save progress</button><label>Next episode<input type="number" min="1" max={total?total+1:2000} inputMode="numeric" value={planDraft[item.id]??String(Math.max(1,progress+1))} onChange={e=>setPlanDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" disabled={savingProgress===item.id+'-next'} onClick={()=>void setNextToWatch(item)}><Clock3 size={14}/> Set next</button></div></section>}
+    {relations.length>0&&<section className="frame-detail-section"><h3>Related anime</h3><div className="frame-detail-relations">{relations.slice(0,12).map((edge,i)=>{const n=edge.node!;const rt=String(edge.relationType||'RELATED').replaceAll('_',' ');const nt=n.title?.userPreferred||n.title?.english||n.title?.romaji||n.title?.native||'Untitled';return <div key={String(n.id||i)}><img src={n.coverImage?.large||''} alt="" loading="lazy"/><span><b>{nt}</b><small>{rt}</small></span></div>})}</div></section>}
+    {row.siteUrl&&<a className="frame-detail-source" href={row.siteUrl} target="_blank" rel="noreferrer">View full AniList entry <ExternalLink size={13}/></a>}
+   </div>
+  </aside>
+ </div>
 }
