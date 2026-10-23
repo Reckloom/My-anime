@@ -26,6 +26,14 @@ type CatalogRow={
  nextAiringEpisode?:{episode?:number|null;airingAt?:number|null}|null;
  studios?:{nodes?:{name?:string|null}[]}|null;
  siteUrl?:string|null;
+ countryOfOrigin?:string|null;
+ source?:string|null;
+ hashtag?:string|null;
+ favourites?:number|null;
+ isLicensed?:boolean|null;
+ isAdult?:boolean|null;
+ rankings?:{rank?:number|null;type?:string|null;allTime?:boolean|null;context?:string|null;season?:string|null;year?:number|null}[];
+ relations?:{edges?:{relationType?:string|null;node?:{id?:number|null;type?:string|null;format?:string|null;status?:string|null;title?:{userPreferred?:string|null;english?:string|null;romaji?:string|null;native?:string|null};coverImage?:{large?:string|null}}}[]}|null;
 };
 type Props={library:MediaItem[];open:(item:MediaItem)=>void;add:(item:MediaItem)=>Promise<boolean|void>;update?:(item:MediaItem)=>Promise<boolean|void>;guest?:boolean};
 
@@ -71,7 +79,9 @@ function toMedia(x:CatalogRow,existing?:MediaItem):MediaItem{
   duration:x.duration==null?undefined:Number(x.duration),
   airStart:x.startDate?.year?([x.startDate.year,x.startDate.month,x.startDate.day].filter(Boolean).join('-')):undefined,
   airEnd:x.endDate?.year?([x.endDate.year,x.endDate.month,x.endDate.day].filter(Boolean).join('-')):undefined,
-  favorite:existing?.favorite||false
+  favorite:existing?.favorite||false,
+  notes:existing?.notes||'',
+  data:{...(existing?.data||{}),catalogue:{countryOfOrigin:x.countryOfOrigin||undefined,source:x.source||undefined,favourites:x.favourites||0,hashtag:x.hashtag||undefined,isLicensed:x.isLicensed??undefined,relations:x.relations?.edges||[]}}
  };
 }
 async function invoke(body:Record<string,unknown>){
@@ -98,6 +108,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  const [pageInfo,setPageInfo]=useState<Record<string,unknown>>({});
  const [savingProgress,setSavingProgress]=useState<string|null>(null);
  const [progressDraft,setProgressDraft]=useState<Record<string,string>>({});
+ const [planDraft,setPlanDraft]=useState<Record<string,string>>({});
 
  const load=async(force=false)=>{
   setLoading(true);setError('');
@@ -123,6 +134,15 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  const mine=useMemo(()=>library.filter(x=>x.medium==='anime'&&!x.parentId),[library]);
  const visibleMine=useMemo(()=>selectedMine==='ALL'?mine:mine.filter(x=>x.status===selectedMine),[mine,selectedMine]);
  const libraryMap=useMemo(()=>new Map(library.filter(x=>x.medium==='anime').map(x=>[x.anilistId||0,x])),[library]);
+
+ const setNextToWatch=async(item:MediaItem)=>{
+  if(!update)return;
+  const raw=planDraft[item.id]??String(Math.max(1,Number(item.progress||0)+1));
+  const nextEpisode=Math.max(1,Math.min(item.total&&item.total>0?item.total+1:2000,Number(raw)||1));
+  setSavingProgress(item.id+'-next');
+  try{await update({...item,progress:Math.max(0,nextEpisode-1),status:'watching',notes:(item.notes||'').replace(/\\n?FRAME_NEXT_EPISODE:\\d+/g,'').trim()+'\\nFRAME_NEXT_EPISODE:'+nextEpisode});}
+  finally{setSavingProgress(null)}
+ };
 
  const saveProgress=async(item:MediaItem)=>{
   if(!update)return;
@@ -183,12 +203,18 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
        <div className="frame-catalog-copy">
         <button className="frame-catalog-title" onClick={()=>open(item)}>{title}</button>
         <div className="frame-catalog-meta"><span>{row.format||'ANIME'}</span><span>{row.seasonYear||item.year||'—'}</span><span>{row.episodes||item.total||'—'} eps</span></div>
-        <div className="frame-catalog-score">{row.averageScore?('★ '+(Number(row.averageScore)/10).toFixed(1)):item.score?('★ '+item.score.toFixed(1)):'No score'}{row.popularity?(' · '+Number(row.popularity).toLocaleString()+' popularity'):''}</div>
+        <div className="frame-catalog-score">{row.averageScore?('★ '+(Number(row.averageScore)/10).toFixed(1)):item.score?('★ '+item.score.toFixed(1)):'No score'}{row.popularity?(' · '+Number(row.popularity).toLocaleString()+' popularity'):''}{row.favourites?(' · '+Number(row.favourites).toLocaleString()+' favourites'):''}</div>
+        {tab!=='mine'&&<div className="frame-catalog-details">{row.countryOfOrigin&&<span>{row.countryOfOrigin}</span>}{row.studios?.nodes?.length&&<span>{row.studios.nodes.slice(0,2).map(s=>s.name).filter(Boolean).join(' · ')}</span>}{row.duration&&<span>{row.duration} min/ep</span>}</div>}
+        {tab!=='mine'&&row.description&&<p className="frame-catalog-description">{clean(row.description).slice(0,150)}{clean(row.description).length>150?'…':''}</p>}
         {tab!=='mine'&&row.nextAiringEpisode?.episode&&<small className="frame-catalog-next">Next: EP {row.nextAiringEpisode.episode}{row.nextAiringEpisode.airingAt?(' · '+new Date(Number(row.nextAiringEpisode.airingAt)*1000).toLocaleDateString()):''}</small>}
         {existing&&<div className="frame-catalog-progress"><i style={{width:pct+'%'}}/><span>{progress}/{total||'—'}</span></div>}
         {existing&&update&&<div className="frame-catalog-quick-progress">
           <label><span>Watched through</span><input type="number" min="0" max={total&&total>0?total:2000} inputMode="numeric" value={progressDraft[item.id]??String(progress)} onChange={e=>setProgressDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label>
-          <button className="secondary" type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}>{savingProgress===item.id?<RefreshCw size={13} className="spin"/>:<Save size={13}/>} Save</button>
+          <button className="secondary" type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}>{savingProgress===item.id?<RefreshCw size={13} className="spin"/>:<Save size={13}/>} Watched through</button>
+        </div>
+        <div className="frame-catalog-quick-progress frame-catalog-plan-progress">
+          <label><span>Next episode to watch</span><input type="number" min="1" max={total&&total>0?total+1:2000} inputMode="numeric" value={planDraft[item.id]??String(Math.max(1,progress+1))} onChange={e=>setPlanDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label>
+          <button className="secondary" type="button" disabled={savingProgress===item.id+'-next'} onClick={()=>void setNextToWatch(item)}>{savingProgress===item.id+'-next'?<RefreshCw size={13} className="spin"/>:<Clock3 size={13}/>} Set next</button>
         </div>}
         {!existing&&<button className="secondary frame-catalog-add" disabled={busyId===row.id} onClick={()=>void addOrOpen(row)}>{busyId===row.id?'Adding…':<><Plus size={14}/> {upcoming?'Add to plan':'Add to FRAME'}</>}</button>}
        </div>
