@@ -5485,3 +5485,121 @@ body{background:var(--f-bg)!important;color:var(--f-text)}
 @media(max-width:1250px){.miruro-grid{grid-template-columns:repeat(6,minmax(0,1fr))!important}.miruro-content-layout{grid-template-columns:minmax(0,1fr) 245px!important}}
 @media(max-width:1050px){.miruro-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}.miruro-content-layout{grid-template-columns:1fr!important}.miruro-right-rail{display:grid!important;grid-template-columns:1fr 1fr!important;border-left:0!important;padding:24px 0 0!important;border-top:1px solid #1c1c20!important}}
 @media(max-width:800px){.miruro-hero{margin:0 -10px 12px!important;height:390px!important;min-height:390px!important}.miruro-hero-copy{left:18px!important;bottom:32px!important}.miruro-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.miruro-content-layout{display:block!important}.miruro-right-rail{display:block!important;margin-top:26px!important}.miruro-section-tabs{gap:10px!important}.miruro-section-tabs button{font-size:8px!important;padding:10px 0!important}}
+
+/* FRAME NEBULA — clean Miruro-inspired catalogue shell. This supersedes all earlier FRAME shells. */
+:root{--miru-bg:#070708;--miru-panel:#0d0d10;--miru-line:#1d1d21;--miru-muted:#73737b;--miru-text:#ededee}
+html,body,#root{background:var(--miru-bg)!important;color:var(--miru-text)!important}
+body{overflow-x:hidden!important}
+.miru-sidebar{position:fixed!important;z-index:90!important;left:0!important;top:0!important;bottom:0!important;width:188px!important;background:#09090b!important;border-right:1px solid #1c1c20!important;padding:20px 12px!important;display:flex!important;flex-direction:column!important}
+.miru-brand{height:52px!important;padding:0 10px!important;border:0!important;background:transparent!important;color:#f4f4f5!important;display:flex!important;align-items:center!important;gap:11px!important;text-align:left!important}
+.miru-brand .frame-logo-mark{width:27px!important;height:27px!important}
+.miru-brand .frame-logo-mark img{width:100%!important;height:100%!important}
+.miru-brand>span{font-size:13px!important;font-weight:900!important;letter-spacing:.25em!important}
+.miru-side-label{margin:28px 10px 8px!important;color:#4d4d54!important;font-size:8px!important;font-weight:800!important;letter-spacing:.18em!important}
+.miru-nav{display:grid!important;gap:2px!important}
+.miru-nav button{height:40px!important;width:100%!important;padding:0 11px!important;border:0!important;background:transparent!important;border-radius:3px!important;color:#707078!important;display:flex!important;align-items:center!important;gap:12px!important;text-align:left!important;font-size:11px!important}
+.miru-nav button:hover{background:#131316!important;color:#ddd!important}
+.miru-nav button.active{background:#17171a!important;color:#fff!important;box-shadow:inset 2px 0 #eee!important}
+.miru-side-foot{margin-top:auto;border-top:1px solid #1a1a1d!important;padding:16px 10px 4px!important}
+.miru-side-foot span{display:block;color:#4e4e55!important;font-size:7px!important;letter-spacing:.16em!important}
+.miru-side-foot small{display:block;color:#686870!important;font-size:9px!important;margin-top:5px!important}
+.miru-topbar{position:fixed!important;z-index:85!important;left:188px!important;right:0!important;top:0!important;height:64px!important;background:rgba(7,7,8,.92)!important;border-bottom:1px solid #1a1a1d!important;backdrop-filter:blur(18px)!important;display:flex!important;align-items:center!important;padding:0 24px!important}
+.miru-search{width:min(520px,52vw)!important;height:38px!important;display:flex!important;align-items:center!important;gap:10px!important;padding:0 13px!important;background:#101012!important;border:1px solid #222226!important;border-radius:3px!important;color:#666!important}
+.miru-search input{width:100%!important;height:100%!important;border:0!important;outline:0!important;background:transparent!important;color:#ddd!important;font-size:11px!important}
+.miru-search input::placeholder{color:#55555d!important}
+.miru-top-actions{margin-left:auto!important;display:flex!important;align-items:center!important;gap:8px!important}
+.miru-search-btn,.miru-signin{height:36px!important;border:1px solid #27272b!important;background:#141416!important;color:#bbb!important;padding:0 12px!important;font-size:9px!important;letter-spacing:.08em!important;border-radius:3px!important}
+.miru-search-btn:hover,.miru-signin:hover{color:#fff!important;background:#1a1a1d!important}
+.miru-avatar{width:34px!important;height:34px!important;border-radius:50%!important;border:1px solid #2a2a2e!important;background:#151518!important;color:#ddd!important;overflow:hidden!important;font-size:11px!important;font-weight:700!important}
+.miru-avatar img{width:100%!important;height:100%!important;object-fit:cover!important}
+.miru-menu-mobile{display:none!important}
+.miru-mobile-menu{display:none!important}
+.miru-main{margin-left:188px!important;padding-top:64px!important;min-height:100vh!important}
+.miru-main>.page{width:100%!important;max-width:none!important;padding:42px 28px 100px!important}
+.miru-main>.frame-library-v3{max-width:none!important;padding:30px 28px 100px!important}
+.miru-home-new{width:100%!important;min-height:calc(100vh - 64px)!important;padding:0 26px 80px!important;background:#070708!important}
+.miru-spotlight-new{height:520px!important;position:relative!important;overflow:hidden!important;background-color:#0e0e11!important;background-size:cover!important;background-position:center!important;margin:0 -26px!important}
+.miru-spotlight-new:after{content:"";position:absolute!important;inset:0!important;background:linear-gradient(0deg,#070708 0%,transparent 28%),linear-gradient(90deg,rgba(7,7,8,.15),transparent 70%)!important;pointer-events:none!important}
+.miru-spotlight-copy{position:absolute!important;z-index:2!important;left:48px!important;bottom:54px!important;width:min(650px,58vw)!important}
+.miru-kicker{font-size:9px!important;letter-spacing:.2em!important;color:#aaa!important;font-weight:700!important}
+.miru-spotlight-copy h1{font-size:clamp(38px,4.8vw,70px)!important;line-height:.96!important;letter-spacing:-.055em!important;margin:10px 0 12px!important;color:#f4f4f5!important}
+.miru-facts{display:flex!important;gap:12px!important;margin:0 0 13px!important;color:#c4c4c8!important;font-size:10px!important}
+.miru-facts span{padding-right:12px!important;border-right:1px solid #555!important}
+.miru-facts span:last-child{border-right:0!important}
+.miru-spotlight-copy p{max-width:600px!important;margin:0 0 19px!important;color:#aaaab0!important;font-size:12px!important;line-height:1.65!important;display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+.miru-spot-actions{display:flex!important;gap:7px!important}
+.miru-spot-actions button{height:35px!important;border:0!important;border-radius:3px!important;background:#171719!important;color:#eee!important;padding:0 14px!important;display:flex!important;align-items:center!important;gap:7px!important;font-size:9px!important;letter-spacing:.04em!important}
+.miru-spot-actions .watch{background:#eee!important;color:#111!important}
+.miru-genre-strip{display:flex!important;gap:5px!important;overflow:auto!important;padding:8px 0 17px!important;scrollbar-width:none!important}
+.miru-genre-strip::-webkit-scrollbar{display:none!important}
+.miru-genre-strip button{flex:0 0 auto!important;height:28px!important;padding:0 12px!important;border:1px solid #19191c!important;background:#0e0e10!important;color:#77777e!important;border-radius:2px!important;font-size:8px!important}
+.miru-genre-strip button:hover{color:#ddd!important;border-color:#333337!important}
+.miru-tabs-new{height:43px!important;border-bottom:1px solid #202024!important;display:flex!important;gap:25px!important;align-items:flex-end!important;margin-bottom:24px!important}
+.miru-tabs-new button{height:43px!important;border:0!important;background:transparent!important;color:#5f5f67!important;padding:0 1px!important;font-size:9px!important;letter-spacing:.12em!important}
+.miru-tabs-new button.active{color:#eee!important;box-shadow:inset 0 -2px #eee!important}
+.miru-shelf{margin-bottom:34px!important}
+.miru-shelf-head{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;margin-bottom:12px!important}
+.miru-shelf-head span{display:block!important;color:#55555d!important;font-size:7px!important;letter-spacing:.18em!important}
+.miru-shelf-head h2{margin:4px 0 0!important;color:#eee!important;font-size:18px!important;font-weight:600!important;letter-spacing:-.02em!important}
+.miru-shelf-head button{border:0!important;background:transparent!important;color:#68686f!important;display:flex!important;align-items:center!important;gap:4px!important;font-size:8px!important;letter-spacing:.1em!important}
+.miru-shelf-head button:hover{color:#fff!important}
+.miru-poster-row{display:grid!important;grid-template-columns:repeat(10,minmax(0,1fr))!important;gap:11px!important}
+.miru-poster-row .media-card{min-width:0!important;background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}
+.miru-poster-row .media-poster{aspect-ratio:2/3!important;border-radius:2px!important;overflow:hidden!important;background:#101013!important;box-shadow:none!important}
+.miru-poster-row .media-poster img{transition:transform .2s ease!important}
+.miru-poster-row .media-card:hover .media-poster img{transform:scale(1.035)!important}
+.miru-poster-row .media-copy{padding:7px 1px 0!important}
+.miru-poster-row .media-copy b{font-size:10px!important;font-weight:550!important;line-height:1.25!important;display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.miru-poster-row .media-copy small{display:block!important;margin-top:4px!important;color:#5e5e66!important;font-size:8px!important}
+.miru-poster-row .card-progress,.miru-poster-row .personal-line,.miru-poster-row .hierarchy-line{display:none!important}
+.miru-empty-new{min-height:330px!important;border-top:1px solid #1b1b1e!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-direction:column!important;gap:9px!important;color:#777!important}
+.miru-empty-new b{color:#ddd!important;font-size:14px!important}
+.miru-empty-new span{font-size:10px!important;color:#5f5f66!important}
+.miru-empty-new button{margin-top:6px!important;height:34px!important;padding:0 14px!important;border:0!important;background:#eee!important;color:#111!important;border-radius:3px!important;font-size:9px!important}
+.miru-main .frame-library-v3{background:#070708!important}
+.miru-main .library-v3-head{border-bottom:1px solid #1c1c20!important;padding:15px 0 25px!important}
+.miru-main .library-v3-head h1{font-size:44px!important;font-weight:600!important}
+.miru-main .library-v3-focus{border-bottom:1px solid #1c1c20!important}
+.miru-main .library-v3-grid{gap:20px 11px!important}
+.miru-main .library-v3-grid .media-poster{border-radius:2px!important;box-shadow:none!important}
+.miru-main .library-v3-grid .media-copy b{font-size:10px!important}
+.miru-main .library-v3-grid .media-copy small{font-size:8px!important}
+.miru-main .settings-page,.miru-main .connections-page,.miru-main .radar-page{max-width:1200px!important;margin:0 auto!important}
+.mobile-bottom{display:none!important}
+@media(max-width:1100px){
+ .miru-sidebar{width:72px!important;padding:15px 8px!important}
+ .miru-brand>span,.miru-side-label,.miru-nav button span,.miru-side-foot{display:none!important}
+ .miru-brand{justify-content:center!important;padding:0!important}
+ .miru-nav button{justify-content:center!important;padding:0!important}
+ .miru-topbar{left:72px!important}
+ .miru-main{margin-left:72px!important}
+ .miru-poster-row{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+}
+@media(max-width:800px){
+ .miru-sidebar{display:none!important}
+ .miru-topbar{left:0!important;height:56px!important;padding:0 10px!important}
+ .miru-main{margin-left:0!important;padding-top:56px!important}
+ .miru-search{height:36px!important;flex:1!important;width:auto!important}
+ .miru-search-btn{display:none!important}
+ .miru-avatar{width:32px!important;height:32px!important}
+ .miru-menu-mobile{display:grid!important;place-items:center!important;width:34px!important;height:34px!important;border:1px solid #252529!important;background:#111113!important;color:#aaa!important;border-radius:3px!important}
+ .miru-mobile-menu{position:fixed!important;z-index:84!important;top:56px!important;left:0!important;right:0!important;background:#0b0b0d!important;border-bottom:1px solid #222225!important;padding:8px!important;display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:3px!important}
+ .miru-mobile-menu button{height:38px!important;border:0!important;background:#131316!important;color:#aaa!important;font-size:10px!important;border-radius:2px!important}
+ .miru-main>.page{padding:28px 14px 90px!important}
+ .miru-main>.frame-library-v3{padding:22px 14px 90px!important}
+ .miru-home-new{padding:0 10px 70px!important}
+ .miru-spotlight-new{height:430px!important;margin:0 -10px!important}
+ .miru-spotlight-copy{left:18px!important;right:18px!important;bottom:34px!important;width:auto!important}
+ .miru-spotlight-copy h1{font-size:35px!important}
+ .miru-poster-row{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px 7px!important;overflow:hidden!important}
+ .miru-poster-row .media-copy b{font-size:9px!important}
+ .miru-tabs-new{gap:17px!important;overflow:auto!important}
+ .miru-tabs-new button{font-size:8px!important;white-space:nowrap!important}
+}
+@media(max-width:520px){
+ .miru-poster-row{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:17px 8px!important}
+ .miru-shelf{margin-bottom:27px!important}
+ .miru-shelf-head h2{font-size:15px!important}
+ .miru-spotlight-new{height:410px!important}
+ .miru-genre-strip{padding-bottom:13px!important}
+}
