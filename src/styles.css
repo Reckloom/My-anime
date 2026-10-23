@@ -4083,3 +4083,12 @@ html,body,#root{background:var(--frame-bg);color:var(--frame-text)}
  .frame-anime-episode-filters select,.frame-anime-episode-filters input{flex:1;width:100%!important}
  .frame-anime-episode-range-separator{display:none}
 }
+
+
+.frame-episode-fallback-tools{display:grid;grid-template-columns:minmax(220px,1fr) auto auto auto;align-items:center;gap:7px;margin:12px 0}
+.frame-episode-fallback-tools label{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid rgba(255,255,255,.08);background:#101015;border-radius:7px;color:#888}
+.frame-episode-fallback-tools label:first-child{min-width:0}
+.frame-episode-fallback-tools input,.frame-episode-fallback-tools select{border:0!important;background:transparent!important;outline:0;color:#eee;min-height:28px;width:100%;font-size:10px}
+.frame-episode-fallback-tools label:not(:first-child) span{font-size:9px;color:#777;white-space:nowrap}
+.frame-episode-fallback-tools label:not(:first-child) input{width:70px}
+@media(max-width:800px){.frame-episode-fallback-tools{grid-template-columns:1fr 1fr}.frame-episode-fallback-tools label:first-child{grid-column:1/-1}.frame-episode-fallback-tools label:not(:first-child) input{width:100%}}
