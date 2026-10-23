@@ -208,7 +208,9 @@ test.describe('FRAME movie discovery UI', () => {
 test.describe('FRAME global voice', () => {
   test('opens the public global call and exposes the simple controls', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Global Call', exact: true }).first().click();
+    await page.getByTitle('Open quick actions').click();
+    await page.getByTitle('Call').click();
+    await page.getByRole('button', { name: 'Open call center', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Global Call', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Join global call', exact: true })).toBeVisible();
     await expect(page.getByText(/Public global calls are separate from private one-to-one calls/)).toBeVisible();
@@ -218,7 +220,9 @@ test.describe('FRAME global voice', () => {
 test.describe('FRAME private voice rooms', () => {
   test('exposes create and join-by-code controls', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Global Call', exact: true }).first().click();
+    await page.getByTitle('Open quick actions').click();
+    await page.getByTitle('Call').click();
+    await page.getByRole('button', { name: 'Open call center', exact: true }).click();
     await page.getByRole('tab', { name: 'Private Rooms', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Private Rooms', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Create room', exact: true })).toBeVisible();
