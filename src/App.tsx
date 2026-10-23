@@ -7,6 +7,7 @@ const FrameGlobalChat=lazy(()=>import('./components/FrameGlobalChat').then(m=>({
 const FrameDetail=lazy(()=>import('./components/FrameDetail').then(m=>({default:m.FrameDetail})));
 const FrameAnimeCatalogPage=lazy(()=>import('./components/FrameAnimeCatalogPage').then(m=>({default:m.FrameAnimeCatalogPage})));
 const FrameMyAnimeDashboard=lazy(()=>import('./components/FrameMyAnimeDashboard').then(m=>({default:m.FrameMyAnimeDashboard})));
+const FrameSchedulePage=lazy(()=>import('./components/FrameSchedulePage').then(m=>({default:m.FrameSchedulePage})));
 const FrameSocial=lazy(()=>import('./components/FrameSocial').then(m=>({default:m.FrameSocial})));
 const CallsPage=lazy(()=>import('./components/FrameCalls').then(m=>({default:m.CallsPage})));
 const FrameDirectCall=lazy(()=>import('./components/FrameDirectCall').then(m=>({default:m.FrameDirectCall})));
@@ -1173,7 +1174,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    {page==='manga'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manga'),sortMode)} library={items} filters={['manga']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='manhwa'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manhwa'),sortMode)} library={items} filters={['manhwa']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
-   {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
+   {page==='radar'&&<Suspense fallback={<FrameRouteFallback/>}><FrameSchedulePage library={items} open={openDetail}/></Suspense>}
    {page==='friends'&&<Suspense fallback={<FrameRouteFallback/>}><FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);go('friend-library')}} onCall={setDirectCall}/></Suspense>}
    {page==='chat'&&<Suspense fallback={<FrameRouteFallback/>}><FrameGlobalChat uid={uid} guest={guest}/></Suspense>} 
    {page==='calls'&&<Suspense fallback={<FrameRouteFallback/>}><CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/></Suspense>}
