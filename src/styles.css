@@ -5215,3 +5215,44 @@ html,body,#root{max-width:100%;overflow-x:hidden}
     width:100%;
   }
 }
+
+/* External episode catalogue controls */
+.frame-episode-tools{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:14px 0;
+}
+.frame-episode-search{
+  flex:1 1 240px;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:40px;
+  padding:0 12px;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;
+  background:rgba(255,255,255,.025);
+}
+.frame-episode-search input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:inherit}
+.frame-episode-filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.frame-episode-filters label{display:flex;align-items:center;gap:6px}
+.frame-episode-filters label span{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#777983}
+.frame-episode-filters input,.frame-episode-filters select{
+  min-height:38px;
+  min-width:74px;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:9px;
+  background:rgba(255,255,255,.025);
+  color:inherit;
+  padding:0 9px;
+}
+@media(max-width:560px){
+  .frame-episode-tools{align-items:stretch;flex-direction:column}
+  .frame-episode-search{flex-basis:auto;width:100%}
+  .frame-episode-filters{width:100%;display:grid;grid-template-columns:1fr 1fr 14px 1fr}
+  .frame-episode-filters label{min-width:0}
+  .frame-episode-filters input,.frame-episode-filters select{width:100%;min-width:0}
+}
