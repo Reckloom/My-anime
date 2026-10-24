@@ -72,14 +72,21 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
           <ChevronRight size={17}/>
         </summary>
         <div className="frame-anime-episode-rows" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))',gap:12}}>
-          {shown.map(item => <button type="button" className="frame-anime-episode-row" key={item.id} onClick={() => onOpen(item)} style={{display:'flex',flexDirection:'column',alignItems:'stretch',gap:8,textAlign:'left',padding:10,minWidth:0,height:'100%'}}>
-            <span style={{position:'relative',display:'block',width:'100%',aspectRatio:'16 / 9',overflow:'hidden',borderRadius:10,background:'var(--surface, #171717)'}}>
-              <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={parentPoster} parentTitle={parentTitle || title} parentMedium="anime" parentAnilistId={parentAnilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
-              <span className="frame-anime-episode-number" style={{position:'absolute',left:8,top:8}}>{String(episodeNumber(item)).padStart(3, '0')}</span>
-            </span>
-            <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episode\s*\d+\s*[—–-]?\s*/i, '') || item.title}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
-            <span className="frame-anime-episode-status">{episodeNumber(item) <= currentProgress || item.status === 'completed' ? 'Watched' : 'Unwatched'} <ChevronRight size={13}/></span><span className="frame-anime-episode-actions">{episodeNumber(item) > currentProgress ? <button type="button" className="secondary" onClick={e=>{e.stopPropagation();void onMarkThrough(episodeNumber(item))}}>Mark through {episodeNumber(item)}</button> : <span className="muted">Watched</span>}</span>
-          </button>)}
+          {shown.map(item => {
+            const number=episodeNumber(item);
+            const watched=number<=currentProgress||item.status==='completed';
+            return <article className="frame-anime-episode-row" key={item.id} style={{display:'flex',flexDirection:'column',alignItems:'stretch',gap:8,textAlign:'left',padding:10,minWidth:0,height:'100%'}}>
+              <button type="button" className="frame-anime-episode-open" onClick={() => onOpen(item)} aria-label={'Open episode '+number}>
+                <span style={{position:'relative',display:'block',width:'100%',aspectRatio:'16 / 9',overflow:'hidden',borderRadius:10,background:'var(--surface, #171717)'}}>
+                  <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={parentPoster} parentTitle={parentTitle || title} parentMedium="anime" parentAnilistId={parentAnilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
+                  <span className="frame-anime-episode-number" style={{position:'absolute',left:8,top:8}}>{String(number).padStart(3, '0')}</span>
+                </span>
+                <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episode\s*\d+\s*[—–-]?\s*/i, '') || item.title}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
+              </button>
+              <div className="frame-anime-episode-status" aria-label={'Episode '+number+' status'}>{watched ? 'Watched' : 'Unwatched'} <ChevronRight size={13}/></div>
+              <div className="frame-anime-episode-actions">{!watched ? <button type="button" className="secondary" onClick={() => void onMarkThrough(number)}>Mark through {number}</button> : <span className="muted">Watched</span>}</div>
+            </article>;
+          })}
         </div>
       </details>
     </div> : <div className="frame-anime-episode-empty-state">
