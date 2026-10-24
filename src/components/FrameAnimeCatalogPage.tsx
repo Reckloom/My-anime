@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
 import {CalendarDays,SlidersHorizontal,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3,Save,X,ExternalLink,Play,Star,Users,Heart,Globe2,Building2,Timer,Tag} from 'lucide-react';
 import type {MediaItem} from '../types';
@@ -115,6 +115,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
  const [genre,setGenre]=useState('ALL');
   const [filtersOpen,setFiltersOpen]=useState(false);
  const [onlyUntracked,setOnlyUntracked]=useState(false);
+ const autoPlannedPages=useRef(new Set<string>());
 
  const load=async(force=false)=>{
   setLoading(true);setError('');
@@ -136,6 +137,18 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
  useEffect(()=>{setPage(1)},[query,sort,status,format,season,tab]);
  useEffect(()=>{if(tab==='mine')return;const timer=window.setTimeout(()=>void load(),query.trim()?300:0);return()=>window.clearTimeout(timer)},[page,query,sort,status,format,season,tab]);
  useEffect(()=>{if(tab!=='upcoming')return;const timer=window.setInterval(()=>void load(true),15*60*1000);return()=>window.clearInterval(timer)},[tab,page]);
+ useEffect(()=>{
+  if(tab!=='upcoming'||!batchAdd||loading||!displayRows.length)return;
+  const key='upcoming:'+page+':'+displayRows.map(row=>row.id).join(',');
+  if(autoPlannedPages.current.has(key))return;
+  autoPlannedPages.current.add(key);
+  const fresh=displayRows.filter(row=>!libraryMap.has(row.id)).map(row=>({...toMedia(row),status:'planned' as const,progress:0}));
+  if(!fresh.length)return;
+  void batchAdd(fresh).then(ok=>{
+   if(ok===false)autoPlannedPages.current.delete(key);
+   else setLastUpdated('Auto-added '+fresh.length+' upcoming titles to Plan to Watch');
+  }).catch(()=>autoPlannedPages.current.delete(key));
+ },[tab,page,displayRows,libraryMap,batchAdd,loading]);
 
  const mine=useMemo(()=>library.filter(x=>x.medium==='anime'&&!x.parentId),[library]);
  const visibleMine=useMemo(()=>selectedMine==='ALL'?mine:mine.filter(x=>x.status===selectedMine),[mine,selectedMine]);
