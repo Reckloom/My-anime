@@ -73,7 +73,8 @@ test.describe('FRAME core smoke flow', () => {
   test('logo returns Home and account bubble opens Settings', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Go to FRAME home', exact: true }).click();
-    await expect(page.locator('h1').filter({ hasText: /Build your anime library\./ })).toBeVisible();
+    await expect(page.locator('.frame-home-new')).toBeVisible();
+    await expect(page.getByText('FEATURED IN YOUR LIBRARY', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
     await expect(page.locator('h1').filter({ hasText: /^Settings$/ })).toBeVisible();
   });
