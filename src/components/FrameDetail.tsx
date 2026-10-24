@@ -369,7 +369,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
     
    {d.medium==='anime'&&(()=>{
       const episodeRows=(libraryChildrenByParent.get(d.id)||[]).filter(x=>x.sourceProvider==='frame-anime-episode'||/^one-piece-episode-\d+$/.test(String(x.externalId||''))||Boolean(x.episode?.episodeNumber));
-      return <>{episodeRows.length>0?<FrameAnimeEpisodeCatalogue title={d.title} episodes={episodeRows} parentPoster={d.poster} parentTitle={d.title} parentAnilistId={d.anilistId} onOpen={openRelated}/>:<FrameEpisodeList title={d.title} malId={d.externalLinks?.malId} currentProgress={d.progress} onMarkThrough={async episode=>{progress(episode);}}/>}</>;
+      return <>{episodeRows.length>0?<FrameAnimeEpisodeCatalogue title={d.title} episodes={episodeRows} parentPoster={d.poster} parentTitle={d.title} parentAnilistId={d.anilistId} currentProgress={d.progress} onMarkThrough={setWatchedThrough} onOpen={openRelated}/>:<FrameEpisodeList title={d.title} malId={d.externalLinks?.malId} currentProgress={d.progress} onMarkThrough={async episode=>{progress(episode);}}/>}</>;
     })()}
 
 
