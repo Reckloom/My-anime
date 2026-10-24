@@ -1,5 +1,5 @@
 import {lazy,Suspense,useEffect,useMemo,useRef,useState} from 'react';
-import {CalendarDays,ChevronRight,CirclePlus,Compass,Gamepad2,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Radio,RefreshCw,Search,Star,Users,X} from 'lucide-react';
+import {CalendarDays,ChevronRight,CirclePlus,Compass,Gamepad2,Heart,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Radio,RefreshCw,Search,Star,Users,X} from 'lucide-react';
 import {useAuth} from './auth/Auth';
 import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
@@ -1150,7 +1150,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    <button className="miru-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><span>FRAME</span></button>
    <div className="miru-side-label">MENU</div>
    <nav className="miru-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['anime','Anime'],Compass],[['radar','Schedule'],CalendarDays],[['connections','Connections'],Link2],[['settings','Settings'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={17}/><span>{label}</span></button>})}
+    {[[['home','Home'],HomeIcon],[['anime','Discover'],Compass],[['library','My Anime'],Library],[['radar','Schedule'],CalendarDays],[['favorites','Favorites'],Heart],[['settings','Settings'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={17}/><span>{label}</span></button>})}
    </nav>
    <div className="miru-side-foot"><span>PRIVATE LIBRARY</span><small>FRAME catalogue</small></div>
   </header>
@@ -1166,11 +1166,12 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <button className="miru-menu-mobile" aria-label={menu?'Close menu':'Open menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="miru-mobile-menu">{[['home','Home'],['library','Library'],['anime','Anime'],['radar','Schedule'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  {menu&&<div className="miru-mobile-menu">{[['home','Home'],['anime','Discover'],['library','My Anime'],['radar','Schedule'],['favorites','Favorites'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
   <main className="miru-main">
    {page==='home'&&<Home items={sortMedia(items,sortMode).filter(x=>!x.parentId)} total={items.filter(x=>!x.parentId).length} open={openDetail} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
    {page==='library'&&<Suspense fallback={<FrameRouteFallback/>}><FrameMyAnimeDashboard items={items} open={openDetail} add={()=>setFinder(true)} update={async x=>save(itemsRef.current.map(i=>i.id===x.id?x:i))}/></Suspense>}
    {page==='anime'&&<Suspense fallback={<FrameRouteFallback/>}><FrameAnimeCatalogPage library={items} open={openDetail} add={importItem} update={async x=>save(itemsRef.current.map(i=>i.id===x.id?x:i))} guest={guest}/></Suspense>}
+   {page==='favorites'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.favorite),sortMode)} library={items} filters={['anime']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='manga'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manga'),sortMode)} library={items} filters={['manga']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='manhwa'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manhwa'),sortMode)} library={items} filters={['manhwa']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
@@ -1183,7 +1184,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
   </main>
   <nav className="mobile-bottom">
-   {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['chat','Chat'],MessageCircle],[['friends','Friends'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
+   {[[['home','Home'],HomeIcon],[['library','My Anime'],Library],[['search','Search'],Search],[['favorites','Favorites'],Heart],[['settings','Settings'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)} aria-label={label}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
   <Suspense fallback={<FrameRouteFallback/>}>{selected&&<FrameDetail item={selected} library={items} navigationItems={shown.length?shown:items.filter(x=>!x.parentId)} navigate={navigateDetail} close={closeDetail} onRefreshMetadata={refreshMetadata} onDelete={async id=>{const target=items.find(i=>i.id===id);const children=items.filter(i=>i.parentId===id);const next=items.filter(i=>i.id!==id).map(i=>i.parentId===id?{...i,parentId:undefined}:i);const client=supabase;if(client&&user?.id){const {error}=await client.from('media_items').delete().eq('id',id).eq('user_id',user.id);if(error){setAppMessage('Delete failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return}}closeDetail();await save(next);await removeOwnedArtwork(target?.poster);if(target?.backdrop&&target.backdrop!==target.poster)await removeOwnedArtwork(target.backdrop);if(children.length){setAppMessage('Entry deleted. Its child entries were kept and detached.');window.setTimeout(()=>setAppMessage(''),5000)}}} save={async x=>{const previous=items.find(i=>i.id===x.id);const ok=await save(items.map(i=>i.id===x.id?x:i));if(ok&&previous){if(previous.poster&&previous.poster!==x.poster)await removeOwnedArtwork(previous.poster);if(previous.backdrop&&previous.backdrop!==x.backdrop&&previous.backdrop!==previous.poster&&previous.backdrop!==x.poster)await removeOwnedArtwork(previous.backdrop)}return ok}}/>}</Suspense>
   {finder&&<AniListSearch initialQuery={query} guest={guest} library={items} close={()=>setFinder(false)} onImported={importItem} onManual={()=>{setFinder(false);setManualEntry(true)}} />}
