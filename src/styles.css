@@ -781,6 +781,45 @@ html,body{background:var(--frame-bg,#09090d);color:var(--frame-text,#f5f7f9)}
 .direct-call-top{display:flex;justify-content:space-between;align-items:center}.direct-call-top .icon-button{border:1px solid var(--frame-line);background:var(--frame-surface-2);color:var(--frame-muted);border-radius:10px;width:34px;height:34px;display:grid;place-items:center}.direct-call-status{display:inline-flex;align-items:center;gap:5px;font-size:8px;letter-spacing:.14em;color:var(--frame-accent);font-weight:800}
 .direct-call-avatar{width:112px;height:112px;border-radius:34px;margin:26px auto 14px;background:var(--frame-surface-2);border:1px solid var(--frame-line);display:grid;place-items:center;overflow:hidden;box-shadow:0 20px 45px #0002}.direct-call-avatar img{width:100%;height:100%;object-fit:cover}.direct-call-avatar span{position:absolute;font-weight:900;font-size:34px;color:var(--frame-accent)}.direct-call-card>small{color:var(--frame-muted);font-size:9px}.direct-call-card h2{font-size:27px;margin:6px 0}.direct-call-card p{color:var(--frame-muted);font-size:10px;line-height:1.5}.direct-call-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:18px}.direct-call-actions .primary,.direct-call-actions .danger,.direct-call-actions .secondary{min-width:110px;justify-content:center}.call-answer{background:#20996b!important;color:#fff!important;border-color:#20996b!important}
 @media(max-width:800px){.theme-picker{grid-template-columns:repeat(2,minmax(0,1fr))}.frame-quick-dock{left:12px;right:12px;bottom:74px;justify-content:center}.frame-quick-dock button{flex:1;min-width:0}.direct-call-card{border-radius:24px;padding:19px}}
+@media(max-width:700px){
+ .detail-overlay{padding:0;place-items:stretch;overflow:hidden}
+ .detail-modal-shell{width:100%;height:100dvh;max-height:none;display:block}
+ .detail-modal{width:100%;height:100%;max-height:none;border-radius:0;border-left:0;border-right:0}
+ .detail-nav-arrow{display:none}
+ .detail-back-bubble{left:10px;top:10px;width:38px;height:38px}
+ .close-btn{right:10px;top:10px;width:40px;height:40px}
+ .frame-cinematic-detail-hero{grid-template-columns:1fr;gap:18px;min-height:auto;padding:76px 16px 28px;align-items:start;background-position:center top}
+ .frame-cinematic-detail-hero:after{background:linear-gradient(180deg,rgba(7,7,10,.22),rgba(7,7,10,.74) 42%,rgba(7,7,10,.98) 100%)}
+ .frame-detail-hero-art{width:min(150px,42vw);margin:0 auto}
+ .frame-detail-hero-art .detail-poster{border-radius:10px}
+ .frame-detail-hero-copy{max-width:none;padding:0;text-align:left}
+ .frame-detail-hero-copy h2{font-size:clamp(30px,10vw,46px);line-height:.98;letter-spacing:-.045em;margin:10px 0 12px}
+ .frame-detail-hero-copy>p{font-size:12px;line-height:1.6}
+ .frame-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+ .frame-detail-actions button{min-height:42px;justify-content:center}
+ .frame-detail-stats{gap:6px;margin:16px 0 8px}
+ .frame-detail-stats span{min-width:0;flex:1 1 calc(50% - 6px);padding:8px 9px}
+ .frame-cinematic-detail-hero+.hierarchy-box,.frame-cinematic-detail-hero~.detail-section{margin-left:14px;margin-right:14px}
+ .detail-body{grid-template-columns:1fr;gap:12px;padding:0 14px 16px;margin-top:0}
+ .detail-body>.detail-poster{display:none}
+ .detail-main h2{font-size:30px}
+ .detail-section{margin-left:14px;margin-right:14px}
+ .detail-section.two-col{grid-template-columns:1fr}
+ .progress-edit{grid-template-columns:1fr 1fr;gap:7px}
+ .progress-edit button{min-height:40px}
+ .frame-detail-controls{grid-template-columns:1fr 1fr}
+ .frame-detail-controls button{min-height:40px}
+ .source-links a{min-height:40px}
+ .frame-anime-arc-heading{grid-template-columns:64px minmax(0,1fr) auto;gap:9px}
+ .frame-anime-arc-cover{width:64px}
+}
+@media(max-width:360px){
+ .frame-detail-actions{grid-template-columns:1fr}
+ .frame-detail-hero-art{width:128px}
+ .frame-detail-hero-copy h2{font-size:29px}
+ .frame-detail-stats span{flex-basis:100%}
+}
+
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 .spotify-control-panel{margin-top:14px;border:1px solid var(--frame-line);background:var(--frame-surface);border-radius:20px;padding:16px;color:var(--frame-text);box-shadow:0 18px 55px #0002}
