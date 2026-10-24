@@ -110,6 +110,8 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  const [progressDraft,setProgressDraft]=useState<Record<string,string>>({});
  const [planDraft,setPlanDraft]=useState<Record<string,string>>({});
  const [detail,setDetail]=useState<{row:CatalogRow;item:MediaItem}|null>(null);
+ const [genre,setGenre]=useState('ALL');
+ const [onlyUntracked,setOnlyUntracked]=useState(false);
 
  const load=async(force=false)=>{
   setLoading(true);setError('');
@@ -135,6 +137,8 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  const mine=useMemo(()=>library.filter(x=>x.medium==='anime'&&!x.parentId),[library]);
  const visibleMine=useMemo(()=>selectedMine==='ALL'?mine:mine.filter(x=>x.status===selectedMine),[mine,selectedMine]);
  const libraryMap=useMemo(()=>new Map(library.filter(x=>x.medium==='anime').map(x=>[x.anilistId||0,x])),[library]);
+ const availableGenres=useMemo(()=>[...new Set(rows.flatMap(x=>x.genres||[]))].sort((a,b)=>a.localeCompare(b)),[rows]);
+ const displayRows=useMemo(()=>rows.filter(row=>(genre==='ALL'||row.genres?.includes(genre))&&(!onlyUntracked||!libraryMap.has(row.id))),[rows,genre,onlyUntracked,libraryMap]);
 
  const setNextToWatch=async(item:MediaItem)=>{
   if(!update)return;
@@ -184,12 +188,14 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
    <select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Any status</option><option value="RELEASING">Airing</option><option value="FINISHED">Finished</option><option value="NOT_YET_RELEASED">Upcoming</option><option value="HIATUS">Hiatus</option></select>
    <select value={format} onChange={e=>setFormat(e.target.value)}><option value="ALL">Any format</option><option value="TV">TV</option><option value="TV_SHORT">TV Short</option><option value="MOVIE">Movie</option><option value="ONA">ONA</option><option value="OVA">OVA</option><option value="SPECIAL">Special</option></select>
    <select value={season} onChange={e=>setSeason(e.target.value)}><option value="ALL">Any season</option><option value="WINTER">Winter</option><option value="SPRING">Spring</option><option value="SUMMER">Summer</option><option value="FALL">Fall</option></select>
+   <select value={genre} onChange={e=>setGenre(e.target.value)}><option value="ALL">Any genre</option>{availableGenres.map(g=><option key={g} value={g}>{g}</option>)}</select>
+   <button type="button" className={onlyUntracked?'secondary active':'secondary'} onClick={()=>setOnlyUntracked(x=>!x)}>{onlyUntracked?<Check size={14}/>:<Plus size={14}/>} {onlyUntracked?'Untracked only':'Hide My Anime'}</button>
   </div>}
   {tab==='mine'&&<div className="frame-catalog-tools"><select value={selectedMine} onChange={e=>setSelectedMine(e.target.value)}><option value="ALL">All my anime</option><option value="watching">Watching</option><option value="planned">Plan to Watch</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="dropped">Dropped</option></select><span className="frame-catalog-count">{visibleMine.length} titles</span></div>}
   {error&&<div className="frame-catalog-error"><b>Catalogue temporarily unavailable</b><span>{error}</span><button className="secondary" onClick={()=>void load()}><RefreshCw size={14}/> Retry</button></div>}
   {loading&&tab!=='mine'?<div className="frame-catalog-grid">{Array.from({length:12},(_,i)=><div className="frame-catalog-skeleton" key={i}/>)}</div>:
    <div className="frame-catalog-grid">
-    {(tab==='mine'?visibleMine:rows).map((row:any)=>{
+    {(tab==='mine'?visibleMine:displayRows).map((row:any)=>{
       const source=tab==='mine'?row as MediaItem:row as CatalogRow;
       const existing=tab==='mine'?row as MediaItem:libraryMap.get(row.id);
       const item=tab==='mine'?row as MediaItem:toMedia(row as CatalogRow,existing);
@@ -227,7 +233,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
     })}
    </div>}
   {detail&&<AnimeDetailPanel detail={detail} update={update} savingProgress={savingProgress} progressDraft={progressDraft} planDraft={planDraft} setProgressDraft={setProgressDraft} setPlanDraft={setPlanDraft} saveProgress={saveProgress} setNextToWatch={setNextToWatch} close={()=>setDetail(null)} openEpisodeList={()=>{setDetail(null);open(detail.item)}}/>}
-  {!loading&&tab!=='mine'&&!rows.length&&<div className="frame-catalog-empty"><h3>No anime found.</h3><p>Try another title or remove a filter.</p></div>}
+  {!loading&&tab!=='mine'&&!displayRows.length&&<div className="frame-catalog-empty"><h3>{rows.length?'No anime matches these filters.':'No anime found.'}</h3><p>{rows.length?'Clear the genre or library filter to see more titles.':'Try another title or remove a filter.'}</p>{rows.length&&<button className="secondary" onClick={()=>{setGenre('ALL');setOnlyUntracked(false)}}>Clear local filters</button>}</div>}
   {tab!=='mine'&&<div className="frame-catalog-pagination"><button className="secondary" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page}</span><button className="secondary" disabled={loading||rows.length<24} onClick={()=>setPage(p=>p+1)}>Next <ChevronRight size={15}/></button>{lastUpdated&&<small>Updated {lastUpdated}</small>}</div>}
  </section>;
 }
