@@ -36,7 +36,7 @@ type CatalogRow={
  rankings?:{rank?:number|null;type?:string|null;allTime?:boolean|null;context?:string|null;season?:string|null;year?:number|null}[];
  relations?:{edges?:{relationType?:string|null;node?:{id?:number|null;type?:string|null;format?:string|null;status?:string|null;title?:{userPreferred?:string|null;english?:string|null;romaji?:string|null;native?:string|null};coverImage?:{large?:string|null}}}[]}|null;
 };
-type Props={library:MediaItem[];open:(item:MediaItem)=>void;add:(item:MediaItem)=>Promise<boolean|void>;update?:(item:MediaItem)=>Promise<boolean|void>;guest?:boolean};
+type Props={library:MediaItem[];open:(item:MediaItem)=>void;add:(item:MediaItem)=>Promise<boolean|void>;update?:(item:MediaItem)=>Promise<boolean|void>;batchAdd?:(items:MediaItem[])=>Promise<boolean|void>;guest?:boolean};
 
 type CatalogCache={savedAt:number;results:CatalogRow[];pageInfo?:Record<string,unknown>};
 const CATALOG_CACHE_TTL=5*60*1000;
@@ -91,7 +91,7 @@ async function invoke(body:Record<string,unknown>){
  if(data?.error)throw new Error(String(data.error));
  return data;
 }
-export function FrameAnimeCatalogPage({library,open,add,update}:Props){
+export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
  const [tab,setTab]=useState<'browse'|'upcoming'|'mine'>('browse');
  const [query,setQuery]=useState('');
  const [page,setPage]=useState(1);
@@ -162,7 +162,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
 
  const showDetail=(row:CatalogRow,existing?:MediaItem)=>setDetail({row,item:toMedia(row,existing)});
 
- const addOrOpen=async(row:CatalogRow)=>{
+ const addAllUpcoming=async()=>{\n  if(!batchAdd||tab!=='upcoming')return;\n  const fresh=displayRows.filter(row=>!libraryMap.has(row.id)).map(row=>toMedia(row));\n  if(!fresh.length)return;\n  setLoading(true);setError('');\n  try{const ok=await batchAdd(fresh);if(ok!==false){setRows(prev=>prev);setLastUpdated('Added '+fresh.length+' to your Plan to Watch');}}catch(e){setError(e instanceof Error?e.message:'Could not add upcoming anime.')}finally{setLoading(false)}\n };\n\n const addOrOpen=async(row:CatalogRow)=>{
   const existing=libraryMap.get(row.id);
   if(existing){open(existing);return;}
   const item=toMedia(row);
@@ -176,7 +176,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  return <section className="frame-anime-catalog-page">
   <div className="frame-catalog-head">
    <div><small>FRAME ANIME CATALOGUE</small><h1>Every anime. One place.</h1><p>Browse the live catalogue without loading thousands of cards into your phone at once. Your watch state stays in FRAME.</p></div>
-   <button className="secondary" type="button" onClick={()=>tab==='mine'?setTab('browse'):void load()} disabled={loading}><RefreshCw size={15} className={loading?'spin':''}/> {loading?'Updating…':'Refresh'}</button>
+   <div className="frame-catalog-head-actions"><button className="secondary" type="button" onClick={()=>tab==='mine'?setTab('browse'):void load()} disabled={loading}><RefreshCw size={15} className={loading?'spin':''}/> {loading?'Updating…':'Refresh'}</button>{tab==='upcoming'&&batchAdd&&<button className="primary" type="button" onClick={()=>void addAllUpcoming()} disabled={loading||!displayRows.some(row=>!libraryMap.has(row.id))}><Plus size={15}/> Add all new</button>}</div>
   </div>
   <div className="frame-catalog-tabs">
    <button className={tab==='browse'?'active':''} onClick={()=>setTab('browse')}>Browse</button>
@@ -266,13 +266,13 @@ function AnimeDetailPanel({detail,update,savingProgress,progressDraft,planDraft,
    <div className="frame-detail-body">
     <div className="frame-detail-stats"><span><Star size={14}/> {row.averageScore?(Number(row.averageScore)/10).toFixed(1)+'/10':'—'}</span><span><Users size={14}/> {row.popularity?Number(row.popularity).toLocaleString():'—'}</span><span><Heart size={14}/> {row.favourites?Number(row.favourites).toLocaleString():'—'}</span>{rank&&<span># {rank} all-time</span>}</div>
     {description&&<section className="frame-detail-section"><h3>Synopsis</h3><p>{description}</p></section>}
-    <section className="frame-detail-section"><h3>Anime details</h3><div className="frame-detail-facts"><span><Globe2 size={13}/> {row.countryOfOrigin||'Unknown origin'}</span><span><Timer size={13}/> {row.duration?row.duration+' min / episode':'Duration unknown'}</span><span><Tag size={13}/> {row.episodes?row.episodes+' episodes':'Episode count unknown'}</span><span><Building2 size={13}/> {studios.length?studios.join(', '):'Studio unknown'}</span><span>Source: {row.source||'Unknown'}</span>{row.startDate?.year&&<span>Started: {[row.startDate.year,row.startDate.month,row.startDate.day].filter(Boolean).join('-')}</span>}{row.endDate?.year&&<span>Ended: {[row.endDate.year,row.endDate.month,row.endDate.day].filter(Boolean).join('-')}</span>}</div></section>
+    <section className="frame-detail-section"><h3>Anime details</h3><div className="frame-detail-facts"><span><Globe2 size={13}/> {row.countryOfOrigin||'Unknown origin'}</span><span><Timer size={13}/> {row.duration?row.duration+' min / episode':'Duration unknown'}</span><span><Tag size={13}/> {row.episodes?row.episodes+' episodes':'Episode count unknown'}</span><span><Building2 size={13}/> {studios.length?studios.join(', '):'Studio unknown'}</span><span>Format: {row.format||'ANIME'}</span><span>Source: {row.source||'Unknown'}</span><span>{row.isLicensed?'Licensed':'Unverified licensing'}</span><span>{row.isAdult?'18+ flagged by source':'General catalogue'}</span>{row.startDate?.year&&<span>Started: {[row.startDate.year,row.startDate.month,row.startDate.day].filter(Boolean).join('-')}</span>}{row.endDate?.year&&<span>Ended: {[row.endDate.year,row.endDate.month,row.endDate.day].filter(Boolean).join('-')}</span>}{row.hashtag&&<span>#{row.hashtag.replace(/^#/,'')}</span>}</div></section>
     {row.genres?.length&&<section className="frame-detail-section"><h3>Genres</h3><div className="frame-detail-chips">{row.genres.map(g=><span key={g}>{g}</span>)}</div></section>}
     {tags.length>0&&<section className="frame-detail-section"><h3>Tags</h3><div className="frame-detail-chips muted">{tags.slice(0,18).map(t=><span key={t}>{t}</span>)}</div></section>}
     {row.nextAiringEpisode?.episode&&<section className="frame-detail-airing"><div><small>NEXT EPISODE</small><b>Episode {row.nextAiringEpisode.episode}</b></div><span>{row.nextAiringEpisode.airingAt?new Date(Number(row.nextAiringEpisode.airingAt)*1000).toLocaleString():''}</span></section>}
-    {update&&<section className="frame-detail-section"><div className="frame-detail-progress-head"><h3>My progress</h3><strong>{progress}/{total||'—'} {pct?'· '+pct+'%':''}</strong></div><div className="frame-detail-progress"><i style={{width:pct+'%'}}/></div><div className="frame-detail-controls"><label>Watched through<input type="number" min="0" max={total||2000} inputMode="numeric" value={progressDraft[item.id]??String(progress)} onChange={e=>setProgressDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}><Save size={14}/> Save progress</button><label>Next episode<input type="number" min="1" max={total?total+1:2000} inputMode="numeric" value={planDraft[item.id]??String(Math.max(1,progress+1))} onChange={e=>setPlanDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" disabled={savingProgress===item.id+'-next'} onClick={()=>void setNextToWatch(item)}><Clock3 size={14}/> Set next</button></div></section>}
+    {update&&<section className="frame-detail-section"><div className="frame-detail-progress-head"><h3>My progress</h3><strong>{progress}/{total||'—'} {pct?'· '+pct+'%':''}</strong></div><div className="frame-detail-progress"><i style={{width:pct+'%'}}/></div><div className="frame-detail-controls"><label>Watched through<input type="number" min="0" max={total||2000} inputMode="numeric" value={progressDraft[item.id]??String(progress)} onChange={e=>setProgressDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label><div className="frame-detail-progress-presets"><button type="button" onClick={()=>setProgressDraft(prev=>({...prev,[item.id]:'0'}))}>None</button><button type="button" onClick={()=>setProgressDraft(prev=>({...prev,[item.id]:String(Math.max(0,progress-1))}))}>Previous</button><button type="button" onClick={()=>setProgressDraft(prev=>({...prev,[item.id]:String(total||progress)}))}>All</button></div><button type="button" disabled={savingProgress===item.id} onClick={()=>void saveProgress(item)}><Save size={14}/> Save progress</button><label>Next episode<input type="number" min="1" max={total?total+1:2000} inputMode="numeric" value={planDraft[item.id]??String(Math.max(1,progress+1))} onChange={e=>setPlanDraft(prev=>({...prev,[item.id]:e.target.value}))}/></label><button type="button" disabled={savingProgress===item.id+'-next'} onClick={()=>void setNextToWatch(item)}><Clock3 size={14}/> Set next</button></div></section>}
     {relations.length>0&&<section className="frame-detail-section"><h3>Related anime</h3><div className="frame-detail-relations">{relations.slice(0,12).map((edge,i)=>{const n=edge.node!;const rt=String(edge.relationType||'RELATED').replaceAll('_',' ');const nt=n.title?.userPreferred||n.title?.english||n.title?.romaji||n.title?.native||'Untitled';return <div key={String(n.id||i)}><img src={n.coverImage?.large||''} alt="" loading="lazy"/><span><b>{nt}</b><small>{rt}</small></span></div>})}</div></section>}
-    {row.siteUrl&&<a className="frame-detail-source" href={row.siteUrl} target="_blank" rel="noreferrer">View full AniList entry <ExternalLink size={13}/></a>}
+    {row.synonyms?.length>0&&<section className="frame-detail-section"><h3>Alternative titles</h3><div className="frame-detail-chips muted">{row.synonyms.slice(0,20).map(s=><span key={s}>{s}</span>)}</div></section>}{row.siteUrl&&<a className="frame-detail-source" href={row.siteUrl} target="_blank" rel="noreferrer">View full AniList entry <ExternalLink size={13}/></a>}
    </div>
   </aside>
  </div>
