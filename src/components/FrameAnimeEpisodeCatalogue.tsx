@@ -23,6 +23,8 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
   parentPoster?: string;
   parentTitle?: string;
   parentAnilistId?: number;
+  currentProgress: number;
+  onMarkThrough: (episode: number) => void | Promise<void>;
   onOpen: (item: MediaItem) => void;
 }) {
   const [query, setQuery] = useState('');
@@ -37,14 +39,14 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
     const max = maxEpisode === '' ? null : Number(maxEpisode);
     return sorted.filter(item => {
       const number = episodeNumber(item);
-      const watched = item.status === 'completed';
+      const watched = episodeNumber(item) <= currentProgress || item.status === 'completed';
       const matchesQuery = !q || [item.title, item.description, item.externalId, item.episode?.episodeCode, String(number)].join(' ').toLocaleLowerCase().includes(q);
       const matchesWatch = watchFilter === 'all' || (watchFilter === 'watched' ? watched : !watched);
       const matchesMin = min === null || (!Number.isNaN(min) && number >= min);
       const matchesMax = max === null || (!Number.isNaN(max) && number <= max);
       return matchesQuery && matchesWatch && matchesMin && matchesMax;
     });
-  }, [maxEpisode, minEpisode, query, sorted, watchFilter]);
+  }, [currentProgress, maxEpisode, minEpisode, query, sorted, watchFilter]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const shown = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
