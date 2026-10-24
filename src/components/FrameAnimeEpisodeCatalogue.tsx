@@ -32,6 +32,7 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
   const [watchFilter, setWatchFilter] = useState<'all' | 'watched' | 'unwatched'>('all');
   const [minEpisode, setMinEpisode] = useState('');
   const [maxEpisode, setMaxEpisode] = useState('');
+  const [pendingMarkThrough, setPendingMarkThrough] = useState<number | null>(null);
   const sorted = useMemo(() => [...episodes].sort((a, b) => episodeNumber(a) - episodeNumber(b)), [episodes]);
   const filtered = useMemo(() => {
     const q = query.trim().toLocaleLowerCase();
@@ -77,7 +78,7 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
           {shown.map(item => {
             const number=episodeNumber(item);
             const watched=number<=currentProgress||item.status==='completed';
-            return <article className="frame-anime-episode-row frame-anime-episode-card">
+            return <article key={item.id} className="frame-anime-episode-row frame-anime-episode-card">
               <button type="button" className="frame-anime-episode-open" onClick={() => onOpen(item)} aria-label={'Open episode '+number}>
                 <span className="frame-anime-episode-thumb">
                   <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={parentPoster} parentTitle={parentTitle || title} parentMedium="anime" parentAnilistId={parentAnilistId} sourceProvider={item.sourceProvider} externalId={item.externalId} className="frame-episode-artwork" alt={item.title} loading="lazy" />
@@ -86,7 +87,7 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
                 <span className="frame-anime-episode-copy"><b>{item.title.replace(/^Episode\s*\d+\s*[—–-]?\s*/i, '') || item.title}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
               </button>
               <div className="frame-anime-episode-status" aria-label={'Episode '+number+' status'}>{watched ? 'Watched' : 'Unwatched'} <ChevronRight size={13}/></div>
-              <div className="frame-anime-episode-actions">{!watched ? <button type="button" className="secondary" onClick={() => void onMarkThrough(number)}>Mark through {number}</button> : <span className="muted">Watched</span>}</div>
+              <div className="frame-anime-episode-actions">{!watched ? <button type="button" className="secondary" onClick={async () => { setPendingMarkThrough(number); try { await onMarkThrough(number); } finally { setPendingMarkThrough(null); } }} disabled={pendingMarkThrough !== null}>Mark through {pendingMarkThrough === number ? '…' : number}</button> : <span className="muted">Watched</span>}</div>
             </article>;
           })}
         </div>
