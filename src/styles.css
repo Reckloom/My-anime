@@ -5961,3 +5961,31 @@ img{content-visibility:auto}
  .frame-catalog-filter-panel>div{display:flex;flex-direction:column;gap:2px;min-width:0}
  .frame-catalog-filter-panel b{font-size:12px}.frame-catalog-filter-panel span{font-size:10px;color:var(--muted,#8d939d)}
 }
+
+/* FRAME catalogue mobile filter drawer V2 */
+.frame-catalog-filter-toggle,.frame-catalog-filter-panel{display:none}
+@media(max-width:650px){
+ .frame-catalog-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}
+ .frame-catalog-search{grid-column:1/-1;min-width:0;width:100%;height:44px}
+ .frame-catalog-filter-toggle{display:flex;min-height:44px;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+ .frame-catalog-tools:not(.filters-open)>select,.frame-catalog-tools:not(.filters-open)>button:not(.frame-catalog-filter-toggle){display:none}
+ .frame-catalog-tools.filters-open>select{display:block;width:100%;min-width:0;height:42px}
+ .frame-catalog-filter-panel{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.025)}
+ .frame-catalog-filter-panel b{font-size:12px}.frame-catalog-filter-panel span{display:block;font-size:10px;color:var(--muted,#8d939d)}
+ .frame-catalog-filter-panel button{min-height:36px}
+ .frame-catalog-grid{gap:9px}
+ .frame-catalog-copy{padding:10px}
+ .frame-catalog-title{font-size:12px;line-height:1.3;min-height:31px}
+ .frame-catalog-meta,.frame-catalog-score,.frame-catalog-next{font-size:10px;line-height:1.35}
+ .frame-catalog-details{font-size:9px}
+ .frame-catalog-description{font-size:10px;line-height:1.45}
+ .frame-catalog-quick-progress label{font-size:10px}
+ .frame-catalog-quick-progress input,.frame-catalog-quick-progress button{min-height:40px;height:40px}
+ .frame-catalog-add{min-height:42px}
+}
+@media(max-width:360px){
+ .frame-catalog-grid{grid-template-columns:1fr;gap:10px}
+ .frame-catalog-title{font-size:13px}
+ .frame-catalog-meta,.frame-catalog-score,.frame-catalog-next{font-size:10px}
+ .frame-catalog-details,.frame-catalog-description{font-size:10px}
+}
