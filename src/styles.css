@@ -5887,6 +5887,13 @@ body{overflow-x:hidden!important}
  .frame-catalog-tools.filters-open>.frame-catalog-filter-panel{display:flex}
  .frame-catalog-filter-panel{min-height:44px}
 }
+/* FRAME catalogue filter drawer */
+.frame-catalog-filter-toggle,.frame-catalog-filter-panel{display:none}
+@media(max-width:650px){
+ .frame-catalog-filter-toggle{display:flex;align-items:center;justify-content:center;gap:6px}
+ .frame-catalog-filter-panel{display:flex;grid-column:1/-1;min-height:44px}
+ .frame-catalog-tools:not(.filters-open)>.frame-catalog-filter-panel{display:none}
+}
 /* FRAME mobile/performance polish */
 button,input,select{touch-action:manipulation}
 img{content-visibility:auto}
