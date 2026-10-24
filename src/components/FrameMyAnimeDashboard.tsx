@@ -45,6 +45,9 @@ export function FrameMyAnimeDashboard({items,open,add,update}:Props){
    if(sort==='progress')return pct(b)-pct(a);
    if(sort==='title')return a.title.localeCompare(b.title);
    if(sort==='score')return (b.score??0)-(a.score??0);
+   if(sort==='year')return (b.year??0)-(a.year??0)||a.title.localeCompare(b.title);
+   if(sort==='popularity')return (b.popularity??0)-(a.popularity??0)||a.title.localeCompare(b.title);
+   if(sort==='release')return (b.nextRelease?Date.parse(b.nextRelease):0)-(a.nextRelease?Date.parse(a.nextRelease):0)||(b.year??0)-(a.year??0);
    return (b.nextRelease?Date.parse(b.nextRelease):0)-(a.nextRelease?Date.parse(a.nextRelease):0)||(b.year??0)-(a.year??0);
   });
  },[roots,query,tab,sort]);
@@ -115,7 +118,7 @@ export function FrameMyAnimeDashboard({items,open,add,update}:Props){
 
   <div className="frame-my-toolbar">
    <div className="frame-my-tabs">{tabs.map(([id,label,count])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}<b>{count}</b></button>)}</div>
-   <div className="frame-my-tools"><label><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search my anime…"/></label><select value={sort} onChange={e=>setSort(e.target.value)}><option value="updated">Recent</option><option value="progress">Progress</option><option value="score">Score</option><option value="title">Title</option></select></div>
+   <div className="frame-my-tools"><label><Search size={15}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search my anime…"/></label><select value={sort} onChange={e=>setSort(e.target.value)}><option value="updated">Recent</option><option value="progress">Progress</option><option value="score">Score</option><option value="title">Title</option><option value="year">Year</option><option value="popularity">Popularity</option><option value="release">Release date</option></select></div>
   </div>
 
   <div className="frame-my-results-head"><span>{visible.length} {visible.length===1?'title':'titles'}</span>{tab!=='all'&&<button onClick={()=>setTab('all')}>Clear filter</button>}</div>
