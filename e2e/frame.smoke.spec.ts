@@ -1,4 +1,4 @@
-async function navigatePrimary(page:any,label:string){const primary=page.locator('.miru-nav').getByRole('button',{name:label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}await page.getByRole('button',{name:/Open navigation menu/}).click();await page.locator('.frame-mobile-menu').getByRole('button',{name:label,exact:true}).click();}
+async function navigatePrimary(page:any,label:string){const primary=page.locator('.miru-nav').getByRole('button',{name:label==='Library'?'My Anime':label==='Anime'?'Discover':label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}const mobile=page.locator('.mobile-bottom').getByRole('button',{name:label==='Library'?'My Anime':label,exact:true});if(await mobile.isVisible().catch(()=>false)){await mobile.click();return}await expect(primary).toBeVisible();}
 
 import { test, expect } from '@playwright/test';
 
@@ -6,7 +6,7 @@ test.describe('FRAME core smoke flow', () => {
   test('loads the app and exposes the main navigation', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('header[role="banner"]').first()).toBeVisible();
-    for (const label of ['Home', 'Library', 'Anime']) {
+    for (const label of ['Home', 'My Anime', 'Discover']) {
       const primary=page.locator('.miru-nav').getByRole('button',{name:label,exact:true});
       if(await primary.isVisible().catch(()=>false))continue;
       const mobile=page.locator('.mobile-bottom').getByRole('button',{name:label,exact:true});
