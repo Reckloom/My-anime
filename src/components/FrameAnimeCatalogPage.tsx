@@ -136,7 +136,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
    else setError(e instanceof Error?e.message:'Could not load the anime catalogue.');
   }finally{setLoading(false);}
  };
- useEffect(()=>{setPage(1)},[query,sort,status,format,season,tab]);
+ useEffect(()=>{setPage(1)},[query,sort,status,format,season,genre,onlyUntracked,upcomingWindow,tab]);
  useEffect(()=>{if(tab==='mine')return;const timer=window.setTimeout(()=>void load(),query.trim()?300:0);return()=>window.clearTimeout(timer)},[page,query,sort,status,format,season,tab]);
  useEffect(()=>{if(tab!=='upcoming')return;const timer=window.setInterval(()=>{setNow(Date.now());void load(true)},15*60*1000);return()=>window.clearInterval(timer)},[tab,page]);
  useEffect(()=>{if(tab!=='upcoming')return;const timer=window.setInterval(()=>setNow(Date.now()),60*1000);return()=>window.clearInterval(timer)},[tab]);
@@ -263,7 +263,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
    </div>}
   {detail&&<AnimeDetailPanel detail={detail} tracked={Boolean(detail.item.anilistId&&libraryMap.has(detail.item.anilistId))} add={add} update={update} savingProgress={savingProgress} progressDraft={progressDraft} planDraft={planDraft} setProgressDraft={setProgressDraft} setPlanDraft={setPlanDraft} saveProgress={saveProgress} setNextToWatch={setNextToWatch} close={()=>setDetail(null)} openEpisodeList={()=>{setDetail(null);open(detail.item)}}/>}
   {!loading&&tab!=='mine'&&!displayRows.length&&<div className="frame-catalog-empty"><h3>{rows.length?'No anime matches these filters.':'No anime found.'}</h3><p>{rows.length?'Clear the genre or library filter to see more titles.':'Try another title or remove a filter.'}</p>{rows.length&&<button className="secondary" onClick={()=>{setGenre('ALL');setOnlyUntracked(false)}}>Clear local filters</button>}</div>}
-  {tab!=='mine'&&<div className="frame-catalog-pagination"><button className="secondary" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page}</span><button className="secondary" disabled={loading||rows.length<24} onClick={()=>setPage(p=>p+1)}>Next <ChevronRight size={15}/></button>{lastUpdated&&<small>Updated {lastUpdated}</small>}</div>}
+  {tab!=='mine'&&<CataloguePagination page={page} pageInfo={pageInfo} rows={rows.length} loading={loading} onPage={setPage} lastUpdated={lastUpdated}/>} 
  </section>;
 }
 
@@ -305,4 +305,19 @@ function AnimeDetailPanel({detail,tracked,add,update,savingProgress,progressDraf
    </div>
   </aside>
  </div>
+}
+
+function CataloguePagination({page,pageInfo,rows,loading,onPage,lastUpdated}:{page:number;pageInfo:Record<string,unknown>;rows:number;loading:boolean;onPage:(page:number)=>void;lastUpdated:string}){
+ const lastPage=Math.max(1,Number(pageInfo.lastPage||0));
+ const hasNext=typeof pageInfo.hasNextPage==='boolean'?Boolean(pageInfo.hasNextPage):rows>=50;
+ const canPrevious=page>1&&!loading;
+ const canNext=hasNext&&page<500&&!loading;
+ const jump=Math.max(1,Math.min(lastPage>1?lastPage:500,Number(page)||1));
+ return <div className="frame-catalog-pagination">
+  <button className="secondary" disabled={!canPrevious} onClick={()=>onPage(Math.max(1,page-1))}><ChevronLeft size={15}/> Previous</button>
+  <span>Page {page}{lastPage>1&&<small> of {lastPage.toLocaleString()}</small>}</span>
+  {lastPage>1&&<label className="frame-catalog-page-jump"><span>Go to</span><input aria-label="Go to catalogue page" type="number" min="1" max={lastPage} value={jump} onChange={e=>onPage(Math.max(1,Math.min(lastPage,Number(e.target.value)||1)))}/></label>}
+  <button className="secondary" disabled={!canNext} onClick={()=>onPage(Math.min(lastPage||500,page+1))}>Next <ChevronRight size={15}/></button>
+  {lastUpdated&&<small>Updated {lastUpdated}</small>}
+ </div>;
 }
