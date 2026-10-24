@@ -121,7 +121,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
 
  const load=async(force=false)=>{
   setLoading(true);setError('');
-  const body=tab==='upcoming'?{action:'upcoming',page,perPage:24}:{action:'browse',page,perPage:24,search:query.trim(),sort,status,format,season};
+  const body=tab==='upcoming'?{action:'upcoming',page,perPage:50}:{action:'browse',page,perPage:50,search:query.trim(),sort,status,format,season};
   const cached=!force?readCatalogCache(body,tab==='upcoming'?UPCOMING_CACHE_TTL:CATALOG_CACHE_TTL):null;
   if(cached){setRows(cached.results);setPageInfo(cached.pageInfo||{});setLastUpdated(new Date(cached.savedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));setLoading(false);return;}
   try{
