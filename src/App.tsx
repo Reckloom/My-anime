@@ -1160,7 +1160,7 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <button className="miru-search-btn" onClick={()=>setFinder(true)}>SEARCH</button>
     <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>{if(!href)return;if(href.startsWith('media:')){const match=items.find(x=>x.id===href.slice(6));if(match){openDetail(match);return}}go(href)}}/>
     {guest&&<button className="miru-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>SIGN IN</button>}
-    <button className="miru-avatar" type="button" title="Open profile" aria-label="Open profile" onClick={()=>go('settings')}>
+    <button className="miru-avatar" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
       {profile?.avatar_url?<img src={profile.avatar_url} alt="" onError={e=>{e.currentTarget.src=import.meta.env.BASE_URL+'frame-logo.svg'}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}
     </button>
     <button className="miru-menu-mobile" aria-label={menu?'Close menu':'Open menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
