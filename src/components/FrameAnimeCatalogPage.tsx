@@ -116,6 +116,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
   const [filtersOpen,setFiltersOpen]=useState(false);
  const [onlyUntracked,setOnlyUntracked]=useState(false);
  const [upcomingWindow,setUpcomingWindow]=useState<'ALL'|'TODAY'|'TOMORROW'|'WEEK'|'LATER'>('ALL');
+ const [now,setNow]=useState(()=>Date.now());
  const autoPlannedPages=useRef(new Set<string>());
 
  const load=async(force=false)=>{
@@ -137,7 +138,8 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
  };
  useEffect(()=>{setPage(1)},[query,sort,status,format,season,tab]);
  useEffect(()=>{if(tab==='mine')return;const timer=window.setTimeout(()=>void load(),query.trim()?300:0);return()=>window.clearTimeout(timer)},[page,query,sort,status,format,season,tab]);
- useEffect(()=>{if(tab!=='upcoming')return;const timer=window.setInterval(()=>void load(true),15*60*1000);return()=>window.clearInterval(timer)},[tab,page]);
+ useEffect(()=>{if(tab!=='upcoming')return;const timer=window.setInterval(()=>{setNow(Date.now());void load(true)},15*60*1000);return()=>window.clearInterval(timer)},[tab,page]);
+ useEffect(()=>{if(tab!=='upcoming')return;const timer=window.setInterval(()=>setNow(Date.now()),60*1000);return()=>window.clearInterval(timer)},[tab]);
  useEffect(()=>{
   if(tab!=='upcoming'||!batchAdd||loading||!displayRows.length)return;
   const key='upcoming:'+page+':'+displayRows.map(row=>row.id).join(',');
@@ -276,7 +278,7 @@ function AnimeDetailPanel({detail,tracked,add,update,savingProgress,progressDraf
  const tags=(row.tags||[]).map(t=>t.name).filter(Boolean) as string[];
  const relations=(row.relations?.edges||[]).filter(e=>e.node?.id);
  const rank=(row.rankings||[]).find(r=>r.type==='RATED'&&r.allTime)?.rank;
- const releaseLabel=useMemo(()=>{const stamp=row.nextAiringEpisode?.airingAt?Number(row.nextAiringEpisode.airingAt)*1000:NaN;if(!Number.isFinite(stamp))return null;const diff=stamp-Date.now();if(diff<=0)return 'Releasing now';const mins=Math.round(diff/60000),days=Math.floor(mins/1440),hours=Math.floor((mins%1440)/60);return days>0?'In '+days+'d '+hours+'h':hours>0?'In '+hours+'h':'In '+Math.max(1,mins)+'m'},[row.nextAiringEpisode?.airingAt]);
+ const releaseLabel=useMemo(()=>{const stamp=row.nextAiringEpisode?.airingAt?Number(row.nextAiringEpisode.airingAt)*1000:NaN;if(!Number.isFinite(stamp))return null;const diff=stamp-now;if(diff<=0)return 'Releasing now';const mins=Math.round(diff/60000),days=Math.floor(mins/1440),hours=Math.floor((mins%1440)/60);return days>0?'In '+days+'d '+hours+'h':hours>0?'In '+hours+'h':'In '+Math.max(1,mins)+'m'},[row.nextAiringEpisode?.airingAt,now]);
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();close()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[close]);
  return <div className="frame-detail-backdrop" role="dialog" aria-modal="true" aria-label={title} onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
   <aside className="frame-detail-panel">
