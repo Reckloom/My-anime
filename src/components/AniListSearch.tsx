@@ -286,12 +286,16 @@ function externalToMedia(r:DiscoveryResult):MediaItem{
 }
 
 export function AniListSearch({close,onImported,onManual,initialQuery='',guest=false,library=[]}:{close:()=>void;onImported:(item:MediaItem)=>void|Promise<void|boolean>;onManual?:()=>void;initialQuery?:string;guest?:boolean;library?:MediaItem[]}){
- const[tab,setTab]=useState<Tab>('anime'),[query,setQuery]=useState(initialQuery),[results,setResults]=useState<(AniListMedia|DiscoveryResult)[]>([]),[selected,setSelected]=useState<AniListMedia|DiscoveryResult|null>(null);
+ const[tab,setTab]=useState<Tab>('anime'),[query,setQuery]=useState(initialQuery),[recentSearches,setRecentSearches]=useState<string[]>(()=>{try{const v=JSON.parse(localStorage.getItem('frame-recent-searches')||'[]');return Array.isArray(v)?v.filter((x):x is string=>typeof x==='string').slice(0,8):[]}catch{return[]}}),[results,setResults]=useState<(AniListMedia|DiscoveryResult)[]>([]),[selected,setSelected]=useState<AniListMedia|DiscoveryResult|null>(null);
  const[loading,setLoading]=useState(false),[detailLoading,setDetailLoading]=useState(false),[importing,setImporting]=useState(false),[added,setAdded]=useState(false),[error,setError]=useState('');
  const[status,setStatus]=useState<MediaItem['status']>('planned'),[progress,setProgress]=useState(0),[total,setTotal]=useState(0),[personalRating,setPersonalRating]=useState<number|undefined>(undefined),[favorite,setFavorite]=useState(false),[notes,setNotes]=useState(''),[parentId,setParentId]=useState(''),[notificationsEnabled,setNotificationsEnabled]=useState(true);
  const current=tabs.find(x=>x.id===tab)!;
  const isAni=tab==='anime'||tab==='manga';
  const catalogType:CatalogType=tab==='anime'?'ANIME':'MANGA';
+
+ useEffect(()=>{try{localStorage.setItem('frame-recent-searches',JSON.stringify(recentSearches.slice(0,8)))}catch{}},[recentSearches]);
+ const rememberSearch=(term:string)=>{const value=term.trim();if(value.length<2)return;setRecentSearches(prev=>[value,...prev.filter(x=>x.toLowerCase()!==value.toLowerCase())].slice(0,8));};
+ const clearRecentSearches=()=>{setRecentSearches([]);try{localStorage.removeItem('frame-recent-searches')}catch{}};
  useEffect(()=>{
   const term=query.trim();
   setSelected(null);
@@ -302,7 +306,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
    try{
     if(isAni){
       const found=await searchAni(term,catalogType);
-      if(!cancelled)setResults(found);
+      if(!cancelled){setResults(found);rememberSearch(term);}
     }else{
       const found=await searchExternal(term,tab as Exclude<Tab,'anime'|'manga'>);
       if(!cancelled)setResults(found);
@@ -377,7 +381,7 @@ export function AniListSearch({close,onImported,onManual,initialQuery='',guest=f
    <div className="catalog-tabs catalog-tabs-wide" role="tablist" aria-label="Media catalogues">{tabs.map(t=>{const Icon=t.icon;return <button role="tab" aria-selected={tab===t.id} key={t.id} className={tab===t.id?'active':''} onClick={()=>{setTab(t.id);setResults([]);setSelected(null);setAdded(false);setError('')}}><Icon size={14}/>{t.label}<small>{t.hint}</small></button>})}</div>
    {error&&<div className="inline-error"><AlertCircle size={15}/><span>{error}</span></div>}
    {loading&&<div className="search-state"><Loader2 className="spin"/>Searching {current.hint}…</div>}
-   {!loading&&query.trim().length<2&&<div className="search-state">Choose a catalogue and type at least two characters.</div>}
+   {!loading&&query.trim().length<2&&<div className="search-state">{recentSearches.length>0?<><div className="search-recent-head"><span>Recent searches</span><button type="button" className="secondary" onClick={clearRecentSearches}>Clear</button></div><div className="search-recent-list">{recentSearches.map(term=><button type="button" key={term} onClick={()=>setQuery(term)}>{term}<Search size={13}/></button>)}</div><small>Choose a catalogue and tap a search to jump back in.</small></>:<>Choose a catalogue and type at least two characters.</>}</div>}
    {!loading&&query.trim().length>=2&&!results.length&&!error&&<div className="search-state">No results yet. Try another title or spelling.</div>}
    {results.length>0&&<div className="ani-results">{results.map(r=>{const i=resultInfo(r);const isSelected=isAni?(selected as AniListMedia|null)?.id===(r as AniListMedia).id:(selected as DiscoveryResult|null)?.externalId===(r as DiscoveryResult).externalId;return <button type="button" key={resultKey(r)} className={isSelected?'ani-result selected':'ani-result'} onClick={()=>void choose(r)}>
     <img className="ani-result-art" src={i.poster||'/frame-logo.svg'} alt={i.title} loading="lazy" decoding="async" onError={e=>{e.currentTarget.src='/frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>
