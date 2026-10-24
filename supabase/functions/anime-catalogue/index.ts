@@ -190,7 +190,7 @@ const browseQuery = `query ($page:Int!,$perPage:Int!,$search:String,$sort:[Media
 
 async function browseAnime(body:any){
   const page=Math.max(1,Math.min(500,Number(body?.page)||1));
-  const perPage=Math.max(1,Math.min(24,Number(body?.perPage)||24));
+  const perPage=Math.max(1,Math.min(50,Number(body?.perPage)||50));
   const search=String(body?.search||'').trim().slice(0,100)||undefined;
   const allowedSort=new Set(['POPULARITY_DESC','SCORE_DESC','START_DATE_DESC','UPDATED_AT_DESC','EPISODES_DESC']);
   const sortName=String(body?.sort||'POPULARITY_DESC');
@@ -215,8 +215,8 @@ async function browseAnime(body:any){
 }
 
 async function upcomingAnime(body:any){
-  const page=Math.max(1,Math.min(50,Number(body?.page)||1));
-  const perPage=Math.max(1,Math.min(24,Number(body?.perPage)||24));
+  const page=Math.max(1,Math.min(500,Number(body?.page)||1));
+  const perPage=Math.max(1,Math.min(50,Number(body?.perPage)||50));
   const data=await fetchJson('https://graphql.anilist.co',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
