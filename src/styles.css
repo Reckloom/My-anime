@@ -6004,3 +6004,14 @@ img{content-visibility:auto}
  .frame-catalog-meta,.frame-catalog-score,.frame-catalog-next{font-size:10px}
  .frame-catalog-details,.frame-catalog-description{font-size:10px}
 }
+
+/* FRAME enriched catalogue controls */
+.frame-catalog-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.frame-detail-progress-presets{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.frame-detail-progress-presets button{min-height:36px;padding:7px 10px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(255,255,255,.04);color:inherit}
+@media(max-width:650px){
+ .frame-catalog-head-actions{width:100%;justify-content:stretch}
+ .frame-catalog-head-actions button{flex:1;min-height:42px}
+ .frame-detail-progress-presets{grid-column:1/-1;width:100%}
+ .frame-detail-progress-presets button{flex:1;min-height:40px}
+}
