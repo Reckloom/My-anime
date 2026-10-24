@@ -497,7 +497,6 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
  };
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
-  if(!client){setAppMessage('Cloud database is unavailable.');return false}
   const merged=dedupeMediaItems(itemsRef.current);
   const changed=new Map<string,MediaItem>();
   for(const raw of incoming){
@@ -530,6 +529,14 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     externalLinks:{...(current.externalLinks||{}),...(item.externalLinks||{})},game:current.game??item.game
    });
    merged[found]=next;changed.set(next.id,next);
+  }
+  if(!client){
+   // Catalogue imports must remain fully usable in free guest mode. Keep the
+   // same duplicate/progress protections, but persist locally when Supabase is
+   // unavailable instead of turning Add to Plan into a dead button.
+   itemsRef.current=merged;setItems(merged);
+   try{localStorage.setItem('frame-library:guest',JSON.stringify(merged))}catch{}
+   return true;
   }
   const rows=[...changed.values()].map(item=>{
    const current=itemsRef.current.find(existing=>existing.id===item.id);
