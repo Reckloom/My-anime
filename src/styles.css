@@ -5902,3 +5902,44 @@ img{content-visibility:auto}
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+
+/* FRAME interaction pass — dense tracker controls remain usable on narrow phones */
+.frame-my-tabs{
+  display:flex;
+  gap:6px;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:none;
+  padding-bottom:2px;
+}
+.frame-my-tabs::-webkit-scrollbar{display:none}
+.frame-my-tabs button{flex:0 0 auto;min-height:38px;white-space:nowrap}
+.frame-my-tools{display:flex;gap:8px;align-items:center}
+.frame-my-tools label{min-width:0;display:flex;align-items:center;gap:7px}
+.frame-my-tools input,.frame-my-tools select{min-height:38px}
+.frame-my-actions{display:grid;grid-template-columns:minmax(0,1fr) 34px 34px 34px}
+.frame-my-actions button{min-width:0;padding:0 4px}
+@media(max-width:650px){
+  .frame-my-tabs{margin-inline:-2px;padding-inline:2px}
+  .frame-my-tools{display:grid;grid-template-columns:minmax(0,1fr) 104px}
+  .frame-my-actions{grid-template-columns:minmax(0,1fr) 32px 32px 32px}
+  .frame-my-actions button{height:32px}
+}
+@media(max-width:360px){
+  .frame-my-dashboard{padding-inline:10px}
+  .frame-my-grid{gap:6px}
+  .frame-my-tools{grid-template-columns:1fr}
+  .frame-my-tools select{width:100%}
+  .frame-my-actions{grid-template-columns:minmax(0,1fr) 30px 30px}
+  .frame-my-actions button:last-child{grid-column:1/-1}
+}
+
+/* Schedule controls should never compress into microscopic desktop sizing. */
+.frame-schedule-switch>button{min-height:40px}
+@media(max-width:650px){
+  .frame-schedule-switch{gap:7px}
+  .frame-schedule-switch>button{min-width:0;padding-inline:8px}
+  .frame-schedule-switch label{min-width:0}
+  .frame-schedule-switch input{min-width:0}
+  .frame-schedule-next{min-width:0}
+}
