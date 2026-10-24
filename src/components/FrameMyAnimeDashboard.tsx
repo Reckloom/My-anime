@@ -1,5 +1,5 @@
 import {useMemo,useState} from 'react';
-import {Check,ChevronRight,Clock3,Pause,Play,Plus,Search,Star,Trash2} from 'lucide-react';
+import {Check,ChevronRight,Clock3,Pause,Play,Plus,Search,Star,RotateCcw,Minus} from 'lucide-react';
 import type {MediaItem} from '../types';
 import {FrameArtwork} from './FrameArtwork';
 
@@ -56,6 +56,12 @@ export function FrameMyAnimeDashboard({items,open,add,update}:Props){
   try{await update({...item,...patch});}finally{setBusy(null)}
  };
  const nextEpisode=(item:MediaItem)=>Math.max(1,(item.progress||0)+1);
+ const setProgress=async(item:MediaItem,value:number)=>{
+  const total=item.total||item.customTotal;
+  const progress=Math.max(0,total?Math.min(value,total):value);
+  const status=total&&progress>=total?'completed':progress>0?(item.status==='planned'?'watching':item.status):item.status;
+  await change(item,{progress,status});
+ };
 
  const Card=({item}: {item:MediaItem})=>{
   const p=pct(item);
@@ -72,11 +78,13 @@ export function FrameMyAnimeDashboard({items,open,add,update}:Props){
     <div className="frame-my-progress"><i style={{width:p+'%'}}/></div>
     <div className="frame-my-actions">
       {item.status==='completed'
-       ?<button disabled={busy===item.id} onClick={()=>void change(item,{status:'watching'})}><Play size={13}/> Rewatch</button>
+       ?<button disabled={busy===item.id} onClick={()=>void change(item,{status:'watching',progress:0})}><RotateCcw size={13}/> Rewatch</button>
        :item.status==='dropped'
        ?<button disabled={busy===item.id} onClick={()=>void change(item,{status:'planned'})}><Plus size={13}/> Restore</button>
-       :<button disabled={busy===item.id} onClick={()=>void change(item,{status:'watching',progress:Math.max(item.progress||0,next)})}><Check size={13}/> EP {next}</button>}
-      <button disabled={busy===item.id} onClick={()=>void change(item,{status:item.status==='paused'?'watching':'paused'})}><Pause size={13}/>{item.status==='paused'?'Resume':'Pause'}</button>
+       :<button disabled={busy===item.id} onClick={()=>void setProgress(item,next)}><Check size={13}/> EP {next}</button>}
+      <button disabled={busy===item.id||!(item.progress>0)} aria-label={"Decrease "+item.title+" progress"} onClick={()=>void setProgress(item,(item.progress||0)-1)}><Minus size={13}/></button>
+      <button disabled={busy===item.id||(Boolean(item.total)&&item.progress>=(item.total||0))} aria-label={"Increase "+item.title+" progress"} onClick={()=>void setProgress(item,(item.progress||0)+1)}><Plus size={13}/></button>
+      {item.status!=='completed'&&item.status!=='dropped'&&<button disabled={busy===item.id} onClick={()=>void change(item,{status:item.status==='paused'?'watching':'paused'})}><Pause size={13}/>{item.status==='paused'?'Resume':'Pause'}</button>}
     </div>
    </div>
   </article>;
