@@ -10,8 +10,7 @@ self.addEventListener('fetch',event=>{
  if(request.method!=='GET'||new URL(request.url).origin!==self.location.origin)return;
  const fallback=BASE+'index.html';
  if(request.mode==='navigate'){
-  if(!isAsset(request))return;
- event.respondWith(fetch(request).then(response=>{const copy=response.clone();void caches.open(CACHE).then(c=>c.put(fallback,copy));return response}).catch(()=>caches.match(fallback)));
+  event.respondWith(fetch(request).then(response=>{const copy=response.clone();void caches.open(CACHE).then(c=>c.put(fallback,copy));return response}).catch(()=>caches.match(fallback)));
   return;
  }
  event.respondWith(fetch(request).then(response=>{
