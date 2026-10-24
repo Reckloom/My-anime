@@ -17,7 +17,7 @@ const episodeNumber = (item: MediaItem) => {
   return Number(titleNumber?.[1] || 0);
 };
 
-export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, parentTitle, parentAnilistId, onOpen }: {
+export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, parentTitle, parentAnilistId, currentProgress, onMarkThrough, onOpen }: {
   title: string;
   episodes: MediaItem[];
   parentPoster?: string;
@@ -78,7 +78,7 @@ export function FrameAnimeEpisodeCatalogue({ title, episodes, parentPoster, pare
               <span className="frame-anime-episode-number" style={{position:'absolute',left:8,top:8}}>{String(episodeNumber(item)).padStart(3, '0')}</span>
             </span>
             <span className="frame-anime-episode-copy" style={{display:'flex',flexDirection:'column',gap:5,minWidth:0}}><b>{item.title.replace(/^Episode\s*\d+\s*[—–-]?\s*/i, '') || item.title}</b><small>{item.episode?.airDate || 'Air date unavailable'} · {item.episode?.ratingSource || item.source || 'Episode details'}{item.episode?.episodeCode ? ' · ' + item.episode.episodeCode : ''}</small><small>{item.description || item.episode?.synopsis || 'Open episode details to view or edit its metadata.'}</small></span>
-            <span className="frame-anime-episode-status">{item.status === 'completed' ? 'Watched' : 'Unwatched'} <ChevronRight size={13}/></span>
+            <span className="frame-anime-episode-status">{episodeNumber(item) <= currentProgress || item.status === 'completed' ? 'Watched' : 'Unwatched'} <ChevronRight size={13}/></span><span className="frame-anime-episode-actions">{episodeNumber(item) > currentProgress ? <button type="button" className="secondary" onClick={e=>{e.stopPropagation();void onMarkThrough(episodeNumber(item))}}>Mark through {episodeNumber(item)}</button> : <span className="muted">Watched</span>}</span>
           </button>)}
         </div>
       </details>
