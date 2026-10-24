@@ -1,7 +1,8 @@
 const BASE=new URL('./',self.registration.scope).pathname;
-const CACHE='frame-shell-v5';
+const CACHE='frame-shell-v8';
 const SHELL=[BASE,BASE+'index.html',BASE+'manifest.webmanifest',BASE+'frame-logo.svg',BASE+'frame-ultra-instinct.svg'];
 const cacheKey=url=>new URL(url,self.location.origin).pathname;
+const isAsset=request=>/\.(?:js|css|woff2?|png|jpe?g|webp|svg|ico|json)$/i.test(new URL(request.url).pathname);
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{

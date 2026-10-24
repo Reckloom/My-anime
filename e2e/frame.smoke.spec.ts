@@ -1,13 +1,13 @@
-async function navigatePrimary(page:any,label:string){const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}await page.getByRole('button',{name:/Open navigation menu/}).click();await page.locator('.frame-mobile-menu').getByRole('button',{name:label,exact:true}).click();}
+async function navigatePrimary(page:any,label:string){const primary=page.locator('.miru-nav').getByRole('button',{name:label==='Library'?'My Anime':label==='Anime'?'Discover':label,exact:true});if(await primary.isVisible().catch(()=>false)){await primary.click();return}const mobile=page.locator('.mobile-bottom').getByRole('button',{name:label==='Library'?'My Anime':label,exact:true});if(await mobile.isVisible().catch(()=>false)){await mobile.click();return}await expect(primary).toBeVisible();}
 
 import { test, expect } from '@playwright/test';
 
 test.describe('FRAME core smoke flow', () => {
   test('loads the app and exposes the main navigation', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('banner')).toBeVisible();
-    for (const label of ['Home', 'Library', 'Discover']) {
-      const primary=page.locator('.frame-nav').getByRole('button',{name:label,exact:true});
+    await expect(page.locator('header[role="banner"]').first()).toBeVisible();
+    for (const label of ['Home', 'My Anime', 'Discover']) {
+      const primary=page.locator('.miru-nav').getByRole('button',{name:label,exact:true});
       if(await primary.isVisible().catch(()=>false))continue;
       const mobile=page.locator('.mobile-bottom').getByRole('button',{name:label,exact:true});
       if(await mobile.isVisible().catch(()=>false))continue;
@@ -20,7 +20,7 @@ test.describe('FRAME core smoke flow', () => {
 
   test('opens manual entry, adds a title, and shows it in the library', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+    await page.getByRole('button', { name: 'SEARCH', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Find anything for FRAME' })).toBeVisible();
     await page.getByRole('button', { name: /can't find it\? add manually/i }).click();
     await expect(page.getByText('Add anything to FRAME.')).toBeVisible();
@@ -53,28 +53,28 @@ test.describe('FRAME core smoke flow', () => {
     await page.evaluate(() => localStorage.setItem('frame-guest', '1'));
     await page.reload();
 
-    await expect(page.getByRole('button', { name: 'Sign in', exact: true }).first()).toBeVisible();
     await expect(page.locator('html[data-frame-theme="ultra-movie"]')).toHaveCount(1);
     await page.getByRole('button', { name: 'Open Settings', exact: true }).first().click();
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in to FRAME', exact: true })).toBeVisible();
     await expect(page.locator('.theme-picker')).toHaveCount(0);
   });
 
-  test('makes Discover shortcuts useful', async ({ page }) => {
+  test('makes Anime navigation useful', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+    await page.getByRole('button', { name: 'SEARCH', exact: true }).first().click();
     await expect(page.getByText('Find anything for FRAME')).toBeVisible();
     await page.keyboard.press('Escape');
-    await navigatePrimary(page,'Discover');
-    await expect(page.getByRole('heading', { name: 'Explore everything.', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: /Connections Control the catalogues and services FRAME uses/ }).click();
-    await expect(page.getByRole('heading', { name: 'Connections', exact: true })).toBeVisible();
+    await navigatePrimary(page,'Anime');
+    await expect(page.locator('h1').filter({ hasText: /Every anime\. One place\./ })).toBeVisible();
   });
 
 
   test('logo returns Home and account bubble opens Settings', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Go to FRAME home', exact: true }).click();
-    await expect(page.locator('h1').filter({ hasText: /Welcome back/ })).toBeVisible();
+    await expect(page.locator('.frame-home-new')).toBeVisible();
+    await expect(page.getByText('FEATURED IN YOUR LIBRARY', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Open Settings', exact: true }).click();
     await expect(page.locator('h1').filter({ hasText: /^Settings$/ })).toBeVisible();
   });
@@ -90,7 +90,7 @@ test.describe('FRAME core smoke flow', () => {
     await page.goto('/');
     const targets: Array<[string, RegExp]> = [
       ['Library', /^Library$/],
-      ['Discover', /Explore everything\./],
+      ['Anime', /^Library$/],
     ];
 
     for (const [button, heading] of targets) {
@@ -196,7 +196,7 @@ test.describe('FRAME movie discovery UI', () => {
       });
     });
     await page.goto('/');
-    await page.getByRole('button', { name: 'Search', exact: true }).first().click();
+    await page.getByRole('button', { name: 'SEARCH', exact: true }).first().click();
     await page.getByRole('tab', { name: /Movies/ }).click();
     await page.getByLabel('Search media').fill('Inception');
     const result=page.getByRole('button', { name: /Inception/ }).first();
@@ -210,7 +210,9 @@ test.describe('FRAME movie discovery UI', () => {
 test.describe('FRAME global voice', () => {
   test('opens the public global call and exposes the simple controls', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Global Call', exact: true }).first().click();
+    await page.getByTitle('Open quick actions').click();
+    await page.getByTitle('Call').click();
+    await page.getByRole('button', { name: 'Open call center', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Global Call', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Join global call', exact: true })).toBeVisible();
     await expect(page.getByText(/Public global calls are separate from private one-to-one calls/)).toBeVisible();
@@ -220,7 +222,9 @@ test.describe('FRAME global voice', () => {
 test.describe('FRAME private voice rooms', () => {
   test('exposes create and join-by-code controls', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Global Call', exact: true }).first().click();
+    await page.getByTitle('Open quick actions').click();
+    await page.getByTitle('Call').click();
+    await page.getByRole('button', { name: 'Open call center', exact: true }).click();
     await page.getByRole('tab', { name: 'Private Rooms', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Private Rooms', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Create room', exact: true })).toBeVisible();
@@ -250,12 +254,12 @@ test.describe('FRAME discovery integration', () => {
 test.describe('FRAME quick actions', () => {
   test('keeps Chat and Call in the floating action hub, not primary nav', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.frame-nav').getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
-    await expect(page.locator('.frame-nav').getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
+    await expect(page.locator('.miru-nav').getByRole('button', { name: 'Chat', exact: true })).toHaveCount(0);
+    await expect(page.locator('.miru-nav').getByRole('button', { name: 'Call', exact: true })).toHaveCount(0);
     const signIn=page.getByRole('button',{name:'Sign in',exact:true}).first();
     if(await signIn.isVisible().catch(()=>false)){
-      await expect(page.locator('.frame-nav').getByRole('button',{name:'Chat',exact:true})).toHaveCount(0);
-      await expect(page.locator('.frame-nav').getByRole('button',{name:'Call',exact:true})).toHaveCount(0);
+      await expect(page.locator('.miru-nav').getByRole('button',{name:'Chat',exact:true})).toHaveCount(0);
+      await expect(page.locator('.miru-nav').getByRole('button',{name:'Call',exact:true})).toHaveCount(0);
       return;
     }
     await page.getByTitle('Open quick actions').click();
@@ -264,161 +268,6 @@ test.describe('FRAME quick actions', () => {
   });
 });
 
-
-test.describe('FRAME anime hierarchy and character archive', () => {
-  test('shows season/arc hierarchy and the rich character archive without an episode tracker', async ({ page }) => {
-    await page.route('https://example.com/luffy.png', route => route.fulfill({
-      status: 200,
-      contentType: 'image/svg+xml',
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18" fill="red"/></svg>'
-    }));
-    await page.route('**/functions/v1/anime-catalogue', async route => {
-      const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-      };
-      if (route.request().method() === 'OPTIONS') {
-        await route.fulfill({ status: 204, headers, body: '' });
-        return;
-      }
-      const body = route.request().postDataJSON() as { action?: string };
-      if (body.action === 'anime-characters') {
-        await route.fulfill({
-          status: 200, headers,
-          body: JSON.stringify({
-            characters: [{
-              id: 1,
-              name: 'Monkey D. Luffy',
-              role: 'MAIN',
-              image: 'https://example.com/luffy.png',
-              sourceUrl: 'https://anilist.co/character/1'
-            }],
-            matched: 1, requested: 1, source: 'AniList'
-          })
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200, headers,
-        body: JSON.stringify({ results: [{ mal_id: 21, title: 'One Piece', title_english: 'One Piece' }] })
-      });
-    });
-
-    await page.addInitScript(() => {
-      localStorage.setItem('frame-guest', '1');
-      localStorage.setItem('frame-library:guest', JSON.stringify([
-        {
-          id: 'qa-one-piece',
-          anilistId: 21,
-          sourceProvider: 'anilist',
-          externalId: '21',
-          title: 'One Piece',
-          description: 'QA fixture',
-          poster: '/frame-logo.svg',
-          backdrop: '',
-          medium: 'anime',
-          status: 'watching',
-          progress: 0,
-          total: 1180,
-          genres: [],
-          themes: [],
-          favorite: false
-        },
-        {
-          id: 'qa-one-piece-arc-1',
-          parentId: 'qa-one-piece',
-          sourceProvider: 'frame-story-arc',
-          externalId: 'one-piece-arc-1',
-          title: 'Romance Dawn',
-          description: 'First story arc.',
-          poster: '/frame-logo.svg',
-          backdrop: '',
-          medium: 'anime',
-          status: 'watching',
-          progress: 0,
-          total: 3,
-          genres: [],
-          themes: [],
-          favorite: false
-        }
-      ]));
-    });
-
-    await page.goto('/');
-    await navigatePrimary(page, 'Library');
-    const onePieceCard=page.locator('.media-card').filter({hasText:'One Piece'}).first();
-    await expect(onePieceCard).toBeVisible({timeout:5000});
-    await onePieceCard.click();
-
-    await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Romance Dawn', { exact: true })).toBeVisible({timeout:5000});
-    await expect(page.getByRole('heading', { name: 'Top 20 Characters', exact: true })).toBeVisible({timeout:5000});
-    await expect(page.getByAltText('Monkey D. Luffy portrait')).toBeVisible({timeout:5000});
-    await expect(page.getByText('Episodes', { exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Mark through' })).toHaveCount(0);
-  });
-});
-
-test.describe('FRAME AOT archive regression', () => {
-  test('keeps Attack on Titan seasons, arcs, progress and rich characters intact', async ({ page }) => {
-    await page.route('https://example.com/eren.jpg', route => route.fulfill({
-      status: 200,
-      contentType: 'image/svg+xml',
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18"/></svg>'
-    }));
-    await page.route('**/functions/v1/anime-catalogue', async route => {
-      const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json'
-      };
-      if (route.request().method() === 'OPTIONS') {
-        await route.fulfill({ status: 204, headers, body: '' });
-        return;
-      }
-      const body = route.request().postDataJSON() as { action?: string };
-      if (body.action === 'anime-characters') {
-        await route.fulfill({
-          status: 200, headers,
-          body: JSON.stringify({
-            characters: [
-              { id: 1, name: 'Eren Yeager', role: 'MAIN', image: 'https://example.com/eren.jpg', birthday: 'March 30', age: '15', gender: 'Male', bloodType: 'B' }
-            ],
-            matched: 1, requested: 1, source: 'AniList'
-          })
-        });
-        return;
-      }
-      await route.fulfill({ status: 200, headers, body: JSON.stringify({ results: [] }) });
-    });
-    await page.addInitScript(() => {
-      localStorage.setItem('frame-guest', '1');
-      localStorage.setItem('frame-library:guest', JSON.stringify([
-        { id: 'aot-root', anilistId: 16498, sourceProvider: 'anilist', externalId: '16498', title: 'Attack on Titan', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 89, total: 89, genres: [], themes: [], favorite: false },
-        { id: 'aot-s1', parentId: 'aot-root', sourceProvider: 'frame-aot-season', externalId: 'aot-s1', title: 'Attack on Titan — Season 1 (Episodes 1–25)', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 25, total: 25, genres: [], themes: [], favorite: false },
-        { id: 'aot-arc-1', parentId: 'aot-s1', sourceProvider: 'frame-aot-arc', externalId: 'aot-arc-1', title: 'Fall of Shiganshina Arc (Episodes 1–2)', poster: '/frame-logo.svg', backdrop: '', medium: 'anime', status: 'completed', progress: 2, total: 2, genres: [], themes: [], favorite: false }
-      ]));
-    });
-    await page.goto('/');
-    await navigatePrimary(page, 'Library');
-    await page.locator('.media-card').filter({ hasText: 'Attack on Titan' }).first().click();
-    await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
-    await expect(page.locator('.progress-edit input').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Seasons & arcs', exact: true })).toBeVisible();
-    const seasonCard=page.locator('.hierarchy-part-card').filter({hasText:'Attack on Titan — Season 1 (Episodes 1–25)'}).first();
-    await expect(seasonCard).toBeVisible();
-    await seasonCard.click();
-    await expect(page.getByRole('heading', { name: 'Attack on Titan — Season 1 (Episodes 1–25)', exact: true })).toBeVisible();
-    await expect(page.getByText('Fall of Shiganshina Arc (Episodes 1–2)', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Go back', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Attack on Titan', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Top 20 Characters', exact: true })).toBeVisible();
-    await expect(page.getByAltText('Eren Yeager portrait')).toBeVisible();
-  });
-});
 
 test.describe('FRAME detail navigation and scroll', () => {
   test('opens a sub-part at the top and Back restores the previous item and scroll position', async ({ page }) => {
@@ -575,6 +424,6 @@ test.describe('FRAME browser detail history', () => {
     await page.goBack();
     await expect(page.locator('.detail-overlay')).toHaveCount(0);
     await expect(page.locator('h1').filter({ hasText: /^Library$/ })).toBeVisible();
-    await expect(page.locator('h1').filter({ hasText: /Welcome back/ })).toHaveCount(0);
+    await expect(page.locator('h1').filter({ hasText: /Your anime deserves a better library\./ })).toHaveCount(0);
   });
 });

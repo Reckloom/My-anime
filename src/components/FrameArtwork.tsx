@@ -73,7 +73,7 @@ const isBareAniListCover=(value?:string)=>{
  const v=String(value||'').trim();
  return /^https:\/\/s\d+\.anilist\.co\/file\/anilistcdn\/media\/anime\/cover\/large\/b\d+\.jpg(?:\?[^\s]*)?$/i.test(v);
 };
-const isPlaceholderArtwork=(value?:string)=>!value||value.toLowerCase().includes('frame-logo.svg')||isBareAniListCover(value);
+const isPlaceholderArtwork=(value?:string)=>!value||value.toLowerCase().includes('frame-logo.svg')||isBareAniListCover(value)||/(?:not-available|not-supplied-by-source)/i.test(value);
 const isHierarchyNode=(p:Props)=>p.sourceProvider==='frame-story-arc'||/^frame-anime-(?:season|arc|episode)$/i.test(p.sourceProvider||'')||isNarutoHierarchy(p)||/one-piece-(?:arc|episode)-/i.test(p.externalId||'')||/(?:^|[-_])(season|s)\d+(?:[-_]|$)/i.test(p.externalId||'')||/(?:^|[-_])arc[-_]/i.test(p.externalId||'');
 const svgFallback=(title:string,medium:Medium)=>{
  const hash=[...title].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,7);
@@ -221,7 +221,14 @@ async function resolve(p:Props):Promise<string>{
  }
  const isSeriesMedia=['anime','manga','manhwa','light-novel'].includes(p.medium);
  const isEpisode=/frame-(?:anime|naruto)-episode/i.test(p.sourceProvider||'')||/:episode:\\d+$/i.test(p.externalId||'')||/naruto-episode-/i.test(p.externalId||'');
- if(isEpisode)return hasSavedPoster && await isPortraitSource(p.poster)?p.poster as string:'';
+ if(isEpisode){
+  // Episode stills may be landscape. Prefer the stored episode image as-is;
+  // if it is missing, use the verified parent anime artwork rather than
+  // searching by the episode title and risking unrelated artwork.
+  if(p.poster && !isPlaceholderArtwork(p.poster))return p.poster as string;
+  if(p.parentPoster && !isPlaceholderArtwork(p.parentPoster))return p.parentPoster as string;
+  return '';
+}
  const dedicatedHierarchyPoster=dedicatedHierarchyArtwork(p.title);
  if(dedicatedHierarchyPoster)return dedicatedHierarchyPoster;
   if(isNarutoHierarchy(p)){
@@ -333,5 +340,5 @@ export function FrameArtwork(p:Props){
  // blank <img>. The next mount can still retry the saved URL.
  const src=failedIdentity===identity?svgFallback(p.title,p.medium):base;
  const displaySrc=src?posterImageSrc(src):undefined;
- return <img className={p.className} {...(displaySrc?{src:displaySrc}:{})} alt={displaySrc?(p.alt??p.title):''} loading={p.loading||'lazy'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;const rawSource=resolved&&resolved.identity===identity?resolved.src:'';if(p.medium==='anime'&&isHierarchyNode(p)&&recoveryAttempted!==identity){setRecoveryAttempted(identity);void recoverHierarchyArtwork(p).then(src=>{if(src){img.src=posterImageSrc(src);return}if(failedIdentity!==identity)setFailedIdentity(identity)});return}if(p.medium==='anime'&&rawSource&&failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.directRetryApplied!=='1'){img.dataset.directRetryApplied='1';img.src=rawSource;return}if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
+ return <img className={p.className} {...(displaySrc?{src:displaySrc}:{})} alt={displaySrc?(p.alt??p.title):''} loading={p.loading||'lazy'} decoding="async" fetchPriority={p.loading==='eager'?'high':'auto'} onError={e=>{const img=e.currentTarget;const failedSrc=img.currentSrc||img.src;const rawSource=resolved&&resolved.identity===identity?resolved.src:'';if(p.medium==='anime'&&isHierarchyNode(p)&&recoveryAttempted!==identity){setRecoveryAttempted(identity);void recoverHierarchyArtwork(p).then(src=>{if(src){img.src=posterImageSrc(src);return}if(failedIdentity!==identity)setFailedIdentity(identity)});return}if(p.medium==='anime'&&rawSource&&failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.directRetryApplied!=='1'){img.dataset.directRetryApplied='1';img.src=rawSource;return}if(/^https?:\/\//i.test(failedSrc)&&!failedSrc.includes('/functions/v1/media-discovery?action=proxy-image')&&img.dataset.imageProxyApplied!=='1'){img.dataset.imageProxyApplied='1';img.src=proxyImageSrc(failedSrc);return}if(failedIdentity!==identity)setFailedIdentity(identity)}}/>;
 }

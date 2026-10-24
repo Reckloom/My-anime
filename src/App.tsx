@@ -1,26 +1,29 @@
-import {useEffect,useMemo,useRef,useState} from 'react';
-import {CalendarDays,ChevronRight,CirclePlus,Compass,Gamepad2,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Radio,RefreshCw,Search,Star,Users,X} from 'lucide-react';
+import {lazy,Suspense,useEffect,useMemo,useRef,useState} from 'react';
+import {CalendarDays,ChevronRight,CirclePlus,Compass,Gamepad2,Heart,Home as HomeIcon,Library,Link2,LogOut,Menu,MessageCircle,Radio,RefreshCw,Search,Star,Users,X} from 'lucide-react';
 import {useAuth} from './auth/Auth';
-import type {AnimeCharacterProfile,MediaItem,Medium} from './types';
+import type {MediaItem,Medium} from './types';
 import {AniListSearch} from './components/AniListSearch';
-import {FrameGlobalChat} from './components/FrameGlobalChat';
-import {FrameDetail} from './components/FrameDetail';
-import {FrameSocial} from './components/FrameSocial';
-import {CallsPage} from './components/FrameCalls';
-import {FrameDirectCall} from './components/FrameDirectCall';
-import {FramePopupHub} from './components/FramePopupHub';
+const FrameGlobalChat=lazy(()=>import('./components/FrameGlobalChat').then(m=>({default:m.FrameGlobalChat})));
+const FrameDetail=lazy(()=>import('./components/FrameDetail').then(m=>({default:m.FrameDetail})));
+const FrameAnimeCatalogPage=lazy(()=>import('./components/FrameAnimeCatalogPage').then(m=>({default:m.FrameAnimeCatalogPage})));
+const FrameMyAnimeDashboard=lazy(()=>import('./components/FrameMyAnimeDashboard').then(m=>({default:m.FrameMyAnimeDashboard})));
+const FrameSchedulePage=lazy(()=>import('./components/FrameSchedulePage').then(m=>({default:m.FrameSchedulePage})));
+const FrameSocial=lazy(()=>import('./components/FrameSocial').then(m=>({default:m.FrameSocial})));
+const CallsPage=lazy(()=>import('./components/FrameCalls').then(m=>({default:m.CallsPage})));
+const FrameDirectCall=lazy(()=>import('./components/FrameDirectCall').then(m=>({default:m.FrameDirectCall})));
+const FramePopupHub=lazy(()=>import('./components/FramePopupHub').then(m=>({default:m.FramePopupHub})));
 import {FrameNotifications} from './components/FrameNotifications';
-import {FrameCommandPalette} from './components/FrameCommandPalette';
-import {FrameDataTools} from './components/FrameDataTools';
+const FrameCommandPalette=lazy(()=>import('./components/FrameCommandPalette').then(m=>({default:m.FrameCommandPalette})));
+const FrameDataTools=lazy(()=>import('./components/FrameDataTools').then(m=>({default:m.FrameDataTools})));
 import {FrameLibraryImport} from './components/FrameLibraryImport';
 import {FrameAnimeCatalogueImport} from './components/FrameAnimeCatalogueImport';
-import {FrameAnimeCharacters} from './components/FrameAnimeCharacters';
 import {aniList,DETAIL_QUERY,SEARCH_QUERY,cleanDescription,titleOf} from './anilist';
 import {FrameSpotifyControls} from './components/FrameSpotify';
 import {supabase} from './lib/supabase';
 import {FrameArtwork,artworkFallbackAncestor} from './components/FrameArtwork';
 
 const poster=import.meta.env.BASE_URL+'frame-logo.svg';
+const FrameRouteFallback=()=> <div className="frame-route-fallback" aria-live="polite"><span className="frame-route-spinner"/>Loading FRAME…</div>;
 const FRAME_OWNER_ID='281a6fa2-a51f-4a50-9fea-213710a10876';
 const types:Record<Medium,string>={anime:'Anime',manga:'Manga',manhwa:'Manhwa','light-novel':'Light Novel','visual-novel':'Visual Novel',movie:'Movie',series:'Series',game:'Game',book:'Book'};
 const unitFor=(m:Medium)=>({anime:'episodes',manga:'chapters',manhwa:'chapters','light-novel':'chapters','visual-novel':'%',movie:'watch state',series:'episodes',game:'%',book:'pages'} as Record<Medium,string>)[m];
@@ -62,7 +65,6 @@ function dbToMedia(raw:unknown):MediaItem{
   nextRelease:r.next_release?String(r.next_release):undefined,nextReleaseNumber:r.next_release_number==null?undefined:Number(r.next_release_number),
   availability:data.availability as MediaItem['availability'],externalLinks:data.externalLinks&&typeof data.externalLinks==='object'?data.externalLinks as MediaItem['externalLinks']:undefined,game:data.game as MediaItem['game'],notificationsEnabled:data.frameReleaseRadar?.enabled!==false,releaseRadarState:data.frameReleaseRadar&&typeof data.frameReleaseRadar==='object'?data.frameReleaseRadar:undefined,
   episode:data.episode&&typeof data.episode==='object'?data.episode as MediaItem['episode']:undefined,
-  characters:Array.isArray(data.characters)?data.characters as MediaItem['characters']:undefined
  });
 }
 const canonicalAnimePosterIds=new Set<number>([
@@ -88,7 +90,7 @@ function repairAnimePosters(items:MediaItem[]){
   });
 }
 function toRow(item:MediaItem,userId:string){
- return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,popularity:item.popularity??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,externalLinks:item.externalLinks??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false},episode:item.episode??null,characters:item.characters??null}};
+ return {id:item.id,user_id:userId,parent_id:item.parentId??null,metadata_id:item.metadataId??null,anilist_id:item.anilistId??null,title:item.title,description:item.description,poster:item.poster,backdrop:item.backdrop,medium:item.medium,status:item.status,progress:item.progress,total:item.medium==='movie'?1:(item.total??null),year:item.year??null,score:item.score??null,genres:item.genres,themes:item.themes,studio:item.studio??null,source:item.source??null,favorite:item.favorite,notes:item.notes??null,data:{provider:item.sourceProvider??null,externalId:item.externalId??null,personalRating:item.personalRating??null,popularity:item.popularity??null,progressUnit:item.progressUnit??unitFor(item.medium),customTotal:item.customTotal??item.total??null,availability:item.availability??null,externalLinks:item.externalLinks??null,game:item.game??null,frameReleaseRadar:{...(item.releaseRadarState||{}),enabled:item.notificationsEnabled!==false},episode:item.episode??null}};
 }
 function preservePersistedArtwork(next:MediaItem,current?:MediaItem):MediaItem{
  if(!current)return next;
@@ -126,7 +128,7 @@ function samePersistedMedia(a:MediaItem,b:MediaItem){
  }
  const nested:[unknown,unknown][]=[
   [a.availability,b.availability],[a.externalLinks,b.externalLinks],[a.game,b.game],
-  [a.releaseRadarState,b.releaseRadarState],[a.episode,b.episode],[a.characters,b.characters]
+  [a.releaseRadarState,b.releaseRadarState],[a.episode,b.episode]
  ];
  for(const [left,right] of nested){
   if(Object.is(left,right))continue;
@@ -366,7 +368,7 @@ export default function App(){
        itemsRef.current=next;setItems(next);
       }catch(error){console.warn('[FRAME season warmup]',error)}};
       if(typeof window!=='undefined'&&'requestIdleCallback' in window)(window as any).requestIdleCallback(warm,{timeout:1200});
-      else if(typeof window!=='undefined')window.setTimeout(warm,120);
+      else setTimeout(warm,120);
      }
     }
     try{
@@ -493,17 +495,8 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
   saveQueue.current=operation.catch(()=>true);
   return operation;
  };
- const persistCharacterProfiles=async(itemId:string,profiles:AnimeCharacterProfile[])=>{
-  const current=itemsRef.current.find(item=>item.id===itemId);
-  if(!current)return false;
-  const signature=(rows:AnimeCharacterProfile[])=>rows.map(character=>[character.id||'',character.name,character.image||''].join(':')).join('|');
-  if(signature(current.characters||[])===signature(profiles))return true;
-  const next={...current,characters:profiles};
-  return await save(itemsRef.current.map(item=>item.id===itemId?next:item));
- };
  const importAnimeBatch=async(incoming:MediaItem[])=>{
   const client=supabase;
-  if(!client){setAppMessage('Cloud database is unavailable.');return false}
   const merged=dedupeMediaItems(itemsRef.current);
   const changed=new Map<string,MediaItem>();
   for(const raw of incoming){
@@ -532,10 +525,18 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     poster:item.poster&&item.poster!=='/frame-logo.svg'?item.poster:current.poster||item.poster,
     backdrop:item.backdrop||current.backdrop,description:item.description||current.description,
     genres:item.genres?.length?item.genres:current.genres,themes:item.themes?.length?item.themes:current.themes,
-    studio:item.studio||current.studio,characters:item.characters?.length?item.characters:current.characters,
+    studio:item.studio||current.studio,
     externalLinks:{...(current.externalLinks||{}),...(item.externalLinks||{})},game:current.game??item.game
    });
    merged[found]=next;changed.set(next.id,next);
+  }
+  if(!client){
+   // Catalogue imports must remain fully usable in free guest mode. Keep the
+   // same duplicate/progress protections, but persist locally when Supabase is
+   // unavailable instead of turning Add to Plan into a dead button.
+   itemsRef.current=merged;setItems(merged);
+   try{localStorage.setItem('frame-library:guest',JSON.stringify(merged))}catch{}
+   return true;
   }
   const rows=[...changed.values()].map(item=>{
    const current=itemsRef.current.find(existing=>existing.id===item.id);
@@ -1152,46 +1153,52 @@ const {data:prefs}=await client.from('user_preferences').select('*').eq('user_id
     <FrameAnimeCatalogueImport userId={user?.id} enabled={Boolean(user?.id)} library={items} onImportBatch={importAnimeBatch}/>
   </div>}
   {appMessage&&<div className="frame-app-message" role="status">{appMessage}<button onClick={()=>setAppMessage('')} aria-label="Dismiss">×</button></div>}
-  <header className="frame-topbar" role="banner">
-   <button className="frame-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><b>FRAME</b></button>
-   <nav className="frame-nav">
-    {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['discover','Discover'],Compass]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={16}/>{label}</button>})}
+  <header className="miru-sidebar" role="banner">
+   <button className="miru-brand" aria-label="Go to FRAME home" onClick={()=>go('home')}><FrameLogoMark logo={profile?.frame_logo}/><span>FRAME</span></button>
+   <div className="miru-side-label">MENU</div>
+   <nav className="miru-nav">
+    {[[['home','Home'],HomeIcon],[['anime','Discover'],Compass],[['library','My Anime'],Library],[['radar','Schedule'],CalendarDays],[['favorites','Favorites'],Heart],[['settings','Settings'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof HomeIcon;return <button key={id} className={page===id?'active':''} onClick={()=>go(id)}><Icon size={17}/><span>{label}</span></button>})}
    </nav>
-   <div className="frame-actions">
-    <div className="global-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search your library…"/></div>
-    <button className="primary top-find" onClick={()=>setFinder(true)}><Search size={16}/>Search</button>
-    <button className="top-icon" title="Connections" aria-label="Connections" onClick={()=>go('connections')}><Link2 size={18}/></button>
+   <div className="miru-side-foot"><span>PRIVATE LIBRARY</span><small>FRAME catalogue</small></div>
+  </header>
+  <header className="miru-topbar">
+   <div className="miru-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setFinder(true)} placeholder="Search anime, manga, manhwa…"/></div>
+   <div className="miru-top-actions">
+    <button className="miru-search-btn" onClick={()=>setFinder(true)}>SEARCH</button>
     <FrameNotifications uid={uid} mediaItems={items} onNavigate={href=>{if(!href)return;if(href.startsWith('media:')){const match=items.find(x=>x.id===href.slice(6));if(match){openDetail(match);return}}go(href)}}/>
-    {guest&&<button className="secondary guest-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in</button>}
-    <button className="top-account" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
-      <span className="top-avatar">{profile?.avatar_url?<img src={profile.avatar_url} alt={(profile.display_name||user?.email||'Account')+' avatar'} onError={e=>{e.currentTarget.src=import.meta.env.BASE_URL+'frame-logo.svg';e.currentTarget.classList.add('image-fallback')}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}</span>
-      <span className="top-account-name">{profile?.display_name||user?.email?.split('@')[0]||'Account'}</span>
+    {guest&&<button className="miru-signin" type="button" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>SIGN IN</button>}
+    <button className="miru-avatar" type="button" title="Open Settings" aria-label="Open Settings" onClick={()=>go('settings')}>
+      {profile?.avatar_url?<img src={profile.avatar_url} alt="" onError={e=>{e.currentTarget.src=import.meta.env.BASE_URL+'frame-logo.svg'}}/>:(profile?.display_name||user?.email||'G')[0].toUpperCase()}
     </button>
-    <button className="top-icon mobile-only" aria-label={menu?'Close navigation menu':'Open navigation menu'} title={menu?'Close navigation menu':'Open navigation menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
+    <button className="miru-menu-mobile" aria-label={menu?'Close menu':'Open menu'} onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
    </div>
   </header>
-  {menu&&<div className="frame-mobile-menu">{[['home','Home'],['library','Library'],['discover','Discover'],['radar','Release Radar'],['friends','Friends'],['connections','Connections'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
-  <main className="frame-main">
+  {menu&&<div className="miru-mobile-menu">{[['home','Home'],['anime','Discover'],['library','My Anime'],['radar','Schedule'],['favorites','Favorites'],['settings','Settings']].map(([id,label])=><button key={id} onClick={()=>go(id)}>{label}</button>)}</div>}
+  <main className="miru-main">
    {page==='home'&&<Home items={sortMedia(items,sortMode).filter(x=>!x.parentId)} total={items.filter(x=>!x.parentId).length} open={openDetail} finder={()=>setFinder(true)} go={go} name={profile?.display_name} />}
-   {page==='library'&&<LibraryPage items={shown} library={items} filters={filters} setFilters={setFilters} sort={sortMode} setSort={x=>{setSortMode(x);void persist('default_sort',x)}} open={openDetail} add={()=>setFinder(true)} />}
+   {page==='library'&&<Suspense fallback={<FrameRouteFallback/>}><FrameMyAnimeDashboard items={items} open={openDetail} add={()=>setFinder(true)} update={async x=>save(itemsRef.current.map(i=>i.id===x.id?x:i))}/></Suspense>}
+   {page==='anime'&&<Suspense fallback={<FrameRouteFallback/>}><FrameAnimeCatalogPage library={items} open={openDetail} add={importItem} update={async x=>save(itemsRef.current.map(i=>i.id===x.id?x:i))} batchAdd={importAnimeBatch} guest={guest}/></Suspense>}
+   {page==='favorites'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.favorite),sortMode)} library={items} filters={['all']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
+   {page==='manga'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manga'),sortMode)} library={items} filters={['manga']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
+   {page==='manhwa'&&<LibraryPage items={sortMedia(items.filter(x=>!x.parentId&&x.medium==='manhwa'),sortMode)} library={items} filters={['manhwa']} setFilters={()=>{}} sort={sortMode} setSort={setSortMode} open={openDetail} add={()=>setFinder(true)} />}
    {page==='discover'&&<Discover finder={()=>setFinder(true)} go={go}/>} 
-   {page==='radar'&&<RadarPage releases={radar} busy={radarBusy} error={radarError} refresh={()=>void refreshRadar()}/>}
-   {page==='friends'&&<FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);go('friend-library')}} onCall={setDirectCall}/>}
-   {page==='chat'&&<FrameGlobalChat uid={uid} guest={guest}/>} 
-   {page==='calls'&&<CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/>}
+   {page==='radar'&&<Suspense fallback={<FrameRouteFallback/>}><FrameSchedulePage library={items} open={openDetail}/></Suspense>}
+   {page==='friends'&&<Suspense fallback={<FrameRouteFallback/>}><FrameSocial uid={uid} guest={guest} onOpenLibrary={id=>{setFriendLibrary(id);go('friend-library')}} onCall={setDirectCall}/></Suspense>}
+   {page==='chat'&&<Suspense fallback={<FrameRouteFallback/>}><FrameGlobalChat uid={uid} guest={guest}/></Suspense>} 
+   {page==='calls'&&<Suspense fallback={<FrameRouteFallback/>}><CallsPage uid={uid} profile={profile} onCloseCall={()=>{}}/></Suspense>}
    {page==='connections'&&<><Connections connections={connections} toggle={updateConnection} onImportSteamGame={addSteamGame}/><FrameLibraryImport onImport={mergeImported}/></>}
    {page==='settings'&&<SettingsPage user={user} profile={profile} setProfile={setProfile} guest={guest} density={density} setDensity={x=>{setDensity(x);void persist('density',x)}} theme={theme} setTheme={x=>{setTheme(x);void persist('theme',x)}} appearanceMode={appearanceMode} setAppearanceMode={x=>{setAppearanceMode(x);void persist('appearance_mode',x)}} items={items} onImport={mergeImported} onImportAnimeBatch={importAnimeBatch} preferences={{default_sort:sortMode,density,theme,appearance_mode:appearanceMode,release_notifications_enabled:releaseNotificationsEnabled}} releaseNotificationsEnabled={releaseNotificationsEnabled} onReleaseNotificationsChange={updateReleaseNotifications} onSignOut={signOut}/>} 
    {page==='friend-library'&&friendLibrary&&<FriendLibrary id={friendLibrary} onBack={()=>go('friends')}/>}
   </main>
   <nav className="mobile-bottom">
-   {[[['home','Home'],HomeIcon],[['library','Library'],Library],[['search','Search'],Search],[['chat','Chat'],MessageCircle],[['friends','Friends'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)}><Icon size={19}/><span>{label}</span></button>})}
+   {[[['home','Home'],HomeIcon],[['library','My Anime'],Library],[['search','Search'],Search],[['favorites','Favorites'],Heart],[['settings','Settings'],Users]].map(([pair,I])=>{const[id,label]=pair as string[],Icon=I as typeof Search;return <button key={id} className={page===id?'active':''} onClick={()=>id==='search'?setFinder(true):go(id)} aria-label={label}><Icon size={19}/><span>{label}</span></button>})}
   </nav>
-  {selected&&<FrameDetail item={selected} library={items} navigationItems={shown.length?shown:items.filter(x=>!x.parentId)} navigate={navigateDetail} close={closeDetail} onRefreshMetadata={refreshMetadata} onDelete={async id=>{const target=items.find(i=>i.id===id);const children=items.filter(i=>i.parentId===id);const next=items.filter(i=>i.id!==id).map(i=>i.parentId===id?{...i,parentId:undefined}:i);const client=supabase;if(client&&user?.id){const {error}=await client.from('media_items').delete().eq('id',id).eq('user_id',user.id);if(error){setAppMessage('Delete failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return}}closeDetail();await save(next);await removeOwnedArtwork(target?.poster);if(target?.backdrop&&target.backdrop!==target.poster)await removeOwnedArtwork(target.backdrop);if(children.length){setAppMessage('Entry deleted. Its child entries were kept and detached.');window.setTimeout(()=>setAppMessage(''),5000)}}} save={async x=>{const previous=items.find(i=>i.id===x.id);const ok=await save(items.map(i=>i.id===x.id?x:i));if(ok&&previous){if(previous.poster&&previous.poster!==x.poster)await removeOwnedArtwork(previous.poster);if(previous.backdrop&&previous.backdrop!==x.backdrop&&previous.backdrop!==previous.poster&&previous.backdrop!==x.poster)await removeOwnedArtwork(previous.backdrop)}return ok}}/>}
+  <Suspense fallback={<FrameRouteFallback/>}>{selected&&<FrameDetail item={selected} library={items} navigationItems={shown.length?shown:items.filter(x=>!x.parentId)} navigate={navigateDetail} close={closeDetail} onRefreshMetadata={refreshMetadata} onDelete={async id=>{const target=items.find(i=>i.id===id);const children=items.filter(i=>i.parentId===id);const next=items.filter(i=>i.id!==id).map(i=>i.parentId===id?{...i,parentId:undefined}:i);const client=supabase;if(client&&user?.id){const {error}=await client.from('media_items').delete().eq('id',id).eq('user_id',user.id);if(error){setAppMessage('Delete failed: '+error.message);window.setTimeout(()=>setAppMessage(''),5000);return}}closeDetail();await save(next);await removeOwnedArtwork(target?.poster);if(target?.backdrop&&target.backdrop!==target.poster)await removeOwnedArtwork(target.backdrop);if(children.length){setAppMessage('Entry deleted. Its child entries were kept and detached.');window.setTimeout(()=>setAppMessage(''),5000)}}} save={async x=>{const previous=items.find(i=>i.id===x.id);const ok=await save(items.map(i=>i.id===x.id?x:i));if(ok&&previous){if(previous.poster&&previous.poster!==x.poster)await removeOwnedArtwork(previous.poster);if(previous.backdrop&&previous.backdrop!==x.backdrop&&previous.backdrop!==previous.poster&&previous.backdrop!==x.poster)await removeOwnedArtwork(previous.backdrop)}return ok}}/>}</Suspense>
   {finder&&<AniListSearch initialQuery={query} guest={guest} library={items} close={()=>setFinder(false)} onImported={importItem} onManual={()=>{setFinder(false);setManualEntry(true)}} />}
   {manualEntry&&<ManualEntryForm library={items} close={()=>setManualEntry(false)} onCreate={async raw=>{const item=normalise({...raw,id:crypto.randomUUID()});const ok=await save([item,...items]);if(!ok)return;openDetail(item);setManualEntry(false);}}/>}
-  {!guest&&<FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/>} 
-  <FramePopupHub uid={uid} hidden={finder||manualEntry||selected!==null||commandOpen} onFind={()=>setFinder(true)} onOpenCalls={()=>go('calls')} onCall={setDirectCall}/>
-  {commandOpen&&<FrameCommandPalette onGo={go} onFind={()=>setFinder(true)} onClose={()=>setCommandOpen(false)}/>}
+  {!guest&&<Suspense fallback={<FrameRouteFallback/>}><FrameDirectCall uid={uid} target={directCall} onClear={()=>setDirectCall(null)}/></Suspense>} 
+  <Suspense fallback={null}><FramePopupHub uid={uid} hidden={finder||manualEntry||selected!==null||commandOpen} onFind={()=>setFinder(true)} onOpenCalls={()=>go('calls')} onCall={setDirectCall}/></Suspense>
+  {commandOpen&&<Suspense fallback={<FrameRouteFallback/>}><FrameCommandPalette onGo={go} onFind={()=>setFinder(true)} onClose={()=>setCommandOpen(false)}/></Suspense>}
  </div>;
 }
 
@@ -1201,66 +1208,69 @@ function ManualEntryForm({close,onCreate,library}:{close:()=>void;onCreate:(item
  const submit=async()=>{if(!title.trim()||busy)return;const t=total>0?Math.min(2000,total):undefined;const max=medium==='movie'?1:(medium==='game'||medium==='visual-novel'?100:(t||2000));setBusy(true);try{await onCreate({id:crypto.randomUUID(),title:title.trim(),description,poster:posterUrl.trim(),backdrop:'',medium,status,progress:status==='completed'?(t||max):Math.max(0,Math.min(max,progress)),total:t,progressUnit:units[medium],genres:[],themes:[],favorite,personalRating,notes:notes.trim()||undefined,parentId:parentId||undefined})}finally{setBusy(false)}};
  return <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><aside className="detail-drawer manual-entry-drawer" onMouseDown={e=>e.stopPropagation()}><button className="close-btn" onClick={close} aria-label="Close"><X/></button><div className="manual-entry-head"><small>MANUAL ENTRY</small><h2>Add anything to FRAME.</h2><p>Use this for media that no catalogue can identify. You can edit all of it later.</p></div><div className="call-form manual-entry-form"><label>Title<input autoFocus value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. a local series, book, game…" /></label><label>Media type<select value={medium} onChange={e=>setMedium(e.target.value as Medium)}>{Object.entries(types).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><label>Status<select value={status} onChange={e=>setStatus(e.target.value as MediaItem['status'])}>{[['planned','Planned'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['paused','Paused'],['dropped','Dropped']].map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label><div className="manual-two-col"><label>Progress<input type="number" min="0" max="2000" value={progress} onChange={e=>setProgress(Number(e.target.value)||0)}/></label><label>Total<input type="number" min="0" max="2000" value={total||''} onChange={e=>setTotal(Number(e.target.value)||0)} placeholder="Optional" /></label></div><label>Poster URL<input value={posterUrl} onChange={e=>setPosterUrl(e.target.value)} placeholder="https://…" /></label><label>Description<textarea value={description} onChange={e=>setDescription(e.target.value)} placeholder="Optional description…" /></label><label>Your rating<input type="number" min="0" max="10" step=".1" value={personalRating??''} onChange={e=>setPersonalRating(e.target.value===''?undefined:Number(e.target.value)||0)} /></label><label>Parent entry<select value={parentId} onChange={e=>setParentId(e.target.value)}><option value="">None — top level</option>{library.slice().sort((a,b)=>a.title.localeCompare(b.title)).map(x=><option key={x.id} value={x.id}>{x.parentId?'↳ ':''}{x.title}</option>)}</select></label><label>Favorite<select value={favorite?'yes':'no'} onChange={e=>setFavorite(e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></label><label>Notes<textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Anything you want to remember…" /></label><button className="primary" disabled={!title.trim()||busy} onClick={()=>void submit()}>{busy?<RefreshCw size={16} className="spin"/>:<CirclePlus size={16}/>} {busy?'Adding…':'Add to my library'}</button></div></aside></div>;
 }
-function Home({items,total,open,finder,go,name}:{items:MediaItem[];total:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
- const active=items.filter(x=>['watching','reading','playing'].includes(x.status));
- const favorites=items.filter(x=>x.favorite);
- const topRated=[...items].sort((a,b)=>(b.popularity??-1)-(a.popularity??-1)||(b.score??0)-(a.score??0));
- return <div className="page home-page">
-  <section className="home-intro"><div className="home-intro-copy"><small>FRAME HOME</small><h1>{'Welcome back'+(name?', '+name:'')+'.'}</h1><p>{total?'You have '+total+' '+(total===1?'title':'titles')+' in your library.':'Your library is empty. Add your first title to get started.'}</p></div><div className="home-intro-actions"><button className="primary" onClick={finder}><Search size={16}/>Add media</button><button className="secondary" onClick={()=>go('library')}><Library size={16}/>Open library</button><button className="secondary" onClick={()=>go('calls')}><Radio size={16}/>Global Call</button></div></section>
-<section className="home-overview" aria-label="Library overview"><div><b>{total}</b><span>Library</span></div><div><b>{active.length}</b><span>In progress</span></div><div><b>{items.filter(x=>x.status==='completed').length}</b><span>Completed</span></div><div><b>{favorites.length}</b><span>Favorites</span></div></section>
-  {active.length>0&&<section className="home-shelf home-continue"><div className="section-title"><div><small>KEEP GOING</small><h2>Continue</h2></div><button className="text-action" onClick={()=>go('library')}>View library <ChevronRight size={14}/></button></div><div className="media-grid">{active.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
-  {favorites.length>0&&<section className="home-shelf home-favorites"><div className="section-title"><div><small>PINNED</small><h2>Favorites</h2></div><span>{favorites.length}</span></div><div className="media-grid">{favorites.slice(0,5).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
-  <section className="home-tools"><div className="home-tools-head"><small>SHORTCUTS</small><h2>Go somewhere</h2></div><div className="home-tool-grid"><button onClick={finder}><Search size={19}/><span><b>Find media</b><small>Search every connected catalogue</small></span><ChevronRight size={15}/></button><button onClick={()=>go('discover')}><Compass size={19}/><span><b>Discover</b><small>Explore new titles and sources</small></span><ChevronRight size={15}/></button><button onClick={()=>go('radar')}><CalendarDays size={19}/><span><b>Release Radar</b><small>See tracked releases</small></span><ChevronRight size={15}/></button><button onClick={()=>go('calls')}><Radio size={19}/><span><b>Global Call</b><small>Join or start the public FRAME voice room</small></span><ChevronRight size={15}/></button></div></section>
-  {total>0&&<section className="home-shelf home-top-rated"><div className="section-title"><div><small>YOUR SCORES</small><h2>Top rated</h2></div><span>{topRated.length}</span></div><div className="media-grid">{topRated.slice(0,6).map(x=><Card key={x.id} item={x} library={items} open={open}/>)}</div></section>}
-  {!total&&<section className="home-empty"><div className="home-empty-mark"><img src={import.meta.env.BASE_URL+"frame-logo.svg"} alt=""/></div><div><small>NO TITLES YET</small><h2>Start with something you already watch, read or play.</h2><p>Use the finder to pull in metadata, then set the status and progress you want.</p><button className="primary" onClick={finder}><Search size={15}/>Find your first title</button></div></section>}
+function Home({items,open,finder,go}:{items:MediaItem[];total?:number;open:(x:MediaItem)=>void;finder:()=>void;go:(x:string)=>void;name?:string}){
+ const anime=items.filter(x=>x.medium==='anime'||x.medium==='movie'||x.medium==='series');
+ const popular=[...anime].sort((a,b)=>(b.popularity??-1)-(a.popularity??-1)||(b.score??0)-(a.score??0));
+ const hero=anime.find(x=>['watching','paused'].includes(x.status))||popular[0];
+ const newest=[...anime].sort((a,b)=>(b.year??0)-(a.year??0));
+ const trending=popular;
+ const continueWatching=anime.filter(x=>['watching','paused'].includes(x.status)).sort((a,b)=>progressPercent(b)-progressPercent(a));
+ const topRated=[...anime].sort((a,b)=>(b.score??0)-(a.score??0));
+ const genres=[...new Set(anime.flatMap(x=>x.genres||[]))].slice(0,10);
+ const Poster=({item}:{item:MediaItem})=>{
+   const parent=artworkFallbackAncestor(item,items);
+   const pct=progressPercent(item);
+   return <button className="frame-poster-card" onClick={()=>open(item)}>
+     <div className="frame-poster-art">
+       <FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId}
+         parentPoster={parent.id!==item.id?parent.poster:undefined} parentTitle={parent.id!==item.id?parent.title:undefined}
+         parentMedium={parent.id!==item.id?parent.medium:undefined} parentAnilistId={parent.id!==item.id?parent.anilistId:undefined}
+         sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/>
+       {item.score!=null&&<span className="frame-score">★ {item.score.toFixed(1)}</span>}
+       {item.status==='watching'&&<span className="frame-now">WATCHING</span>}
+       {pct>0&&pct<100&&<span className="frame-poster-progress"><i style={{width:pct+'%'}}/></span>}
+     </div>
+     <strong>{item.title}</strong>
+     <small>{item.year||'—'}{item.total?' · '+item.total+' EP':''}</small>
+   </button>;
+ };
+ const shelf=(title:string,rows:MediaItem[],kicker='COLLECTION')=><section className="frame-shelf">
+   <div className="frame-shelf-head"><div><span>{kicker}</span><h2>{title}</h2></div><button onClick={()=>go('library')}>SEE ALL <ChevronRight size={13}/></button></div>
+   <div className="frame-poster-row">{rows.slice(0,10).map(x=><Poster key={x.id} item={x}/>)}</div>
+ </section>;
+ const bg=hero?.backdrop?{backgroundImage:`linear-gradient(90deg,#070708 0%,rgba(7,7,8,.82) 32%,rgba(7,7,8,.18) 72%,rgba(7,7,8,.52) 100%),linear-gradient(0deg,#070708 0%,transparent 55%),url("${hero.backdrop}")`}:{};
+ return <div className="frame-home-new">
+   <section className="frame-hero" style={bg}>
+     <div className="frame-hero-copy">
+       <span className="frame-eyebrow">FEATURED IN YOUR LIBRARY</span>
+       <h1>{hero?.title||'Build your anime library.'}</h1>
+       {hero&&<div className="frame-meta">{hero.score!=null&&<b>★ {hero.score.toFixed(1)}</b>}{hero.year&&<span>{hero.year}</span>}<span>{hero.medium==='anime'?'TV':hero.medium.toUpperCase()}</span>{hero.total&&<span>{hero.total} EPISODES</span>}</div>}
+       <p>{hero?.description||'Your private catalogue, built around the series you actually follow.'}</p>
+       <div className="frame-hero-actions">{hero&&<button className="primary" onClick={()=>open(hero)}>OPEN TITLE</button>}<button onClick={finder}><Search size={14}/> SEARCH CATALOGUE</button></div>
+     </div>
+   </section>
+   <div className="frame-genre-bar">{genres.map(g=><button key={g} onClick={finder}>{g}</button>)}</div>
+   {continueWatching.length>0&&shelf('Continue watching',continueWatching,'YOUR QUEUE')}
+   {shelf('Trending now',trending,'DISCOVER')}
+   {shelf('Top rated',topRated,'RATINGS')}
+   {shelf('Newest additions',newest,'RECENT')}
+   {!anime.length&&<div className="frame-empty"><Library size={24}/><b>Your catalogue is empty</b><span>Search AniList and add your first title.</span><button onClick={finder}>SEARCH CATALOGUE</button></div>}
  </div>;
 }
-function Stat({value,label}:{value:number;label:string}){return <div className="stat-card"><b>{value}</b><span>{label}</span></div>}
-function Card({item,open,library=[]}:{item:MediaItem;open:(x:MediaItem)=>void;library?:MediaItem[]}){
- const pct=progressPercent(item);
- const indexes=getLibraryIndexes(library);
-  const parent=item.parentId?indexes.byId.get(item.parentId):undefined;
- const artworkParent=artworkFallbackAncestor(item,library);
- const childCount=indexes.childCounts.get(item.id)||0;
- return <button className="media-card" onClick={()=>open(item)}><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} parentPoster={artworkParent.id!==item.id?artworkParent.poster:undefined} parentTitle={artworkParent.id!==item.id?artworkParent.title:undefined} parentMedium={artworkParent.id!==item.id?artworkParent.medium:undefined} parentAnilistId={artworkParent.id!==item.id?artworkParent.anilistId:undefined} sourceProvider={item.sourceProvider} externalId={item.externalId} alt={item.title} loading="lazy"/><span className="medium-pill">{types[item.medium]}</span><span className="score-pill"><Star size={10} fill="currentColor"/>{item.score==null?'—':item.score.toFixed(1)}</span></div><div className="media-copy"><b>{item.title}</b><small>{item.status==='completed'?'Completed':item.progress+' / '+(item.total??'—')} {item.progressUnit||unitFor(item.medium)}</small><div className="card-progress"><i style={{width:Math.min(100,Math.max(0,pct))+'%'}}/></div><span className="personal-line">{item.personalRating!=null?'Your '+item.personalRating.toFixed(1):'Rate it yourself'}</span>{parent&&<span className="hierarchy-line">Part of {parent.title}</span>}{!parent&&childCount>0&&<span className="hierarchy-line">{childCount} {childCount===1?'sub-part':'sub-parts'}</span>}</div></button>;
-}
-
+function Card({item,open}:{item:MediaItem;library:MediaItem[];open:(x:MediaItem)=>void}){return <button className="media-card" type="button" onClick={()=>open(item)}><div className="media-poster"><FrameArtwork title={item.title} medium={item.medium} poster={item.poster} anilistId={item.anilistId} alt="" loading="lazy"/></div><div className="media-copy"><b>{item.title}</b><small>{item.progress}{item.total?' / '+item.total:''} {item.progressUnit||unitFor(item.medium)}</small></div></button>}
 function LibraryPage({items,library,filters,setFilters,sort,setSort,open,add}:{items:MediaItem[];library:MediaItem[];filters:string[];setFilters:(x:string[])=>void;sort:string;setSort:(x:string)=>void;open:(x:MediaItem)=>void;add:()=>void}){
- const statusFilters:[string,string][]=[['incomplete','Not 100%'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
- const mediaFilters:[string,string][]=[['all','All Media'],...Object.entries(types)];
- const toggleMedia=(id:string)=>{
-  const mediaIds=mediaFilters.slice(1).map(([key])=>key);
-  const statusOnly=filters.filter(x=>x!=='all'&&!mediaIds.includes(x));
-  if(id==='all'){setFilters(statusOnly.length?['all',...statusOnly]:['all']);return}
-  const base=filters.filter(x=>x!=='all');
-  const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];
-  const nextHasMedia=next.some(x=>mediaIds.includes(x));
-  setFilters(nextHasMedia?next:['all',...statusOnly]);
- };
- const toggleStatus=(id:string)=>{
-  const mediaIds=mediaFilters.slice(1).map(([key])=>key);
-  const base=filters.filter(x=>x!=='all');
-  const next=base.includes(id)?base.filter(x=>x!==id):[...base,id];
-  const hasMedia=next.some(x=>mediaIds.includes(x));
-  setFilters(next.length?(hasMedia?next:['all',...next]):['all']);
- };
- const allMediaActive=!mediaFilters.slice(1).some(([key])=>filters.includes(key));
- return <div className="page library-page">
-  <div className="page-heading"><div><small>YOUR COLLECTION</small><h1>Library</h1><p>Top-level entries are shown normally. Use filters to drill into matching seasons, parts and sub-items.</p></div><div className="library-heading-actions"><button className="primary" onClick={add}><CirclePlus size={17}/>Add media</button></div></div>
-  <div className="library-controls">
-   <div className="filter-groups">
-    <div className="filter-group">
-     <span className="filter-group-label">Media</span>
-     <div className="filter-scroll media-filter-scroll">{mediaFilters.map(([id,label])=><button type="button" className={(id==='all'?allMediaActive:filters.includes(id))?'active':''} key={id} onClick={()=>toggleMedia(id)} aria-pressed={id==='all'?allMediaActive:filters.includes(id)}>{label}</button>)}</div>
-    </div>
-    <div className="filter-group">
-     <span className="filter-group-label">Status</span>
-     <div className="filter-scroll status-filter-scroll">{statusFilters.map(([id,label])=><button type="button" className={filters.includes(id)?'active':''} key={id} onClick={()=>toggleStatus(id)} aria-pressed={filters.includes(id)}>{label}</button>)}</div>
-    </div>
-   </div>
-   <label className="sort-select"><span>Sort</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="popularity">Popularity</option><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label>
-  </div>
-  <div className="media-grid">{items.map(x=><Card key={x.id} item={x} library={library} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/>}
+ const mediaFilters:[string,string][]=[['all','All'],...Object.entries(types)];
+ const statusFilters:[string,string][]=[['incomplete','In progress'],['watching','Watching'],['reading','Reading'],['playing','Playing'],['completed','Completed'],['planned','Planned'],['paused','Paused'],['dropped','Dropped']];
+ const mediaIds=mediaFilters.slice(1).map(x=>x[0]); const activeMedia=filters.filter(x=>mediaIds.includes(x)); const allMedia=!activeMedia.length;
+ const toggle=(id:string)=>{if(id==='all'){setFilters(['all']);return} const next=activeMedia.includes(id)?activeMedia.filter(x=>x!==id):[...activeMedia,id]; const statuses=filters.filter(x=>!mediaIds.includes(x)&&x!=='all'); setFilters([...(next.length?next:['all']),...statuses]);};
+ const toggleStatus=(id:string)=>{const base=filters.filter(x=>x!=='all'); const next=base.includes(id)?base.filter(x=>x!==id):[...base,id]; setFilters(next.length?next:['all']);};
+ const watching=items.filter(x=>['watching','reading','playing'].includes(x.status)); const completed=items.filter(x=>x.status==='completed');
+ return <div className="frame-library-v3">
+  <div className="library-v3-head"><div><span className="library-kicker">COLLECTION / {items.length} TITLES</span><h1>Library</h1><p>Everything you keep in FRAME, arranged for browsing rather than administration.</p></div><button className="library-add-v3" onClick={add}><CirclePlus size={17}/> Add title</button></div>
+  <div className="library-v3-strip"><div className="library-v3-tabs"><button className={allMedia?'active':''} onClick={()=>toggle('all')}>Everything</button>{mediaFilters.slice(1).map(([id,label])=><button key={id} className={activeMedia.includes(id)?'active':''} onClick={()=>toggle(id)}>{label}</button>)}</div><label className="library-v3-sort"><span>Sort by</span><select value={sort} onChange={e=>setSort(e.target.value)}><option value="popularity">Popularity</option><option value="rating">Rating</option><option value="personal">My rating</option><option value="recent">Newest</option><option value="progress">Progress</option><option value="title">Title</option></select></label></div>
+  <div className="library-v3-status">{statusFilters.map(([id,label])=><button key={id} className={filters.includes(id)?'active':''} onClick={()=>toggleStatus(id)}>{label}</button>)}</div>
+  {(watching.length>0&&allMedia)&&<section className="library-v3-focus"><div><span>ACTIVE NOW</span><h2>Pick up where you left off</h2></div><div className="library-v3-focus-list">{watching.slice(0,4).map(x=><button key={x.id} onClick={()=>open(x)}><FrameArtwork title={x.title} medium={x.medium} poster={x.poster} anilistId={x.anilistId} alt="" loading="lazy"/><span><b>{x.title}</b><small>{x.progress}{x.total?' / '+x.total:''} {x.progressUnit||unitFor(x.medium)}</small></span></button>)}</div></section>}
+  <section className="library-v3-grid-wrap"><div className="library-v3-grid-head"><span>{items.length} results</span>{completed.length>0&&<small>{completed.length} completed</small>}</div><div className="media-grid library-v3-grid">{items.map(x=><Card key={x.id} item={x} library={library} open={open}/>)}</div>{!items.length&&<Empty text="Nothing matches these filters."/>}</section>
  </div>;
 }
 function Discover({finder,go}:{finder:()=>void;go:(x:string)=>void}){return <div className="page"><div className="page-heading"><div><small>UNIVERSAL DISCOVERY</small><h1>Explore everything.</h1><p>One consistent interface for media, metadata and connected services.</p></div></div><div className="feature-grid"><button className="feature-card" onClick={finder}><Search size={22}/><h3>Universal search</h3><p>AniList + Jikan, IGDB + RAWG, TMDB, VNDB, Open Library + Google Books and more.</p><ChevronRight/></button><button className="feature-card" onClick={()=>go('connections')}><Link2 size={22}/><h3>Connections</h3><p>Control the catalogues and services FRAME uses.</p><ChevronRight/></button></div></div>}
@@ -1281,7 +1291,7 @@ function Connections({connections:_,toggle:_toggle,onImportSteamGame}:{connectio
   <section id="settings-appearance" className="settings-panel settings-panel-wide"><div className="section-title"><div><small>LOOK & FEEL</small><h2>Appearance</h2><p>FRAME uses one fixed Ultra-Movie interface — built around cinematic artwork and immersive detail pages.</p></div></div><div className="appearance-control ultra-movie-lock"><b>Ultra-Movie</b><span>Full-screen artwork · floating content · cinematic focus.</span><div className="ultra-movie-badge">ACTIVE · PERMANENT UI</div></div><div className="appearance-bottom-grid"><div className="appearance-control"><b>FRAME colour system</b><span>Dark cinematic surfaces with restrained highlights so your anime artwork stays the focus.</span><div className="frame-palette-swatches" aria-label="Ultra-Movie palette"><i/><i/><i/></div></div><div className="appearance-control"><b>Content density</b><span>Fixed to comfortable spacing for the best balance on phone and Chromebook.</span><div className="ultra-movie-badge">COMFORTABLE</div></div></div></section>
   <section id="settings-profile" className="settings-panel"><div className="section-title"><div><small>ACCOUNT</small><h2>Profile & logo</h2><p>Set the name shown in FRAME, choose your avatar, and choose the symbol used in the header.</p></div></div>{guest?<p className="muted">Guest mode keeps this information on the current device.</p>:<><div className="settings-form-grid"><label>Username<input value={username} onChange={e=>setUsername(e.target.value.replace(/[^A-Za-z0-9_]/g,''))}/></label><label>Display name<input value={name} onChange={e=>setName(e.target.value)}/></label></div><div className="settings-email-row"><label>Account email<input type="email" autoComplete="email" value={email} onChange={e=>{setEmail(e.target.value);setEmailMessage('')}}/></label><button type="button" className="secondary" disabled={emailBusy} onClick={()=>void saveEmail()}>{emailBusy?'Sending…':'Change email'}</button></div>{emailMessage&&<small className="data-tools-message">{emailMessage}</small>}<div className="avatar-setting"><div className="avatar-setting-preview">{avatar?<img src={avatar} alt={(name||username||'Account')+' avatar'} onError={e=>{e.currentTarget.src=import.meta.env.BASE_URL+'frame-logo.svg'}}/>:<span>{(name||username||user?.email||'G').trim().charAt(0).toUpperCase()}</span>}</div><div className="avatar-setting-copy"><b>Profile avatar</b><small>Shown in your account bubble and social areas.</small><label className="logo-upload"><span>Upload avatar</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={avatarBusy} onChange={e=>{const f=e.target.files?.[0];if(f)void uploadAvatar(f);e.currentTarget.value='' }}/></label>{avatarMessage&&<small className="data-tools-message">{avatarMessage}</small>}</div></div><div className="logo-setting"><div><b>FRAME symbol</b><small>Your chosen mark appears in the top-left of the app.</small></div><div className="logo-picker">{logos.map(([id,label,sub])=><button type="button" key={id} className={'logo-choice '+(logo===id?'selected':'')} onClick={()=>{setLogo(id);void save(id)}}><FrameLogoMark logo={id} small/><span><strong>{label}</strong><small>{sub}</small></span></button>)}{logo.startsWith('http')&&<div className="logo-choice selected"><FrameLogoMark logo={logo} small/><span><strong>Custom</strong><small>Uploaded for this account</small></span></div>}</div><label className="logo-upload"><span>Upload a personal logo</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" disabled={logoBusy} onChange={e=>{const f=e.target.files?.[0];if(f)void uploadLogo(f);e.currentTarget.value='' }}/></label>{logoMessage&&<small className="data-tools-message">{logoMessage}</small>}<button type="button" className="primary" onClick={()=>void save()}>{saved?'Saved':'Save profile'}</button></div></>}</section>
   <section id="settings-notifications" className="settings-panel settings-panel-wide"><div className="section-title"><div><small>RELEASE INTELLIGENCE</small><h2>Media notifications</h2><p>Choose whether FRAME should monitor your AniList-linked library for upcoming episodes, related releases and catalogue changes.</p></div></div><label className="release-notifications-setting"><span className="release-notifications-setting-copy"><b>Enable notifications for all media</b><small>When enabled, FRAME checks every AniList-linked title in your library every 30 minutes. Individual titles can still be opted out from the Add to Library menu.</small></span><input type="checkbox" checked={releaseNotificationsEnabled} onChange={e=>void onReleaseNotificationsChange(e.target.checked)} aria-label="Enable notifications for all media"/></label></section>
-  <div className="settings-bottom-grid"><section id="settings-data" className="settings-panel"><div className="section-title"><div><small>PORTABILITY</small><h2>Backup</h2><p>Export a copy of your library or import one on another device.</p></div></div><FrameDataTools items={items} profile={profile} preferences={preferences} onImport={onImport}/></section><section id="settings-security" className="settings-panel settings-security-panel"><div className="section-title"><div><small>ACCOUNT ACCESS</small><h2>Security</h2><p>Manage the account active on this device.</p></div></div>{guest?<><p className="muted">Guest changes are saved on this device. Sign in to attach them to your FRAME account.</p><button type="button" className="secondary" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in to FRAME</button></>:<><div className="account-access-actions"><button type="button" className="danger" disabled={securityBusy} onClick={async()=>{setSecurityBusy(true);setSecurityMessage('Signing out…');try{await onSignOut()}catch(e){setSecurityMessage(e instanceof Error?e.message:'Could not sign out. Please try again.');setSecurityBusy(false)}}}><LogOut size={16}/>{securityBusy?'Signing out…':'Log out'}</button><button type="button" className="secondary" disabled={securityBusy} onClick={async()=>{setSecurityBusy(true);setSecurityMessage('Opening account switcher…');try{await onSignOut()}catch(e){setSecurityMessage(e instanceof Error?e.message:'Could not switch accounts. Please try again.');setSecurityBusy(false)}}}>Add / switch account</button></div><p className="muted">FRAME uses one active account per browser. “Add / switch account” signs out this account and opens the secure sign-in screen, where you can enter another existing account or create a new one.</p>{securityMessage&&<small className="data-tools-message">{securityMessage}</small>}</>}</section></div>
+  <div className="settings-bottom-grid"><section id="settings-data" className="settings-panel"><div className="section-title"><div><small>PORTABILITY</small><h2>Backup</h2><p>Export a copy of your library or import one on another device.</p></div></div><Suspense fallback={<FrameRouteFallback/>}><FrameDataTools items={items} profile={profile} preferences={preferences} onImport={onImport}/></Suspense></section><section id="settings-security" className="settings-panel settings-security-panel"><div className="section-title"><div><small>ACCOUNT ACCESS</small><h2>Security</h2><p>Manage the account active on this device.</p></div></div>{guest?<><p className="muted">Guest changes are saved on this device. Sign in to attach them to your FRAME account.</p><button type="button" className="secondary" onClick={()=>{localStorage.removeItem('frame-guest');window.location.reload()}}>Sign in to FRAME</button></>:<><div className="account-access-actions"><button type="button" className="danger" disabled={securityBusy} onClick={async()=>{setSecurityBusy(true);setSecurityMessage('Signing out…');try{await onSignOut()}catch(e){setSecurityMessage(e instanceof Error?e.message:'Could not sign out. Please try again.');setSecurityBusy(false)}}}><LogOut size={16}/>{securityBusy?'Signing out…':'Log out'}</button><button type="button" className="secondary" disabled={securityBusy} onClick={async()=>{setSecurityBusy(true);setSecurityMessage('Opening account switcher…');try{await onSignOut()}catch(e){setSecurityMessage(e instanceof Error?e.message:'Could not switch accounts. Please try again.');setSecurityBusy(false)}}}>Add / switch account</button></div><p className="muted">FRAME uses one active account per browser. “Add / switch account” signs out this account and opens the secure sign-in screen, where you can enter another existing account or create a new one.</p>{securityMessage&&<small className="data-tools-message">{securityMessage}</small>}</>}</section></div>
  </div>;
 }
 function FriendLibrary({id,onBack}:{id:string;onBack:()=>void}){

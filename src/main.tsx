@@ -11,8 +11,13 @@ class FrameErrorBoundary extends Component<{children:ReactNode},{error:Error|nul
  state={error:null} as {error:Error|null};
  static getDerivedStateFromError(error:Error){return {error};}
  componentDidCatch(error:Error,info:ErrorInfo){console.error('[FRAME runtime error]',error,info);}
+ handleReload=()=>window.location.reload();
+ handleReset=()=>{
+  Object.keys(localStorage).filter(key=>key==='frame-library'||key.startsWith('frame-library:')).forEach(key=>localStorage.removeItem(key));
+  window.location.reload();
+ };
  render(){
-  if(this.state.error)return <main className="frame-runtime-error"><div><img src={import.meta.env.BASE_URL + "frame-ultra-instinct.svg"} alt="FRAME"/><small>FRAME RUNTIME</small><h1>Something went off track.</h1><p>Your library data is still stored. Reload FRAME to recover this session.</p><button className="primary" onClick={()=>window.location.reload()}>Reload FRAME</button><button className="secondary" onClick={()=>{Object.keys(localStorage).filter(key=>key==='frame-library'||key.startsWith('frame-library:')).forEach(key=>localStorage.removeItem(key));window.location.reload()}}>Reset local library cache</button></div></main>;
+  if(this.state.error)return <main className="frame-runtime-error" role="alert" aria-live="assertive"><div><img src={import.meta.env.BASE_URL + "frame-ultra-instinct.svg"} alt="FRAME"/><small>FRAME RUNTIME</small><h1>Something went off track.</h1><p>Your library data is still stored. Reload FRAME to recover this session.</p><div className="frame-runtime-actions"><button className="primary" type="button" onClick={this.handleReload}>Reload FRAME</button><button className="secondary" type="button" onClick={this.handleReset}>Reset local library cache</button></div></div></main>;
   return this.props.children;
  }
 }
@@ -22,7 +27,7 @@ function FrameNativeBackHandling(){
   let mounted=true;
   const listener=CapacitorApp.addListener('backButton',({canGoBack})=>{
    if(!mounted)return;
-   const close=document.querySelector<HTMLButtonElement>('.detail-overlay .close,.overlay .close');
+   const close=document.querySelector<HTMLButtonElement>('.detail-overlay .close-btn,.overlay .close-btn,.detail-overlay [aria-label="Close details"]');
    if(close){close.click();return;}
    if(window.history.length>1&&canGoBack){window.history.back();return;}
   });

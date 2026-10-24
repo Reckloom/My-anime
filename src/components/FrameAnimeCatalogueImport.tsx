@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, CircleAlert, LoaderCircle, Play, RefreshCw } from 'lucide-react';
 import type { AniListMedia } from '../anilist';
 import { aniList, cleanDescription, titleOf } from '../anilist';
-import type { AnimeCharacterProfile, EpisodeMetadata, MediaItem } from '../types';
+import type { EpisodeMetadata, MediaItem } from '../types';
 import { supabase } from '../lib/supabase';
 
 type CatalogueStatus = 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS' | string;
@@ -573,28 +573,6 @@ async function episodeCatalogue(media: CatalogueMedia): Promise<{ rows: EpisodeR
   return { rows: current, verified: !countMismatch && !airingMismatch && missingPosterCount === 0 && (!expected || current.length > 0), warnings };
 }
 
-function charactersFrom(media: CatalogueMedia): AnimeCharacterProfile[] {
-  const edges = Array.isArray(media.characters?.edges) ? media.characters!.edges! : [];
-  const result: AnimeCharacterProfile[] = [];
-  const seen = new Set<string>();
-  for (const edge of edges) {
-    const node = edge.node;
-    const name = String(node?.name?.full || '').trim();
-    if (!name || seen.has(normalizeText(name))) continue;
-    seen.add(normalizeText(name));
-    result.push({
-      id: Number(node?.id) || undefined,
-      name,
-      nativeName: String(node?.name?.native || '').trim() || undefined,
-      role: String(edge.role || 'SUPPORTING').toLowerCase(),
-      image: String(node?.image?.large || '').trim() || undefined,
-      description: clean(node?.description).slice(0, 900) || undefined,
-      sourceUrl: String(node?.siteUrl || '').trim() || undefined
-    });
-  }
-  return result.slice(0, 20);
-}
-
 function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: MediaItem[], isRoot: boolean, rootId: string) {
   const wantedMedium = MOVIE_FORMATS.has(String(media.format || '')) ? 'movie' : 'anime';
   const mediaNumber = Number(media.id);
@@ -621,7 +599,7 @@ function mediaIdFor(media: CatalogueMedia, task: Task, userId: string, library: 
   return 'frame-anime-media-' + mediaNumber + '-' + scope;
 }
 function mapMediaItem(media: CatalogueMedia, opts: {
-  id: string; parentId?: string; progress: number; total: number; characters?: AnimeCharacterProfile[];
+  id: string; parentId?: string; progress: number; total: number;
 }): MediaItem {
   const movie = MOVIE_FORMATS.has(String(media.format || ''));
   const title = preferredTitle(media);
@@ -661,7 +639,6 @@ function mapMediaItem(media: CatalogueMedia, opts: {
     airStart: starts,
     airEnd: ends,
     favorite: false,
-    characters: opts.characters,
     externalLinks: {
       malId: mal,
       officialUrl: undefined,
@@ -932,8 +909,7 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
           ? undefined
           : (itemIds.get(parentByMediaId.get(Number(media.id)) ?? Number(rootDetails.id)) || rootId),
       progress,
-      total,
-      characters: index === 0 ? charactersFrom(rootDetails) : undefined
+      total
     });
     // Keep the 366-episode original BLEACH run as the curated Season 1 part.
     if (task.key === 'bleach' && index === 0) {
@@ -1001,19 +977,6 @@ async function buildTask(task: Task, userId: string, library: MediaItem[], onPro
       checkedItems.push({ ...item, poster: '' });
     } else {
       checkedItems.push(item);
-    }
-    if (Array.isArray(item.characters) && item.characters.length) {
-      const profiles = [];
-      for (const character of item.characters) {
-        const characterPortrait = character.image ? await verifyPortraitArtwork(character.image) : false;
-        if (character.image && !characterPortrait) {
-          warnings.push(item.title + ': character portrait failed natural portrait verification for ' + character.name + '.');
-          profiles.push({ ...character, image: undefined });
-        } else {
-          profiles.push(character);
-        }
-      }
-      checkedItems[checkedItems.length - 1] = { ...checkedItems[checkedItems.length - 1], characters: profiles };
     }
   }
   finalItems = checkedItems;

@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {supabase} from '../lib/supabase';
-import {CalendarDays,ChevronLeft,ChevronRight,LoaderCircle,RefreshCw} from 'lucide-react';
+import {CalendarDays,ChevronLeft,ChevronRight,LoaderCircle,RefreshCw,Search,Check,Plus,SkipForward} from 'lucide-react';
 
 type JikanEpisode={
   mal_id:number;
@@ -78,6 +78,13 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
   const [error,setError]=useState('');
   const [savingEpisode,setSavingEpisode]=useState<number|null>(null);
   const [attempt,setAttempt]=useState(0);
+  const [query,setQuery]=useState('');
+  const [watchFilter,setWatchFilter]=useState<'all'|'watched'|'unwatched'>('all');
+  const [minEpisode,setMinEpisode]=useState('');
+  const [maxEpisode,setMaxEpisode]=useState('');
+  const [jumpEpisode,setJumpEpisode]=useState(String(Math.max(1,currentProgress+1)));
+
+  useEffect(()=>{setPage(1)},[query,watchFilter,minEpisode,maxEpisode]);
 
   useEffect(()=>{
     let alive=true;const controller=new AbortController();
@@ -126,6 +133,13 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
     return()=>{alive=false;controller.abort()};
   },[resolvedMalId,page,attempt]);
 
+  const visibleEpisodes=episodes.filter(ep=>{
+    const n=Number(ep.mal_id);
+    const min=minEpisode===''?null:Number(minEpisode), max=maxEpisode===''?null:Number(maxEpisode);
+    const hay=[ep.title||'',ep.title_japanese||'',String(n)].join(' ').toLocaleLowerCase();
+    return (!query.trim()||hay.includes(query.trim().toLocaleLowerCase())) && (watchFilter==='all'||(watchFilter==='watched'?n<=currentProgress:n>currentProgress)) && (min===null||(!Number.isNaN(min)&&n>=min)) && (max===null||(!Number.isNaN(max)&&n<=max));
+  });
+
   const markThrough=async(episode:number)=>{
     setSavingEpisode(episode);
     try{await onMarkThrough(episode)}finally{setSavingEpisode(null)}
@@ -137,15 +151,32 @@ export function FrameEpisodeList({malId,title,currentProgress,onMarkThrough}:{ma
       {resolvedMalId&&<a href={'https://myanimelist.net/anime/'+encodeURIComponent(resolvedMalId)+'/'} target="_blank" rel="noreferrer">Source <RefreshCw size={12}/></a>}
     </div>
     <p className="frame-episode-list-summary">{title} · Watched through episode {currentProgress}. Episode titles and air dates load page by page from the MyAnimeList catalogue.</p>
+    <div className="frame-episode-quickbar">
+      <div className="frame-episode-progress-chip"><Check size={14}/><span>Watched through <b>EP {currentProgress}</b></span></div>
+      <button type="button" className="secondary" disabled={savingEpisode!==null} onClick={()=>void markThrough(Math.max(0,currentProgress-1))}><ChevronLeft size={14}/> Undo 1</button>
+      <button type="button" className="primary" disabled={savingEpisode!==null} onClick={()=>void markThrough(currentProgress+1)}><Plus size={14}/> Mark EP {currentProgress+1}</button>
+      <label className="frame-episode-jump-control"><span>Jump to</span><input type="number" min="1" inputMode="numeric" value={jumpEpisode} onChange={e=>setJumpEpisode(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){const n=Math.max(1,Number(jumpEpisode)||1);setPage(Math.max(1,Math.min(lastPage,Math.ceil(n/100))))}}}/></label>
+      <button type="button" className="secondary" onClick={()=>{const n=Math.max(1,Number(jumpEpisode)||1);setPage(Math.max(1,Math.min(lastPage,Math.ceil(n/100))))}}><SkipForward size={14}/> Go</button>
+    </div>
+
+    <div className="frame-episode-tools">
+      <label className="frame-episode-search"><Search size={15}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search episode number or title…" aria-label="Search episode number or title"/></label>
+      <div className="frame-episode-filters" aria-label="Episode filters">
+        <label><span>Watch</span><select value={watchFilter} onChange={e=>setWatchFilter(e.target.value as typeof watchFilter)}><option value="all">All</option><option value="watched">Watched</option><option value="unwatched">Unwatched</option></select></label>
+        <label><span>From</span><input type="number" min="1" inputMode="numeric" value={minEpisode} onChange={e=>setMinEpisode(e.target.value)} placeholder="1" aria-label="Minimum episode number"/></label>
+        <span>–</span>
+        <label><span>To</span><input type="number" min="1" inputMode="numeric" value={maxEpisode} onChange={e=>setMaxEpisode(e.target.value)} placeholder="∞" aria-label="Maximum episode number"/></label>
+      </div>
+    </div>
     {resolving?<div className="frame-episode-list-state"><LoaderCircle size={17} className="spin"/> Finding the matching anime…</div>:loading?<div className="frame-episode-list-state"><LoaderCircle size={17} className="spin"/> Loading episode list…</div>:error?<div className="frame-episode-list-state error">{error}<button type="button" className="secondary" onClick={()=>setAttempt(v=>v+1)}>Retry</button></div>:episodes.length===0?<div className="frame-episode-list-state">No episodes were listed by the source.</div>:<>
-      <div className="frame-episode-list-rows">
-        {episodes.map(ep=><div className={'frame-episode-row '+(ep.mal_id<=currentProgress?'watched':'')} key={ep.mal_id}>
+      {visibleEpisodes.length ? <div className="frame-episode-list-rows">
+        {visibleEpisodes.map(ep=><div className={'frame-episode-row '+(ep.mal_id<=currentProgress?'watched':'')} key={ep.mal_id}>
           <span className="frame-episode-number">{ep.mal_id}</span>
           <div className="frame-episode-title"><b>{ep.title||'Episode '+ep.mal_id}</b><small>{ep.aired?new Date(ep.aired).toLocaleDateString(): 'Air date unavailable'}{ep.filler?' · Filler':''}{ep.recap?' · Recap':''}</small></div>
           {ep.mal_id<=currentProgress?<span className="frame-episode-watched">Watched</span>:<button type="button" className="secondary frame-episode-mark" disabled={savingEpisode!==null} onClick={()=>void markThrough(ep.mal_id)}>{savingEpisode===ep.mal_id?'Saving…':'Mark through'}</button>}
         </div>)}
-      </div>
-      <div className="frame-episode-pagination"><button className="secondary frame-episode-jump" type="button" disabled={page<=1||loading} onClick={()=>setPage(1)}>Oldest</button><button className="secondary" type="button" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page} of {lastPage}</span><button className="secondary" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(p=>Math.min(lastPage,p+1))}>Next <ChevronRight size={15}/></button><button className="secondary frame-episode-jump" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(lastPage)}>Latest</button></div>
+      </div> : <div className="frame-anime-episode-empty-state"><p className="muted">No episodes match those filters.</p><button type="button" className="secondary" onClick={()=>{setQuery('');setWatchFilter('all');setMinEpisode('');setMaxEpisode('')}}>Clear episode filters</button></div>}
+      <div className="frame-episode-filter-summary">Showing {visibleEpisodes.length} of {episodes.length} episodes on this page</div><div className="frame-episode-pagination"><button className="secondary frame-episode-jump" type="button" disabled={page<=1||loading} onClick={()=>setPage(1)}>Oldest</button><button className="secondary" type="button" disabled={page<=1||loading} onClick={()=>setPage(p=>Math.max(1,p-1))}><ChevronLeft size={15}/> Previous</button><span>Page {page} of {lastPage}</span><button className="secondary" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(p=>Math.min(lastPage,p+1))}>Next <ChevronRight size={15}/></button><button className="secondary frame-episode-jump" type="button" disabled={page>=lastPage||loading} onClick={()=>setPage(lastPage)}>Latest</button></div>
     </>}
     <div className="frame-episode-list-foot"><CalendarDays size={13}/> Episode titles and dates are supplied by the external catalogue and may be incomplete or revised.</div>
   </section>;
