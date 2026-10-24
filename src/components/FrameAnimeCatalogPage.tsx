@@ -173,7 +173,9 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
   const raw=planDraft[item.id]??String(Math.max(1,Number(item.progress||0)+1));
   const nextEpisode=Math.max(1,Math.min(item.total&&item.total>0?item.total+1:2000,Number(raw)||1));
   setSavingProgress(item.id+'-next');
-  try{await update({...item,progress:Math.max(0,nextEpisode-1),status:'watching',notes:(item.notes||'').replace(/\\n?FRAME_NEXT_EPISODE:\\d+/g,'').trim()+'\\nFRAME_NEXT_EPISODE:'+nextEpisode});}
+  try{await update({...item,progress:Math.max(0,nextEpisode-1),status:'watching',notes:(item.notes||'').replace(/\
+?FRAME_NEXT_EPISODE:\\d+/g,'').trim()+'\
+FRAME_NEXT_EPISODE:'+nextEpisode});}
   finally{setSavingProgress(null)}
  };
 
@@ -189,7 +191,15 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
 
  const showDetail=(row:CatalogRow,existing?:MediaItem)=>setDetail({row,item:toMedia(row,existing)});
 
- const addAllUpcoming=async()=>{\n  if(!batchAdd||tab!=='upcoming')return;\n  const fresh=displayRows.filter(row=>!libraryMap.has(row.id)).map(row=>({...toMedia(row),status:'planned',progress:0}));\n  if(!fresh.length)return;\n  setLoading(true);setError('');\n  try{const ok=await batchAdd(fresh);if(ok!==false){setRows(prev=>prev);setLastUpdated('Added '+fresh.length+' to your Plan to Watch');}}catch(e){setError(e instanceof Error?e.message:'Could not add upcoming anime.')}finally{setLoading(false)}\n };\n\n const addOrOpen=async(row:CatalogRow)=>{
+ const addAllUpcoming=async()=>{
+  if(!batchAdd||tab!=='upcoming')return;
+  const fresh=displayRows.filter(row=>!libraryMap.has(row.id)).map(row=>({...toMedia(row),status:'planned',progress:0}));
+  if(!fresh.length)return;
+  setLoading(true);setError('');
+  try{const ok=await batchAdd(fresh);if(ok!==false){setRows(prev=>prev);setLastUpdated('Added '+fresh.length+' to your Plan to Watch');}}catch(e){setError(e instanceof Error?e.message:'Could not add upcoming anime.')}finally{setLoading(false)}
+ };
+
+ const addOrOpen=async(row:CatalogRow)=>{
   const existing=libraryMap.get(row.id);
   if(existing){open(existing);return;}
   const item=toMedia(row);
@@ -213,7 +223,9 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
   {tab==='upcoming'&&<div className="frame-catalog-tools frame-upcoming-windows" aria-label="Upcoming release window">{(['ALL','TODAY','TOMORROW','WEEK','LATER'] as const).map(x=><button key={x} type="button" className={upcomingWindow===x?'secondary active':'secondary'} onClick={()=>setUpcomingWindow(x)}>{x==='ALL'?'All':x==='TODAY'?'Today':x==='TOMORROW'?'Tomorrow':x==='WEEK'?'This week':'Later'}</button>)}</div>}
   {tab!=='mine'&&<div className={"frame-catalog-tools"+(filtersOpen?" filters-open":"")}>
    <label className="frame-catalog-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search every anime…" aria-label="Search every anime"/></label>
-   <button type="button" className="secondary frame-catalog-filter-toggle" onClick={()=>setFiltersOpen(v=>!v)} aria-expanded={filtersOpen} aria-controls="frame-catalog-filter-panel"><SlidersHorizontal size={15}/> {filtersOpen?"Hide filters":"Filters"}</button>\n   <div id="frame-catalog-filter-panel" className="frame-catalog-filter-panel"><div><b>{[status!=="ALL",format!=="ALL",season!=="ALL",genre!=="ALL",onlyUntracked].filter(Boolean).length} active</b><span>Catalogue filters</span></div><button type="button" className="secondary" onClick={()=>{setStatus("ALL");setFormat("ALL");setSeason("ALL");setGenre("ALL");setOnlyUntracked(false)}}>Clear</button></div>\n   <select value={sort} onChange={e=>setSort(e.target.value)}><option value="POPULARITY_DESC">Most popular</option><option value="SCORE_DESC">Top rated</option><option value="START_DATE_DESC">Newest</option><option value="UPDATED_AT_DESC">Recently updated</option><option value="EPISODES_DESC">Most episodes</option></select>
+   <button type="button" className="secondary frame-catalog-filter-toggle" onClick={()=>setFiltersOpen(v=>!v)} aria-expanded={filtersOpen} aria-controls="frame-catalog-filter-panel"><SlidersHorizontal size={15}/> {filtersOpen?"Hide filters":"Filters"}</button>
+   <div id="frame-catalog-filter-panel" className="frame-catalog-filter-panel"><div><b>{[status!=="ALL",format!=="ALL",season!=="ALL",genre!=="ALL",onlyUntracked].filter(Boolean).length} active</b><span>Catalogue filters</span></div><button type="button" className="secondary" onClick={()=>{setStatus("ALL");setFormat("ALL");setSeason("ALL");setGenre("ALL");setOnlyUntracked(false)}}>Clear</button></div>
+   <select value={sort} onChange={e=>setSort(e.target.value)}><option value="POPULARITY_DESC">Most popular</option><option value="SCORE_DESC">Top rated</option><option value="START_DATE_DESC">Newest</option><option value="UPDATED_AT_DESC">Recently updated</option><option value="EPISODES_DESC">Most episodes</option></select>
    <select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">Any status</option><option value="RELEASING">Airing</option><option value="FINISHED">Finished</option><option value="NOT_YET_RELEASED">Upcoming</option><option value="HIATUS">Hiatus</option></select>
    <select value={format} onChange={e=>setFormat(e.target.value)}><option value="ALL">Any format</option><option value="TV">TV</option><option value="TV_SHORT">TV Short</option><option value="MOVIE">Movie</option><option value="ONA">ONA</option><option value="OVA">OVA</option><option value="SPECIAL">Special</option></select>
    <select value={season} onChange={e=>setSeason(e.target.value)}><option value="ALL">Any season</option><option value="WINTER">Winter</option><option value="SPRING">Spring</option><option value="SUMMER">Summer</option><option value="FALL">Fall</option></select>
@@ -236,7 +248,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
        <button className="frame-catalog-poster" onClick={()=>showDetail(row as CatalogRow,existing)}>
         <FrameArtwork title={title} medium="anime" poster={item.poster} anilistId={item.anilistId} alt={title} loading="lazy"/>
         {upcoming&&<span className="frame-catalog-badge">UPCOMING</span>}
-        {existing&&<span className="frame-catalog-owned">{item.status==='completed'?<Check size={12}/> {item.status==='planned'?'IN PLAN':item.status.toUpperCase()}</span>}
+        {existing&&<span className="frame-catalog-owned">{item.status==='completed'?<><Check size={12}/> COMPLETED</>:item.status==='planned'?'IN PLAN':item.status.toUpperCase()}</span>}
        </button>
        <div className="frame-catalog-copy">
         <button className="frame-catalog-title" onClick={()=>showDetail(row as CatalogRow,existing)}>{title}</button>
