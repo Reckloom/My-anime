@@ -1,6 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import type {Dispatch,SetStateAction} from 'react';
-import {CalendarDays,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3,Save,X,ExternalLink,Play,Star,Users,Heart,Globe2,Building2,Timer,Tag} from 'lucide-react';
+import {CalendarDays,SlidersHorizontal,ChevronLeft,ChevronRight,Plus,RefreshCw,Search,Check,Clock3,Save,X,ExternalLink,Play,Star,Users,Heart,Globe2,Building2,Timer,Tag} from 'lucide-react';
 import type {MediaItem} from '../types';
 import {FrameArtwork} from './FrameArtwork';
 import {supabase} from '../lib/supabase';
@@ -111,6 +111,7 @@ export function FrameAnimeCatalogPage({library,open,add,update}:Props){
  const [planDraft,setPlanDraft]=useState<Record<string,string>>({});
  const [detail,setDetail]=useState<{row:CatalogRow;item:MediaItem}|null>(null);
  const [genre,setGenre]=useState('ALL');
+  const [filtersOpen,setFiltersOpen]=useState(false);
  const [onlyUntracked,setOnlyUntracked]=useState(false);
 
  const load=async(force=false)=>{
