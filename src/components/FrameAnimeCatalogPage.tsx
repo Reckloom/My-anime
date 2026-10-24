@@ -115,6 +115,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
  const [genre,setGenre]=useState('ALL');
   const [filtersOpen,setFiltersOpen]=useState(false);
  const [onlyUntracked,setOnlyUntracked]=useState(false);
+ const [upcomingWindow,setUpcomingWindow]=useState<'ALL'|'TODAY'|'TOMORROW'|'WEEK'|'LATER'>('ALL');
  const autoPlannedPages=useRef(new Set<string>());
 
  const load=async(force=false)=>{
@@ -154,7 +155,16 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
  const visibleMine=useMemo(()=>selectedMine==='ALL'?mine:mine.filter(x=>x.status===selectedMine),[mine,selectedMine]);
  const libraryMap=useMemo(()=>new Map(library.filter(x=>x.medium==='anime').map(x=>[x.anilistId||0,x])),[library]);
  const availableGenres=useMemo(()=>[...new Set(rows.flatMap(x=>x.genres||[]))].sort((a,b)=>a.localeCompare(b)),[rows]);
- const displayRows=useMemo(()=>rows.filter(row=>(genre==='ALL'||row.genres?.includes(genre))&&(!onlyUntracked||!libraryMap.has(row.id))),[rows,genre,onlyUntracked,libraryMap]);
+ const displayRows=useMemo(()=>rows.filter(row=>{
+  if(genre!=='ALL'&&!row.genres?.includes(genre))return false;
+  if(onlyUntracked&&libraryMap.has(row.id))return false;
+  if(tab!=='upcoming'||upcomingWindow==='ALL')return true;
+  const stamp=row.nextAiringEpisode?.airingAt?Number(row.nextAiringEpisode.airingAt)*1000:(row.startDate?.year?Date.UTC(row.startDate.year,(row.startDate.month||1)-1,row.startDate.day||1):NaN);
+  if(!Number.isFinite(stamp))return upcomingWindow==='LATER';
+  const now=new Date();const start=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  const tomorrow=start+86400000;const week=start+7*86400000;
+  return upcomingWindow==='TODAY'?stamp>=start&&stamp<tomorrow:upcomingWindow==='TOMORROW'?stamp>=tomorrow&&stamp<tomorrow+86400000:upcomingWindow==='WEEK'?stamp>=start&&stamp<week:stamp>=week;
+ }),[rows,genre,onlyUntracked,libraryMap,tab,upcomingWindow]);
 
  const setNextToWatch=async(item:MediaItem)=>{
   if(!update)return;
@@ -198,6 +208,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
    <button className={tab==='upcoming'?'active':''} onClick={()=>setTab('upcoming')}><CalendarDays size={15}/> Upcoming</button>
    <button className={tab==='mine'?'active':''} onClick={()=>setTab('mine')}>My Anime <span>{mine.length}</span></button>
   </div>
+  {tab==='upcoming'&&<div className="frame-catalog-tools frame-upcoming-windows" aria-label="Upcoming release window">{(['ALL','TODAY','TOMORROW','WEEK','LATER'] as const).map(x=><button key={x} type="button" className={upcomingWindow===x?'secondary active':'secondary'} onClick={()=>setUpcomingWindow(x)}>{x==='ALL'?'All':x==='TODAY'?'Today':x==='TOMORROW'?'Tomorrow':x==='WEEK'?'This week':'Later'}</button>)}</div>}
   {tab!=='mine'&&<div className={"frame-catalog-tools"+(filtersOpen?" filters-open":"")}>
    <label className="frame-catalog-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search every anime…" aria-label="Search every anime"/></label>
    <button type="button" className="secondary frame-catalog-filter-toggle" onClick={()=>setFiltersOpen(v=>!v)} aria-expanded={filtersOpen} aria-controls="frame-catalog-filter-panel"><SlidersHorizontal size={15}/> {filtersOpen?"Hide filters":"Filters"}</button>\n   <div id="frame-catalog-filter-panel" className="frame-catalog-filter-panel"><div><b>{[status!=="ALL",format!=="ALL",season!=="ALL",genre!=="ALL",onlyUntracked].filter(Boolean).length} active</b><span>Catalogue filters</span></div><button type="button" className="secondary" onClick={()=>{setStatus("ALL");setFormat("ALL");setSeason("ALL");setGenre("ALL");setOnlyUntracked(false)}}>Clear</button></div>\n   <select value={sort} onChange={e=>setSort(e.target.value)}><option value="POPULARITY_DESC">Most popular</option><option value="SCORE_DESC">Top rated</option><option value="START_DATE_DESC">Newest</option><option value="UPDATED_AT_DESC">Recently updated</option><option value="EPISODES_DESC">Most episodes</option></select>
