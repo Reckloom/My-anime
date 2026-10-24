@@ -164,7 +164,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
 
  const showDetail=(row:CatalogRow,existing?:MediaItem)=>setDetail({row,item:toMedia(row,existing)});
 
- const addAllUpcoming=async()=>{\n  if(!batchAdd||tab!=='upcoming')return;\n  const fresh=displayRows.filter(row=>!libraryMap.has(row.id)).map(row=>toMedia(row));\n  if(!fresh.length)return;\n  setLoading(true);setError('');\n  try{const ok=await batchAdd(fresh);if(ok!==false){setRows(prev=>prev);setLastUpdated('Added '+fresh.length+' to your Plan to Watch');}}catch(e){setError(e instanceof Error?e.message:'Could not add upcoming anime.')}finally{setLoading(false)}\n };\n\n const addOrOpen=async(row:CatalogRow)=>{
+ const addAllUpcoming=async()=>{\n  if(!batchAdd||tab!=='upcoming')return;\n  const fresh=displayRows.filter(row=>!libraryMap.has(row.id)).map(row=>({...toMedia(row),status:'planned',progress:0}));\n  if(!fresh.length)return;\n  setLoading(true);setError('');\n  try{const ok=await batchAdd(fresh);if(ok!==false){setRows(prev=>prev);setLastUpdated('Added '+fresh.length+' to your Plan to Watch');}}catch(e){setError(e instanceof Error?e.message:'Could not add upcoming anime.')}finally{setLoading(false)}\n };\n\n const addOrOpen=async(row:CatalogRow)=>{
   const existing=libraryMap.get(row.id);
   if(existing){open(existing);return;}
   const item=toMedia(row);
@@ -178,7 +178,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
  return <section className="frame-anime-catalog-page">
   <div className="frame-catalog-head">
    <div><small>FRAME ANIME CATALOGUE</small><h1>Every anime. One place.</h1><p>Browse the live catalogue without loading thousands of cards into your phone at once. Your watch state stays in FRAME.</p></div>
-   <div className="frame-catalog-head-actions"><button className="secondary" type="button" onClick={()=>tab==='mine'?setTab('browse'):void load()} disabled={loading}><RefreshCw size={15} className={loading?'spin':''}/> {loading?'Updating…':'Refresh'}</button>{tab==='upcoming'&&batchAdd&&<button className="primary" type="button" onClick={()=>void addAllUpcoming()} disabled={loading||!displayRows.some(row=>!libraryMap.has(row.id))}><Plus size={15}/> Add all new</button>}</div>
+   <div className="frame-catalog-head-actions"><button className="secondary" type="button" onClick={()=>tab==='mine'?setTab('browse'):void load()} disabled={loading}><RefreshCw size={15} className={loading?'spin':''}/> {loading?'Updating…':'Refresh'}</button>{tab==='upcoming'&&batchAdd&&<button className="primary" type="button" onClick={()=>void addAllUpcoming()} disabled={loading||!displayRows.some(row=>!libraryMap.has(row.id))}><Plus size={15}/> Add all new to Plan</button>}</div>
   </div>
   <div className="frame-catalog-tabs">
    <button className={tab==='browse'?'active':''} onClick={()=>setTab('browse')}>Browse</button>
@@ -210,7 +210,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
        <button className="frame-catalog-poster" onClick={()=>showDetail(row as CatalogRow,existing)}>
         <FrameArtwork title={title} medium="anime" poster={item.poster} anilistId={item.anilistId} alt={title} loading="lazy"/>
         {upcoming&&<span className="frame-catalog-badge">UPCOMING</span>}
-        {existing&&<span className="frame-catalog-owned">{item.status==='completed'?<Check size={12}/>:<Clock3 size={12}/>} {item.status==='planned'?'PLAN':item.status.toUpperCase()}</span>}
+        {existing&&<span className="frame-catalog-owned">{item.status==='completed'?<Check size={12}/> {item.status==='planned'?'IN PLAN':item.status.toUpperCase()}</span>}
        </button>
        <div className="frame-catalog-copy">
         <button className="frame-catalog-title" onClick={()=>showDetail(row as CatalogRow,existing)}>{title}</button>
@@ -230,7 +230,7 @@ export function FrameAnimeCatalogPage({library,open,add,update,batchAdd}:Props){
             <button className="secondary" type="button" disabled={savingProgress===item.id+'-next'} onClick={()=>void setNextToWatch(item)}>{savingProgress===item.id+'-next'?<RefreshCw size={13} className="spin"/>:<Clock3 size={13}/>} Set next</button>
           </div>
         </>}
-        {!existing&&<button className="secondary frame-catalog-add" disabled={busyId===row.id} onClick={()=>void addOrOpen(row)}>{busyId===row.id?'Adding…':<><Plus size={14}/> {upcoming?'Add to plan':'Add to FRAME'}</>}</button>}
+        {!existing&&<button className="secondary frame-catalog-add" disabled={busyId===row.id} onClick={()=>void addOrOpen(row)}>{busyId===row.id?'Adding…':<><Plus size={14}/> {upcoming?'Add to Plan':'Add to FRAME'}</>}</button>}
        </div>
       </article>
     })}
