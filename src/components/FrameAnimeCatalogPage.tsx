@@ -7,6 +7,7 @@ import {supabase} from '../lib/supabase';
 
 type CatalogRow={
  id:number;
+ idMal?:number|null;
  title:{romaji?:string|null;english?:string|null;native?:string|null;userPreferred?:string|null};
  synonyms?:string[];
  description?:string|null;
@@ -81,7 +82,8 @@ function toMedia(x:CatalogRow,existing?:MediaItem):MediaItem{
   airStart:x.startDate?.year?([x.startDate.year,x.startDate.month,x.startDate.day].filter(Boolean).join('-')):undefined,
   airEnd:x.endDate?.year?([x.endDate.year,x.endDate.month,x.endDate.day].filter(Boolean).join('-')):undefined,
   favorite:existing?.favorite||false ,
-  notes:existing?.notes||''
+  notes:existing?.notes||'',
+  externalLinks:{...(existing?.externalLinks||{}),malId:x.idMal?String(x.idMal):undefined,officialUrl:x.siteUrl||existing?.externalLinks?.officialUrl}
  };
 }
 async function invoke(body:Record<string,unknown>){
