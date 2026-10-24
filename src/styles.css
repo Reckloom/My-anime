@@ -5879,21 +5879,7 @@ body{overflow-x:hidden!important}
 @media(max-width:650px){.frame-schedule{padding:20px 14px 80px}.frame-schedule-head{align-items:flex-start}.frame-schedule-head h1{font-size:29px}.frame-schedule-switch{display:grid;grid-template-columns:1fr 1fr}.frame-schedule-switch label{grid-column:1/-1;margin-left:0}.frame-schedule-switch input{width:100%;flex:1}.frame-schedule-item{padding:7px}.frame-schedule-art{width:42px;height:59px}}
 
 
-/* FRAME catalogue filter drawer */
-.frame-catalog-filter-toggle,.frame-catalog-filter-panel{display:none}
-@media(max-width:650px){
- .frame-catalog-filter-toggle{display:flex;align-items:center;justify-content:center;gap:6px}
- .frame-catalog-tools:not(.filters-open)>.frame-catalog-filter-panel{display:flex}
- .frame-catalog-tools.filters-open>.frame-catalog-filter-panel{display:flex}
- .frame-catalog-filter-panel{min-height:44px}
-}
-/* FRAME catalogue filter drawer */
-.frame-catalog-filter-toggle,.frame-catalog-filter-panel{display:none}
-@media(max-width:650px){
- .frame-catalog-filter-toggle{display:flex;align-items:center;justify-content:center;gap:6px}
- .frame-catalog-filter-panel{display:flex;grid-column:1/-1;min-height:44px}
- .frame-catalog-tools:not(.filters-open)>.frame-catalog-filter-panel{display:none}
-}
+
 /* FRAME mobile/performance polish */
 button,input,select{touch-action:manipulation}
 img{content-visibility:auto}
@@ -5999,10 +5985,10 @@ img{content-visibility:auto}
  .frame-catalog-add{min-height:42px}
 }
 @media(max-width:360px){
- .frame-catalog-grid{grid-template-columns:1fr;gap:10px}
- .frame-catalog-title{font-size:13px}
- .frame-catalog-meta,.frame-catalog-score,.frame-catalog-next{font-size:10px}
- .frame-catalog-details,.frame-catalog-description{font-size:10px}
+ .frame-catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .frame-catalog-title{font-size:11px}
+ .frame-catalog-meta,.frame-catalog-score,.frame-catalog-next{font-size:9px}
+ .frame-catalog-details,.frame-catalog-description{font-size:9px}
 }
 
 /* FRAME enriched catalogue controls */
