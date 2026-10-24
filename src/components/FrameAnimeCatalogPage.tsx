@@ -249,6 +249,7 @@ function AnimeDetailPanel({detail,update,savingProgress,progressDraft,planDraft,
  const tags=(row.tags||[]).map(t=>t.name).filter(Boolean) as string[];
  const relations=(row.relations?.edges||[]).filter(e=>e.node?.id);
  const rank=(row.rankings||[]).find(r=>r.type==='RATED'&&r.allTime)?.rank;
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();close()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[close]);
  return <div className="frame-detail-backdrop" role="dialog" aria-modal="true" aria-label={title} onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
   <aside className="frame-detail-panel">
    <button className="frame-detail-close" type="button" onClick={close} aria-label="Close details"><X size={18}/></button>
