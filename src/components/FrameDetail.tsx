@@ -300,7 +300,7 @@ export function FrameDetail({item,library,navigationItems,navigate,close,save,on
  const hasPrevious=navItems.length>1;
  const goPrevious=()=>{if(!navigate||navItems.length<2)return;navigate(navItems[(navIndex-1+navItems.length)%navItems.length])};
  const goNext=()=>{if(!navigate||navItems.length<2)return;navigate(navItems[(navIndex+1)%navItems.length])};
- useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='ArrowLeft'){e.preventDefault();goPrevious()}else if(e.key==='ArrowRight'){e.preventDefault();goNext()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[navIndex,navItems.length,navigate]);
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.preventDefault();close();return}if(e.key==='ArrowLeft'){e.preventDefault();goPrevious()}else if(e.key==='ArrowRight'){e.preventDefault();goNext()}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[close,navIndex,navItems.length,navigate]);
 
  return <div className="overlay detail-overlay frame-detail-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}>
   <div className="detail-modal-shell">
